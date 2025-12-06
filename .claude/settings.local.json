@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create:*)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(npx shadcn@latest init -d)",
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(npm init -y)",
+      "Bash(npm run dev:*)",
+      "Bash(psql:*)",
+      "Bash(node server.js:*)",
+      "Bash(curl:*)",
+      "Bash(taskkill:*)",
+      "Bash(git reset:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
