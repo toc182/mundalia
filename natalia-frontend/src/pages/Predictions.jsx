@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { Navigate, Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +18,7 @@ const playoffToTeamId = {
 };
 
 export default function Predictions() {
-  const { user } = useAuth();
+  const navigate = useNavigate();
   const [predictions, setPredictions] = useState({});
   const [playoffSelections, setPlayoffSelections] = useState({});
   const [saved, setSaved] = useState(false);
@@ -47,10 +46,6 @@ export default function Predictions() {
       setPlayoffSelections(JSON.parse(savedPlayoffs));
     }
   }, []);
-
-  if (!user) {
-    return <Navigate to="/login" />;
-  }
 
   // Get the winning team from a playoff
   const getPlayoffWinner = (playoffId) => {
@@ -89,22 +84,6 @@ export default function Predictions() {
 
     return team;
   };
-
-  // Check if there are pending playoff selections
-  const getPendingPlayoffs = () => {
-    const pending = [];
-    for (const [playoffId, teamId] of Object.entries(playoffToTeamId)) {
-      if (!playoffSelections[playoffId]?.final) {
-        const playoff = playoffs.find(p => p.id === playoffId);
-        if (playoff) {
-          pending.push(playoff);
-        }
-      }
-    }
-    return pending;
-  };
-
-  const pendingPlayoffs = getPendingPlayoffs();
 
   const handleDragStart = (e, teamId) => {
     e.dataTransfer.setData('teamId', teamId.toString());
@@ -148,20 +127,33 @@ export default function Predictions() {
     setSaved(false);
   };
 
-  const handleSave = () => {
+  const handleContinue = () => {
     localStorage.setItem('natalia_predictions', JSON.stringify(predictions));
     setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    setTimeout(() => {
+      navigate('/terceros');
+    }, 500);
   };
 
   const groups = getAllGroups();
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Progress indicator */}
+      <div className="flex items-center gap-2 mb-6 text-sm text-muted-foreground">
+        <Link to="/" className="hover:text-foreground">Inicio</Link>
+        <span>/</span>
+        <Link to="/repechajes" className="hover:text-foreground">Paso 1: Repechajes</Link>
+        <span>/</span>
+        <span className="font-medium text-foreground">Paso 2: Grupos</span>
+        <span>/</span>
+        <span>Paso 3: Terceros</span>
+      </div>
+
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Predicciones de Grupos</h1>
-        <Button onClick={handleSave}>
-          Guardar Predicciones
+        <Button onClick={handleContinue}>
+          Continuar
         </Button>
       </div>
 
@@ -173,22 +165,9 @@ export default function Predictions() {
         </Alert>
       )}
 
-      {pendingPlayoffs.length > 0 && (
-        <Alert className="mb-6">
-          <AlertDescription className="flex items-center justify-between">
-            <span>
-              Tienes {pendingPlayoffs.length} playoff(s) sin completar. Los equipos apareceran como placeholder hasta que selecciones los ganadores.
-            </span>
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/playoffs">Ir a Playoffs</Link>
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
-
       <p className="text-muted-foreground mb-6">
         Arrastra los equipos para ordenarlos segun como crees que terminaran en cada grupo.
-        Los primeros 2 clasifican a la siguiente ronda.
+        Los primeros 2 clasifican directamente. El 3ro puede clasificar como mejor tercero.
       </p>
 
       {/* Group selector for mobile */}
@@ -233,6 +212,16 @@ export default function Predictions() {
           />
         ))}
       </div>
+
+      {/* Bottom navigation */}
+      <div className="flex justify-between mt-8 pt-6 border-t">
+        <Button variant="outline" asChild>
+          <Link to="/repechajes">Volver a Repechajes</Link>
+        </Button>
+        <Button onClick={handleContinue} size="lg">
+          Continuar a Terceros
+        </Button>
+      </div>
     </div>
   );
 }
@@ -249,6 +238,7 @@ function GroupCard({ group, teamIds, getTeamById, onDragStart, onDragOver, onDro
           if (!team) return null;
 
           const qualifies = index < 2;
+          const isThird = index === 2;
 
           return (
             <div
@@ -258,7 +248,8 @@ function GroupCard({ group, teamIds, getTeamById, onDragStart, onDragOver, onDro
               onDragOver={onDragOver}
               onDrop={(e) => onDrop(e, index, group)}
               className={`flex items-center gap-3 p-3 rounded-lg border cursor-move transition-colors
-                ${qualifies ? 'bg-green-50 border-green-200' : 'bg-background'}
+                ${qualifies ? 'bg-green-50 border-green-200' : ''}
+                ${isThird ? 'bg-yellow-50 border-yellow-200' : ''}
                 ${team.isPlayoffWinner ? 'ring-2 ring-blue-300' : ''}
                 hover:bg-muted`}
             >
@@ -273,7 +264,7 @@ function GroupCard({ group, teamIds, getTeamById, onDragStart, onDragOver, onDro
               <div className="flex-1">
                 <span className="font-medium text-sm">{team.name}</span>
                 {team.isPlayoffWinner && (
-                  <p className="text-xs text-blue-600">Ganador Playoff</p>
+                  <p className="text-xs text-blue-600">Ganador Repechaje</p>
                 )}
                 {team.is_playoff && !team.isPlayoffWinner && (
                   <p className="text-xs text-muted-foreground">{team.playoff_teams}</p>
@@ -282,6 +273,11 @@ function GroupCard({ group, teamIds, getTeamById, onDragStart, onDragOver, onDro
               {qualifies && (
                 <Badge variant="outline" className="text-green-600 border-green-300 text-xs">
                   Clasifica
+                </Badge>
+              )}
+              {isThird && (
+                <Badge variant="outline" className="text-yellow-600 border-yellow-300 text-xs">
+                  3ro
                 </Badge>
               )}
               <div className="flex flex-col gap-0.5">

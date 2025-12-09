@@ -1,11 +1,8 @@
 import { Link } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default function Home() {
-  const { user } = useAuth();
-
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="text-center mb-12">
@@ -15,102 +12,62 @@ export default function Home() {
         </p>
       </div>
 
-      {user ? (
-        <div className="grid md:grid-cols-3 gap-6 max-w-4xl mx-auto">
-          <Card>
-            <CardHeader>
-              <CardTitle>Predicciones</CardTitle>
-              <CardDescription>
-                Ordena los equipos en cada grupo
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild className="w-full">
-                <Link to="/predictions">Hacer Predicciones</Link>
-              </Button>
-            </CardContent>
-          </Card>
+      <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <CardTitle>Hacer Predicciones</CardTitle>
+            <CardDescription>
+              Completa tus predicciones para el Mundial 2026
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild className="w-full" size="lg">
+              <Link to="/repechajes">Comenzar</Link>
+            </Button>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Ranking</CardTitle>
-              <CardDescription>
-                Mira tu posicion en el leaderboard
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild variant="outline" className="w-full">
-                <Link to="/leaderboard">Ver Ranking</Link>
-              </Button>
-            </CardContent>
-          </Card>
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <CardTitle>Ver Mis Predicciones</CardTitle>
+            <CardDescription>
+              Revisa las predicciones que has guardado
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline" className="w-full" size="lg">
+              <Link to="/mis-predicciones">Ver Predicciones</Link>
+            </Button>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Grupos Privados</CardTitle>
-              <CardDescription>
-                Compite con amigos y familia
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button asChild variant="outline" className="w-full">
-                <Link to="/groups">Mis Grupos</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      ) : (
-        <div className="text-center">
-          <Card className="max-w-md mx-auto">
-            <CardHeader>
-              <CardTitle>Comienza Ahora</CardTitle>
-              <CardDescription>
-                Crea tu cuenta gratis y empieza a predecir
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <Button asChild className="w-full">
-                <Link to="/register">Crear Cuenta</Link>
-              </Button>
-              <Button asChild variant="outline" className="w-full">
-                <Link to="/login">Ya tengo cuenta</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+        <Card className="hover:shadow-lg transition-shadow opacity-60">
+          <CardHeader>
+            <CardTitle>Ver Ranking</CardTitle>
+            <CardDescription>
+              Mira tu posicion en el leaderboard
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline" className="w-full" size="lg" disabled>
+              <span>Proximamente</span>
+            </Button>
+          </CardContent>
+        </Card>
 
-      <div className="mt-16 max-w-3xl mx-auto">
-        <h2 className="text-2xl font-bold text-center mb-8">Como Funciona</h2>
-        <div className="grid md:grid-cols-3 gap-8 text-center">
-          <div>
-            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-xl font-bold text-primary">1</span>
-            </div>
-            <h3 className="font-semibold mb-2">Predice los Grupos</h3>
-            <p className="text-sm text-muted-foreground">
-              Ordena como crees que quedaran los equipos en cada grupo
-            </p>
-          </div>
-          <div>
-            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-xl font-bold text-primary">2</span>
-            </div>
-            <h3 className="font-semibold mb-2">Escoge Ganadores</h3>
-            <p className="text-sm text-muted-foreground">
-              En las eliminatorias, predice quien ganara cada partido
-            </p>
-          </div>
-          <div>
-            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-xl font-bold text-primary">3</span>
-            </div>
-            <h3 className="font-semibold mb-2">Gana Puntos</h3>
-            <p className="text-sm text-muted-foreground">
-              Acumula puntos por cada prediccion correcta
-            </p>
-          </div>
-        </div>
+        <Card className="hover:shadow-lg transition-shadow opacity-60">
+          <CardHeader>
+            <CardTitle>Mis Grupos</CardTitle>
+            <CardDescription>
+              Compite con amigos y familia
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline" className="w-full" size="lg" disabled>
+              <span>Proximamente</span>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="mt-16 max-w-2xl mx-auto">

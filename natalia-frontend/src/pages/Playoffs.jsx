@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { playoffs } from '@/data/playoffsData';
 
 export default function Playoffs() {
+  const navigate = useNavigate();
   const [selections, setSelections] = useState({});
   const [saved, setSaved] = useState(false);
 
@@ -43,30 +45,58 @@ export default function Playoffs() {
     setSaved(false);
   };
 
-  const handleSave = () => {
+  // Check if all playoffs are complete
+  const isComplete = () => {
+    return playoffs.every(playoff => {
+      const sel = selections[playoff.id];
+      if (!sel?.final) return false;
+      return true;
+    });
+  };
+
+  const handleContinue = () => {
     localStorage.setItem('natalia_playoffs', JSON.stringify(selections));
     setSaved(true);
-    setTimeout(() => setSaved(false), 3000);
+    setTimeout(() => {
+      navigate('/grupos');
+    }, 500);
   };
 
   const getTeamById = (playoff, teamId) => {
     return playoff.teams.find(t => t.id === teamId);
   };
 
-  const getWinner = (playoffId, round) => {
-    return selections[playoffId]?.[round];
-  };
+  const completedCount = playoffs.filter(p => selections[p.id]?.final).length;
 
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Progress indicator */}
+      <div className="flex items-center gap-2 mb-6 text-sm text-muted-foreground">
+        <Link to="/" className="hover:text-foreground">Inicio</Link>
+        <span>/</span>
+        <span className="font-medium text-foreground">Paso 1: Repechajes</span>
+        <span>/</span>
+        <span>Paso 2: Grupos</span>
+        <span>/</span>
+        <span>Paso 3: Terceros</span>
+      </div>
+
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Playoffs / Repechajes</h1>
+          <h1 className="text-2xl font-bold">Repechajes Intercontinentales</h1>
           <p className="text-muted-foreground">Marzo 2026</p>
         </div>
-        <Button onClick={handleSave}>
-          Guardar Selecciones
-        </Button>
+        <div className="flex items-center gap-3">
+          <Badge variant={isComplete() ? 'default' : 'secondary'}>
+            {completedCount}/{playoffs.length} completos
+          </Badge>
+          <Button
+            onClick={handleContinue}
+            disabled={!isComplete()}
+          >
+            Continuar
+          </Button>
+        </div>
       </div>
 
       {saved && (
@@ -77,13 +107,16 @@ export default function Playoffs() {
         </Alert>
       )}
 
-      <p className="text-muted-foreground mb-6">
-        Selecciona quien crees que ganara cada partido de repechaje.
-        El ganador de cada playoff ira al grupo indicado.
-      </p>
+      {!isComplete() && (
+        <Alert className="mb-6">
+          <AlertDescription>
+            Selecciona el ganador de cada repechaje para continuar. El ganador de cada uno ira al grupo indicado.
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* UEFA Playoffs */}
-      <h2 className="text-xl font-semibold mb-4">Playoffs UEFA (Europa)</h2>
+      <h2 className="text-xl font-semibold mb-4">Repechajes UEFA (Europa)</h2>
       <div className="grid md:grid-cols-2 gap-6 mb-8">
         {playoffs.filter(p => p.confederation === 'UEFA').map(playoff => (
           <PlayoffBracket
@@ -97,7 +130,7 @@ export default function Playoffs() {
       </div>
 
       {/* FIFA Playoffs */}
-      <h2 className="text-xl font-semibold mb-4">Playoffs Intercontinentales FIFA</h2>
+      <h2 className="text-xl font-semibold mb-4">Repechajes Intercontinentales FIFA</h2>
       <div className="grid md:grid-cols-2 gap-6">
         {playoffs.filter(p => p.confederation === 'FIFA').map(playoff => (
           <PlayoffBracketFIFA
@@ -108,6 +141,20 @@ export default function Playoffs() {
             getTeamById={(teamId) => getTeamById(playoff, teamId)}
           />
         ))}
+      </div>
+
+      {/* Bottom navigation */}
+      <div className="flex justify-between mt-8 pt-6 border-t">
+        <Button variant="outline" asChild>
+          <Link to="/">Volver al Inicio</Link>
+        </Button>
+        <Button
+          onClick={handleContinue}
+          disabled={!isComplete()}
+          size="lg"
+        >
+          Continuar a Grupos
+        </Button>
       </div>
     </div>
   );
@@ -139,10 +186,17 @@ function PlayoffBracket({ playoff, selections, onSelectWinner, getTeamById }) {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg">{playoff.name}</CardTitle>
-        <CardDescription>
-          Ganador va al Grupo {playoff.destinationGroup}
-        </CardDescription>
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-lg">{playoff.name}</CardTitle>
+            <CardDescription>
+              Ganador va al Grupo {playoff.destinationGroup}
+            </CardDescription>
+          </div>
+          {finalWinner && (
+            <Badge className="bg-green-500">Completo</Badge>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="flex gap-4">
@@ -239,7 +293,6 @@ function PlayoffBracket({ playoff, selections, onSelectWinner, getTeamById }) {
 function PlayoffBracketFIFA({ playoff, selections, onSelectWinner, getTeamById }) {
   const semi1Winner = selections.semi1;
   const finalWinner = selections.final;
-  const waitingTeam = getTeamById(playoff.bracket.finalTeamA);
 
   const TeamButton = ({ teamId, round, isSelected, isEliminated }) => {
     const team = getTeamById(teamId);
@@ -262,10 +315,17 @@ function PlayoffBracketFIFA({ playoff, selections, onSelectWinner, getTeamById }
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg">{playoff.name}</CardTitle>
-        <CardDescription>
-          Ganador va al Grupo {playoff.destinationGroup}
-        </CardDescription>
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-lg">{playoff.name}</CardTitle>
+            <CardDescription>
+              Ganador va al Grupo {playoff.destinationGroup}
+            </CardDescription>
+          </div>
+          {finalWinner && (
+            <Badge className="bg-green-500">Completo</Badge>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="flex gap-4">
