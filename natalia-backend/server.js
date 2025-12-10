@@ -18,6 +18,7 @@ app.use('/api/users', require('./routes/users'));
 app.use('/api/teams', require('./routes/teams'));
 app.use('/api/matches', require('./routes/matches'));
 app.use('/api/predictions', require('./routes/predictions'));
+app.use('/api/prediction-sets', require('./routes/predictionSets'));
 app.use('/api/groups', require('./routes/groups'));
 app.use('/api/leaderboard', require('./routes/leaderboard'));
 

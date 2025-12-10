@@ -1,22 +1,46 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { playoffs } from '@/data/playoffsData';
+import { predictionsAPI } from '@/services/api';
 
 export default function Playoffs() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const setId = searchParams.get('setId');
+
   const [selections, setSelections] = useState({});
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const savedSelections = localStorage.getItem('natalia_playoffs');
-    if (savedSelections) {
-      setSelections(JSON.parse(savedSelections));
-    }
-  }, []);
+    const loadSelections = async () => {
+      // Si hay setId, solo cargar del servidor (sin fallback a localStorage)
+      if (setId) {
+        try {
+          const response = await predictionsAPI.getPlayoffs(setId);
+          if (response.data && Object.keys(response.data).length > 0) {
+            setSelections(response.data);
+          }
+          // Si no hay datos en servidor, empezar en blanco (no cargar localStorage)
+        } catch (err) {
+          // Error de servidor, empezar en blanco
+          console.error('Error loading playoffs:', err);
+        }
+      } else {
+        // Sin setId: comportamiento legacy con localStorage
+        const savedSelections = localStorage.getItem('natalia_playoffs');
+        if (savedSelections) {
+          setSelections(JSON.parse(savedSelections));
+        }
+      }
+    };
+    loadSelections();
+  }, [setId]);
 
   const selectWinner = (playoffId, round, winnerId) => {
     setSelections(prev => {
@@ -54,12 +78,29 @@ export default function Playoffs() {
     });
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
+    setSaving(true);
+    setError(null);
+
+    // Guardar en localStorage primero
     localStorage.setItem('natalia_playoffs', JSON.stringify(selections));
-    setSaved(true);
-    setTimeout(() => {
-      navigate('/grupos');
-    }, 500);
+
+    const nextUrl = setId ? `/grupos?setId=${setId}` : '/grupos';
+
+    try {
+      await predictionsAPI.savePlayoffs(selections, setId);
+      setSaved(true);
+      setTimeout(() => {
+        navigate(nextUrl);
+      }, 500);
+    } catch (err) {
+      setError('Error al guardar en servidor - Continuando con guardado local');
+      setTimeout(() => {
+        navigate(nextUrl);
+      }, 1500);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const getTeamById = (playoff, teamId) => {
@@ -92,9 +133,9 @@ export default function Playoffs() {
           </Badge>
           <Button
             onClick={handleContinue}
-            disabled={!isComplete()}
+            disabled={!isComplete() || saving}
           >
-            Continuar
+            {saving ? 'Guardando...' : 'Continuar'}
           </Button>
         </div>
       </div>
@@ -104,6 +145,12 @@ export default function Playoffs() {
           <AlertDescription>
             Selecciones guardadas correctamente
           </AlertDescription>
+        </Alert>
+      )}
+
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
@@ -150,10 +197,10 @@ export default function Playoffs() {
         </Button>
         <Button
           onClick={handleContinue}
-          disabled={!isComplete()}
+          disabled={!isComplete() || saving}
           size="lg"
         >
-          Continuar a Grupos
+          {saving ? 'Guardando...' : 'Continuar a Grupos'}
         </Button>
       </div>
     </div>

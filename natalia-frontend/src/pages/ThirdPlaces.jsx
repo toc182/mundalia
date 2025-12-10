@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { mockTeams, getAllGroups } from '@/data/mockData';
 import { playoffs } from '@/data/playoffsData';
 import { getThirdPlaceCombination } from '@/data/thirdPlaceCombinations';
+import { predictionsAPI } from '@/services/api';
 
 // Mapeo de playoff ID a team ID en mockTeams
 const playoffToTeamId = {
@@ -20,27 +21,70 @@ const playoffToTeamId = {
 
 export default function ThirdPlaces() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const setId = searchParams.get('setId');
+
   const [predictions, setPredictions] = useState({});
   const [playoffSelections, setPlayoffSelections] = useState({});
   const [bestThirdPlaces, setBestThirdPlaces] = useState([]);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const savedPredictions = localStorage.getItem('natalia_predictions');
-    if (savedPredictions) {
-      setPredictions(JSON.parse(savedPredictions));
-    }
+    const loadData = async () => {
+      // Si hay setId, solo cargar del servidor (sin fallback a localStorage)
+      if (setId) {
+        try {
+          // Cargar predicciones de grupos del servidor
+          const groupsResponse = await predictionsAPI.getMy(setId);
+          if (groupsResponse.data?.groupPredictions?.length > 0) {
+            const grouped = {};
+            groupsResponse.data.groupPredictions.forEach(gp => {
+              if (!grouped[gp.group_letter]) {
+                grouped[gp.group_letter] = [];
+              }
+              grouped[gp.group_letter][gp.predicted_position - 1] = gp.team_id;
+            });
+            setPredictions(grouped);
+          }
 
-    const savedPlayoffs = localStorage.getItem('natalia_playoffs');
-    if (savedPlayoffs) {
-      setPlayoffSelections(JSON.parse(savedPlayoffs));
-    }
+          // Cargar playoffs del servidor
+          const playoffsResponse = await predictionsAPI.getPlayoffs(setId);
+          if (playoffsResponse.data && Object.keys(playoffsResponse.data).length > 0) {
+            setPlayoffSelections(playoffsResponse.data);
+          }
 
-    const savedThirdPlaces = localStorage.getItem('natalia_best_third_places');
-    if (savedThirdPlaces) {
-      setBestThirdPlaces(JSON.parse(savedThirdPlaces));
-    }
-  }, []);
+          // Cargar terceros del servidor
+          const thirdResponse = await predictionsAPI.getThirdPlaces(setId);
+          if (thirdResponse.data?.selectedGroups) {
+            const groups = thirdResponse.data.selectedGroups.split('');
+            setBestThirdPlaces(groups);
+          }
+          // Si no hay datos, empezar en blanco
+        } catch (err) {
+          console.error('Error loading data:', err);
+        }
+      } else {
+        // Sin setId: comportamiento legacy con localStorage
+        const savedPredictions = localStorage.getItem('natalia_predictions');
+        if (savedPredictions) {
+          setPredictions(JSON.parse(savedPredictions));
+        }
+
+        const savedPlayoffs = localStorage.getItem('natalia_playoffs');
+        if (savedPlayoffs) {
+          setPlayoffSelections(JSON.parse(savedPlayoffs));
+        }
+
+        const savedThirdPlaces = localStorage.getItem('natalia_best_third_places');
+        if (savedThirdPlaces) {
+          setBestThirdPlaces(JSON.parse(savedThirdPlaces));
+        }
+      }
+    };
+    loadData();
+  }, [setId]);
 
   // Get the winning team from a playoff
   const getPlayoffWinner = (playoffId) => {
@@ -100,12 +144,31 @@ export default function ThirdPlaces() {
 
   const isComplete = bestThirdPlaces.length === 8 && thirdPlaceCombination;
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
+    setSaving(true);
+    setError(null);
+
+    // Guardar en localStorage primero
     localStorage.setItem('natalia_best_third_places', JSON.stringify(bestThirdPlaces));
-    setSaved(true);
-    setTimeout(() => {
-      navigate('/eliminatorias');
-    }, 500);
+
+    const nextUrl = setId ? `/eliminatorias?setId=${setId}` : '/eliminatorias';
+
+    try {
+      // Convertir array a string: ['A','B','C'] -> 'ABC'
+      const selectedGroups = bestThirdPlaces.sort().join('');
+      await predictionsAPI.saveThirdPlaces(selectedGroups, setId);
+      setSaved(true);
+      setTimeout(() => {
+        navigate(nextUrl);
+      }, 500);
+    } catch (err) {
+      setError('Error al guardar en servidor - Continuando con guardado local');
+      setTimeout(() => {
+        navigate(nextUrl);
+      }, 1500);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -129,8 +192,8 @@ export default function ThirdPlaces() {
           <Badge variant={isComplete ? 'default' : 'secondary'}>
             {bestThirdPlaces.length}/8 seleccionados
           </Badge>
-          <Button onClick={handleFinish} disabled={!isComplete}>
-            Continuar
+          <Button onClick={handleFinish} disabled={!isComplete || saving}>
+            {saving ? 'Guardando...' : 'Continuar'}
           </Button>
         </div>
       </div>
@@ -140,6 +203,12 @@ export default function ThirdPlaces() {
           <AlertDescription>
             Seleccion guardada. Continuando a eliminatorias...
           </AlertDescription>
+        </Alert>
+      )}
+
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
@@ -247,10 +316,10 @@ export default function ThirdPlaces() {
       {/* Bottom navigation */}
       <div className="flex justify-between mt-8 pt-6 border-t">
         <Button variant="outline" asChild>
-          <Link to="/grupos">Volver a Grupos</Link>
+          <Link to={setId ? `/grupos?setId=${setId}` : '/grupos'}>Volver a Grupos</Link>
         </Button>
-        <Button onClick={handleFinish} disabled={!isComplete} size="lg">
-          Continuar a Eliminatorias
+        <Button onClick={handleFinish} disabled={!isComplete || saving} size="lg">
+          {saving ? 'Guardando...' : 'Continuar a Eliminatorias'}
         </Button>
       </div>
     </div>

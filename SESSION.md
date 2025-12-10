@@ -4,154 +4,187 @@
 
 ---
 
-## COMPLETADO: Reestructurar flujo de la aplicacion
+## COMPLETADO: Sistema de Multiples Predicciones
 
-### Cambios implementados
+**Nueva funcionalidad:** Los usuarios pueden crear multiples predicciones con nombres personalizados.
 
-#### 1. Login eliminado temporalmente
-- [x] Quitada pagina de login
-- [x] App va directo a pagina principal
-- [ ] Restaurar login al final (pendiente)
-
-#### 2. Pagina principal (Home)
-- [x] Eliminado Navbar del top
-- [x] 4 opciones en cards:
-  - "Hacer Predicciones" -> /repechajes
-  - "Ver Mis Predicciones" -> /mis-predicciones
-  - "Ver Ranking" (disabled)
-  - "Mis Grupos" (disabled)
-
-#### 3. Flujo "Hacer Predicciones" (wizard de 3 pasos)
-
-**Paso 1: Repechajes Intercontinentales** (`/repechajes`)
-- [x] Renombrado a "Repechajes Intercontinentales"
-- [x] Boton "Continuar" con validacion
-- [x] Progreso breadcrumb en header
-- [x] Navegacion a `/grupos`
-
-**Paso 2: Predicciones de Grupos** (`/grupos`)
-- [x] Eliminada seccion de terceros
-- [x] Boton "Continuar a Terceros"
-- [x] Progreso breadcrumb
-- [x] Navegacion a `/terceros`
-
-**Paso 3: Mejores Terceros Lugares** (`/terceros`)
-- [x] Nueva pagina ThirdPlaces.jsx
-- [x] Seleccion de 8 de 12 terceros
-- [x] Validacion contra 495 combinaciones FIFA
-- [x] Muestra emparejamientos cuando combinacion valida
-- [x] Boton "Continuar" navega a eliminatorias
-
-**Paso 4: Eliminatorias Completas** (`/eliminatorias`)
-- [x] Nueva pagina Knockout.jsx con todas las rondas
-- [x] Estructura basada en knockoutBracket.js (tabla oficial FIFA)
-- [x] Round of 32: 16 partidos (M73-M88)
-- [x] Round of 16: 8 partidos (M89-M96)
-- [x] Cuartos de Final: 4 partidos (M97-M100)
-- [x] Semifinales: 2 partidos (M101-M102)
-- [x] Tercer Lugar: 1 partido (M103)
-- [x] Final: 1 partido (M104)
-- [x] Tabs para navegar entre rondas
-- [x] Dependencias: cambiar ganador limpia predicciones dependientes
-- [x] Display de campeon al seleccionar ganador de la final
-- [x] Total: 32 partidos para completar
-
-#### 4. Ver Mis Predicciones (`/mis-predicciones`)
-- [x] Nueva pagina MyPredictions.jsx
-- [x] Resumen de todas las predicciones guardadas
-- [x] Muestra repechajes, grupos y terceros
-- [x] Link para editar predicciones
-
-### Rutas actuales
-| Ruta | Pagina | Descripcion |
-|------|--------|-------------|
-| `/` | Home | 4 opciones principales |
-| `/repechajes` | Playoffs | Paso 1 - Repechajes |
-| `/grupos` | Predictions | Paso 2 - Grupos |
-| `/terceros` | ThirdPlaces | Paso 3 - Terceros |
-| `/eliminatorias` | Knockout | Paso 4 - Round of 32 |
-| `/mis-predicciones` | MyPredictions | Ver resumen |
-| `/ranking` | Leaderboard | (futuro) |
-| `/mis-grupos` | Groups | (futuro) |
+### Estado de las Fases
+- [x] Fase 1: Infraestructura API (api.js, vite.config)
+- [x] Fase 2: Autenticacion (AuthContext, Login, Register, ProtectedRoute)
+- [x] Fase 3: Predicciones (TODAS conectadas con API)
+- [x] **Fase 3.5: Multiples Predicciones (NUEVO)**
+- [ ] Fase 4: Leaderboard
+- [ ] Fase 5: Grupos privados
+- [ ] Fase 6: Ajustes backend (parcialmente completado)
 
 ---
 
-## COMPLETADO: 495 combinaciones terceros lugares
+## Nueva Funcionalidad: Prediction Sets
 
-### Archivo: `natalia-frontend/src/data/thirdPlaceCombinations.js`
-- 495 combinaciones COMPLETADAS en formato compacto
-- Reducido de 610 lineas a 183 lineas (~70% reduccion)
-- Lazy loading implementado para mejor rendimiento
+### Tabla Principal
+```sql
+CREATE TABLE prediction_sets (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(100) NOT NULL,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Tablas Modificadas
+Agregada columna `prediction_set_id` a:
+- `group_predictions`
+- `playoff_predictions`
+- `third_place_predictions`
+- `knockout_predictions`
+
+### Nuevos Endpoints
+
+| Metodo | Ruta | Descripcion |
+|--------|------|-------------|
+| GET | `/api/prediction-sets` | Lista todos los sets del usuario |
+| GET | `/api/prediction-sets/:id` | Detalle de un set con todas sus predicciones |
+| POST | `/api/prediction-sets` | Crear nuevo set |
+| PUT | `/api/prediction-sets/:id` | Renombrar set |
+| DELETE | `/api/prediction-sets/:id` | Eliminar set |
+| POST | `/api/prediction-sets/:id/duplicate` | Duplicar un set |
+
+### Endpoints de Predicciones Actualizados
+Todos los endpoints de `/api/predictions/*` ahora aceptan `setId` como parametro opcional:
+- Query param para GET: `?setId=X`
+- Body param para POST: `{ ..., setId: X }`
 
 ---
 
-## URLs de Produccion
+## Nuevas Paginas Frontend
+
+### MyPredictions.jsx (reescrita completamente)
+- Lista todas las predicciones del usuario
+- Muestra progreso de cada prediccion (repechajes, grupos, terceros, bracket)
+- Botones: Ver, Editar, Duplicar, Renombrar, Eliminar
+- Dialog para crear nueva prediccion con nombre
+
+### PredictionDetail.jsx (NUEVA)
+- Ruta: `/prediccion/:id`
+- Muestra detalle completo de una prediccion especifica
+- Campeon, grupos, terceros, eliminatorias
+
+---
+
+## Flujo de Usuario Actualizado
+
+```
+/mis-predicciones
+     |
+     +-> "Nueva Prediccion" -> Dialog nombre
+     |         |
+     |         +-> "Crear y Comenzar" -> /repechajes?setId=X
+     |
+     +-> Card de prediccion existente
+             |
+             +-> "Ver" -> /prediccion/X
+             +-> "Editar" -> /repechajes?setId=X
+             +-> "Duplicar" -> Crea copia
+             +-> "Renombrar" -> Dialog
+             +-> "Eliminar" -> Confirmacion
+
+/repechajes?setId=X
+     |
+     v
+/grupos?setId=X
+     |
+     v
+/terceros?setId=X
+     |
+     v
+/eliminatorias?setId=X
+     |
+     +-> "Finalizar" -> /prediccion/X (o /mis-predicciones si no hay setId)
+```
+
+---
+
+## Archivos Creados/Modificados (Sesion Actual)
+
+### Backend
+| Archivo | Cambio |
+|---------|--------|
+| `routes/predictionSets.js` | NUEVO - 6 endpoints para manejar sets |
+| `routes/predictions.js` | Actualizado - Todos los endpoints soportan setId |
+| `server.js` | Agregada ruta /api/prediction-sets |
+
+### Frontend
+| Archivo | Cambio |
+|---------|--------|
+| `src/services/api.js` | Agregado predictionSetsAPI + actualizado predictionsAPI con setId |
+| `src/pages/MyPredictions.jsx` | REESCRITO - Lista de prediction sets |
+| `src/pages/PredictionDetail.jsx` | NUEVO - Detalle de una prediccion |
+| `src/pages/Playoffs.jsx` | Actualizado - Lee/guarda con setId |
+| `src/pages/Predictions.jsx` | Actualizado - Lee/guarda con setId |
+| `src/pages/ThirdPlaces.jsx` | Actualizado - Lee/guarda con setId |
+| `src/pages/Knockout.jsx` | Actualizado - Lee/guarda con setId |
+| `src/App.jsx` | Nueva ruta /prediccion/:id |
+
+---
+
+## URLs y Puertos
+
+### Desarrollo Local
+- **Frontend:** http://localhost:5174
+- **Backend:** http://localhost:5001
+
+### Produccion
 - **Frontend (Vercel):** https://mundalia.vercel.app
 - **Backend (Railway):** https://mundalia-production.up.railway.app
-- **GitHub:** https://github.com/toc182/mundalia
-
-## Puertos Locales
-- **Frontend:** 5174
-- **Backend:** 5000
 
 ---
 
-## Archivos Clave
+## Base de Datos (Railway PostgreSQL)
 
-| Archivo | Proposito |
-|---------|-----------|
-| `CLAUDE.md` | Documentacion tecnica completa |
-| `SESSION.md` | Estado actual (este archivo) |
-| `combinations.csv` | 495 combinaciones en formato CSV |
-| `src/data/thirdPlaceCombinations.js` | 495 combinaciones (formato compacto) |
-| `src/pages/Predictions.jsx` | Predicciones grupos |
-| `src/pages/Playoffs.jsx` | Repechajes intercontinentales |
+### Tablas
+| Tabla | Estado | Descripcion |
+|-------|--------|-------------|
+| `users` | OK | Usuarios registrados |
+| `teams` | OK | 48 equipos del Mundial |
+| `prediction_sets` | NUEVA | Sets de predicciones con nombre |
+| `group_predictions` | OK + prediction_set_id | Predicciones de grupos |
+| `playoff_predictions` | OK + prediction_set_id | Predicciones de repechajes |
+| `third_place_predictions` | OK + prediction_set_id | Predicciones de terceros lugares |
+| `knockout_predictions` | OK + prediction_set_id | Predicciones de eliminatorias |
+| `matches` | Vacia | Partidos (no necesaria actualmente) |
+| `match_predictions` | OK | Predicciones de partidos (legacy) |
+| `private_groups` | OK | Grupos privados |
+| `private_group_members` | OK | Miembros de grupos |
+| `user_scores` | OK | Puntuaciones |
+| `settings` | OK | Configuracion (deadlines) |
+
+---
+
+## Comportamiento de Guardado
+
+Todas las paginas siguen el mismo patron:
+1. **Al cargar:** Intenta API primero (con setId si existe), fallback a localStorage
+2. **Al guardar:** Guarda en localStorage primero, luego intenta API (con setId)
+3. **Si API falla:** Muestra error pero continua (graceful degradation)
+4. **Navegacion:** Mantiene setId en query params entre pasos del wizard
 
 ---
 
 ## TODO Pendiente
 
-### Alta Prioridad
-1. [x] Eliminar login temporalmente
-2. [x] Reestructurar Home con 4 botones
-3. [x] Modificar Playoffs (textos + boton Continuar)
-4. [x] Modificar Predictions (quitar terceros + boton Continuar)
-5. [x] Crear pagina ThirdPlaces.jsx
-6. [x] Crear pagina MyPredictions.jsx
-7. [x] Implementar navegacion wizard entre pasos
+### Completado
+- [x] Fase 1: Infraestructura API
+- [x] Fase 2: Autenticacion
+- [x] Fase 3: Predicciones (todas las paginas)
+- [x] Fase 3.5: Multiples predicciones
 
-### Proxima Prioridad
-- [x] Implementar pagina Knockout.jsx con bracket Round of 32
-- [x] Implementar Round of 16, Cuartos, Semis y Final
-- [ ] Conectar frontend con backend real
-- [ ] Panel admin para cargar resultados
-- [ ] Restaurar sistema de login/autenticacion
+### Pendiente (Media Prioridad)
+- [ ] Fase 4: Leaderboard funcional (GET /api/leaderboard)
+- [ ] Fase 5: Grupos privados (crear, unirse, ver ranking)
+- [ ] Panel admin para cargar resultados reales
 
----
-
-## Flujo Actual
-
-```
-Home ─────────────────────────────────────────────────────
-  │
-  ├─> "Hacer Predicciones" ─> /repechajes
-  │         │
-  │         ├─> Paso 1: Repechajes Intercontinentales
-  │         │         [Continuar]
-  │         │             │
-  │         │             v
-  │         ├─> Paso 2: Predicciones de Grupos (/grupos)
-  │         │         [Continuar a Terceros]
-  │         │             │
-  │         │             v
-  │         ├─> Paso 3: Mejores Terceros (/terceros)
-  │         │         [Continuar a Eliminatorias]
-  │         │             │
-  │         │             v
-  │         └─> Paso 4: Round of 32 (/eliminatorias)
-  │                   [Finalizar] -> Home
-  │
-  └─> "Ver Mis Predicciones" ─> /mis-predicciones
-              │
-              └─> Resumen de todas las predicciones
-```
+### Pendiente (Baja Prioridad)
+- [ ] Deploy a produccion con cambios actuales
+- [ ] Calcular puntuaciones automaticamente

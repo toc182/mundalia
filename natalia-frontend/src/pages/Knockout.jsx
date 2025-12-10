@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,7 @@ import {
   finalMatch
 } from '@/data/knockoutBracket';
 import { getThirdPlaceAssignments } from '@/data/thirdPlaceCombinations';
+import { predictionsAPI } from '@/services/api';
 
 // Mapeo de playoff ID a team ID en mockTeams
 const playoffToTeamId = {
@@ -28,34 +29,83 @@ const playoffToTeamId = {
 
 export default function Knockout() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const setId = searchParams.get('setId');
+
   const [predictions, setPredictions] = useState({});
   const [playoffSelections, setPlayoffSelections] = useState({});
   const [bestThirdPlaces, setBestThirdPlaces] = useState([]);
   const [knockoutPredictions, setKnockoutPredictions] = useState({});
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
   const [activeRound, setActiveRound] = useState('r32');
 
   useEffect(() => {
-    const savedPredictions = localStorage.getItem('natalia_predictions');
-    if (savedPredictions) {
-      setPredictions(JSON.parse(savedPredictions));
-    }
+    const loadData = async () => {
+      // Si hay setId, solo cargar del servidor (sin fallback a localStorage)
+      if (setId) {
+        try {
+          // Cargar predicciones de grupos del servidor
+          const groupsResponse = await predictionsAPI.getMy(setId);
+          if (groupsResponse.data?.groupPredictions?.length > 0) {
+            const grouped = {};
+            groupsResponse.data.groupPredictions.forEach(gp => {
+              if (!grouped[gp.group_letter]) {
+                grouped[gp.group_letter] = [];
+              }
+              grouped[gp.group_letter][gp.predicted_position - 1] = gp.team_id;
+            });
+            setPredictions(grouped);
+          }
 
-    const savedPlayoffs = localStorage.getItem('natalia_playoffs');
-    if (savedPlayoffs) {
-      setPlayoffSelections(JSON.parse(savedPlayoffs));
-    }
+          // Cargar playoffs del servidor
+          const playoffsResponse = await predictionsAPI.getPlayoffs(setId);
+          if (playoffsResponse.data && Object.keys(playoffsResponse.data).length > 0) {
+            setPlayoffSelections(playoffsResponse.data);
+          }
 
-    const savedThirdPlaces = localStorage.getItem('natalia_best_third_places');
-    if (savedThirdPlaces) {
-      setBestThirdPlaces(JSON.parse(savedThirdPlaces));
-    }
+          // Cargar terceros del servidor
+          const thirdResponse = await predictionsAPI.getThirdPlaces(setId);
+          if (thirdResponse.data?.selectedGroups) {
+            const groups = thirdResponse.data.selectedGroups.split('');
+            setBestThirdPlaces(groups);
+          }
 
-    const savedKnockout = localStorage.getItem('natalia_knockout');
-    if (savedKnockout) {
-      setKnockoutPredictions(JSON.parse(savedKnockout));
-    }
-  }, []);
+          // Cargar knockout del servidor
+          const knockoutResponse = await predictionsAPI.getKnockout(setId);
+          if (knockoutResponse.data && Object.keys(knockoutResponse.data).length > 0) {
+            setKnockoutPredictions(knockoutResponse.data);
+          }
+          // Si no hay datos, empezar en blanco
+        } catch (err) {
+          console.error('Error loading data:', err);
+        }
+      } else {
+        // Sin setId: comportamiento legacy con localStorage
+        const savedPredictions = localStorage.getItem('natalia_predictions');
+        if (savedPredictions) {
+          setPredictions(JSON.parse(savedPredictions));
+        }
+
+        const savedPlayoffs = localStorage.getItem('natalia_playoffs');
+        if (savedPlayoffs) {
+          setPlayoffSelections(JSON.parse(savedPlayoffs));
+        }
+
+        const savedThirdPlaces = localStorage.getItem('natalia_best_third_places');
+        if (savedThirdPlaces) {
+          setBestThirdPlaces(JSON.parse(savedThirdPlaces));
+        }
+
+        const savedKnockout = localStorage.getItem('natalia_knockout');
+        if (savedKnockout) {
+          setKnockoutPredictions(JSON.parse(savedKnockout));
+        }
+      }
+    };
+    loadData();
+  }, [setId]);
 
   // Get the winning team from a playoff
   const getPlayoffWinner = (playoffId) => {
@@ -314,14 +364,6 @@ export default function Knockout() {
   const totalMatches = 16 + 8 + 4 + 2 + 1 + 1; // 32
   const isComplete = totalComplete === totalMatches;
 
-  const handleContinue = () => {
-    localStorage.setItem('natalia_knockout', JSON.stringify(knockoutPredictions));
-    setSaved(true);
-    setTimeout(() => {
-      navigate('/');
-    }, 1000);
-  };
-
   // Check if predictions are missing
   const missingPredictions = Object.keys(predictions).length === 0;
   const missingThirdPlaces = bestThirdPlaces.length !== 8;
@@ -345,12 +387,49 @@ export default function Knockout() {
   }
 
   const rounds = [
-    { id: 'r32', label: 'Round of 32', count: r32Complete, total: 16 },
-    { id: 'r16', label: 'Round of 16', count: r16Complete, total: 8 },
-    { id: 'qf', label: 'Cuartos', count: qfComplete, total: 4 },
-    { id: 'sf', label: 'Semis', count: sfComplete, total: 2 },
-    { id: 'final', label: 'Final', count: thirdPlaceComplete + finalComplete, total: 2 },
+    { id: 'r32', label: 'Round of 32', count: r32Complete, total: 16, next: 'r16' },
+    { id: 'r16', label: 'Round of 16', count: r16Complete, total: 8, next: 'qf' },
+    { id: 'qf', label: 'Cuartos', count: qfComplete, total: 4, next: 'sf' },
+    { id: 'sf', label: 'Semis', count: sfComplete, total: 2, next: 'final' },
+    { id: 'final', label: 'Final', count: thirdPlaceComplete + finalComplete, total: 2, next: null },
   ];
+
+  const currentRound = rounds.find(r => r.id === activeRound);
+  const isCurrentRoundComplete = currentRound?.count === currentRound?.total;
+
+  const handleNextRound = () => {
+    // Save progress
+    localStorage.setItem('natalia_knockout', JSON.stringify(knockoutPredictions));
+    // Go to next round
+    if (currentRound?.next) {
+      setActiveRound(currentRound.next);
+    }
+  };
+
+  const handleFinish = async () => {
+    setSaving(true);
+    setError(null);
+
+    // Guardar en localStorage primero
+    localStorage.setItem('natalia_knockout', JSON.stringify(knockoutPredictions));
+
+    const nextUrl = setId ? `/prediccion/${setId}` : '/mis-predicciones';
+
+    try {
+      await predictionsAPI.saveKnockout(knockoutPredictions, setId);
+      setSaved(true);
+      setTimeout(() => {
+        navigate(nextUrl);
+      }, 1000);
+    } catch (err) {
+      setError('Error al guardar en servidor - Continuando con guardado local');
+      setTimeout(() => {
+        navigate(nextUrl);
+      }, 1500);
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -369,14 +448,9 @@ export default function Knockout() {
 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Eliminatorias</h1>
-        <div className="flex items-center gap-3">
-          <Badge variant={isComplete ? 'default' : 'secondary'}>
-            {totalComplete}/{totalMatches} partidos
-          </Badge>
-          <Button onClick={handleContinue} disabled={!isComplete}>
-            Finalizar
-          </Button>
-        </div>
+        <Badge variant={isComplete ? 'default' : 'secondary'}>
+          {totalComplete}/{totalMatches} partidos
+        </Badge>
       </div>
 
       {saved && (
@@ -384,6 +458,12 @@ export default function Knockout() {
           <AlertDescription>
             Predicciones guardadas correctamente. Redirigiendo...
           </AlertDescription>
+        </Alert>
+      )}
+
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
@@ -424,6 +504,15 @@ export default function Knockout() {
               />
             ))}
           </div>
+          <div className="flex justify-end mt-6">
+            <Button
+              onClick={handleNextRound}
+              disabled={!isCurrentRoundComplete}
+              size="lg"
+            >
+              Continuar a Round of 16
+            </Button>
+          </div>
         </>
       )}
 
@@ -442,6 +531,15 @@ export default function Knockout() {
                 showFrom={true}
               />
             ))}
+          </div>
+          <div className="flex justify-end mt-6">
+            <Button
+              onClick={handleNextRound}
+              disabled={!isCurrentRoundComplete}
+              size="lg"
+            >
+              Continuar a Cuartos
+            </Button>
           </div>
         </>
       )}
@@ -462,6 +560,15 @@ export default function Knockout() {
               />
             ))}
           </div>
+          <div className="flex justify-end mt-6">
+            <Button
+              onClick={handleNextRound}
+              disabled={!isCurrentRoundComplete}
+              size="lg"
+            >
+              Continuar a Semifinales
+            </Button>
+          </div>
         </>
       )}
 
@@ -480,6 +587,15 @@ export default function Knockout() {
                 showFrom={true}
               />
             ))}
+          </div>
+          <div className="flex justify-end mt-6">
+            <Button
+              onClick={handleNextRound}
+              disabled={!isCurrentRoundComplete}
+              size="lg"
+            >
+              Continuar a la Final
+            </Button>
           </div>
         </>
       )}
@@ -522,16 +638,24 @@ export default function Knockout() {
               </div>
             </div>
           )}
+
+          {/* Finalizar button */}
+          <div className="flex justify-end mt-6">
+            <Button
+              onClick={handleFinish}
+              disabled={!isCurrentRoundComplete || saving}
+              size="lg"
+            >
+              {saving ? 'Guardando...' : 'Finalizar Predicciones'}
+            </Button>
+          </div>
         </>
       )}
 
-      {/* Bottom navigation */}
-      <div className="flex justify-between mt-8 pt-6 border-t">
+      {/* Bottom navigation - only show back button */}
+      <div className="mt-8 pt-6 border-t">
         <Button variant="outline" asChild>
-          <Link to="/terceros">Volver a Terceros</Link>
-        </Button>
-        <Button onClick={handleContinue} disabled={!isComplete} size="lg">
-          Finalizar Predicciones
+          <Link to={setId ? `/terceros?setId=${setId}` : '/terceros'}>Volver a Terceros</Link>
         </Button>
       </div>
     </div>

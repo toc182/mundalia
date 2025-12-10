@@ -1,113 +1,140 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { mockTeams, getAllGroups } from '@/data/mockData';
-import { playoffs } from '@/data/playoffsData';
-import { getThirdPlaceCombination } from '@/data/thirdPlaceCombinations';
+import { Input } from '@/components/ui/input';
 import {
-  roundOf32Structure,
-  roundOf16Structure,
-  quarterFinalsStructure,
-  semiFinalsStructure,
-  thirdPlaceMatch,
-  finalMatch
-} from '@/data/knockoutBracket';
-
-// Mapeo de playoff ID a team ID en mockTeams
-const playoffToTeamId = {
-  'UEFA_A': 6,
-  'UEFA_B': 23,
-  'UEFA_C': 16,
-  'UEFA_D': 4,
-  'FIFA_1': 42,
-  'FIFA_2': 35,
-};
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { predictionSetsAPI } from '@/services/api';
+import { Plus, Copy, Trash2, Eye, Edit2, Trophy } from 'lucide-react';
 
 export default function MyPredictions() {
-  const [predictions, setPredictions] = useState({});
-  const [playoffSelections, setPlayoffSelections] = useState({});
-  const [bestThirdPlaces, setBestThirdPlaces] = useState([]);
-  const [knockoutPredictions, setKnockoutPredictions] = useState({});
+  const navigate = useNavigate();
+  const [predictionSets, setPredictionSets] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Dialog states
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showRenameDialog, setShowRenameDialog] = useState(false);
+  const [selectedSet, setSelectedSet] = useState(null);
+  const [newName, setNewName] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const savedPredictions = localStorage.getItem('natalia_predictions');
-    if (savedPredictions) {
-      setPredictions(JSON.parse(savedPredictions));
-    }
-
-    const savedPlayoffs = localStorage.getItem('natalia_playoffs');
-    if (savedPlayoffs) {
-      setPlayoffSelections(JSON.parse(savedPlayoffs));
-    }
-
-    const savedThirdPlaces = localStorage.getItem('natalia_best_third_places');
-    if (savedThirdPlaces) {
-      setBestThirdPlaces(JSON.parse(savedThirdPlaces));
-    }
-
-    const savedKnockout = localStorage.getItem('natalia_knockout');
-    if (savedKnockout) {
-      setKnockoutPredictions(JSON.parse(savedKnockout));
-    }
+    loadPredictionSets();
   }, []);
 
-  // Get the winning team from a playoff
-  const getPlayoffWinner = (playoffId) => {
-    const selection = playoffSelections[playoffId];
-    if (!selection?.final) return null;
-    const playoff = playoffs.find(p => p.id === playoffId);
-    if (!playoff) return null;
-    return playoff.teams.find(t => t.id === selection.final);
-  };
-
-  // Get team by ID
-  const getTeamById = (id) => {
-    const team = mockTeams.find(t => t.id === id);
-    if (!team) return null;
-
-    if (team.is_playoff) {
-      const playoffEntry = Object.entries(playoffToTeamId).find(([_, teamId]) => teamId === id);
-      if (playoffEntry) {
-        const playoffId = playoffEntry[0];
-        const winner = getPlayoffWinner(playoffId);
-        if (winner) {
-          return { ...winner, id: team.id, isPlayoffWinner: true };
-        }
-      }
+  const loadPredictionSets = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await predictionSetsAPI.getAll();
+      setPredictionSets(response.data);
+    } catch (err) {
+      setError('Error al cargar predicciones');
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-    return team;
   };
 
-  const groups = getAllGroups();
-  const completedPlayoffs = playoffs.filter(p => playoffSelections[p.id]?.final).length;
-  const completedGroups = groups.filter(g => predictions[g]?.length === 4).length;
-  const thirdPlaceCombination = bestThirdPlaces.length === 8
-    ? getThirdPlaceCombination(bestThirdPlaces)
-    : null;
+  const handleCreate = async () => {
+    if (!newName.trim()) return;
+    setSaving(true);
+    try {
+      const response = await predictionSetsAPI.create(newName.trim());
+      setShowCreateDialog(false);
+      setNewName('');
+      // Navigate to start making predictions with the new set
+      navigate(`/repechajes?setId=${response.data.id}`);
+    } catch (err) {
+      setError('Error al crear prediccion');
+    } finally {
+      setSaving(false);
+    }
+  };
 
-  // Count knockout predictions
-  const r32Count = roundOf32Structure.filter(m => knockoutPredictions[m.matchId]).length;
-  const r16Count = roundOf16Structure.filter(m => knockoutPredictions[m.matchId]).length;
-  const qfCount = quarterFinalsStructure.filter(m => knockoutPredictions[m.matchId]).length;
-  const sfCount = semiFinalsStructure.filter(m => knockoutPredictions[m.matchId]).length;
-  const thirdPlaceCount = knockoutPredictions[thirdPlaceMatch.matchId] ? 1 : 0;
-  const finalCount = knockoutPredictions[finalMatch.matchId] ? 1 : 0;
-  const totalKnockout = r32Count + r16Count + qfCount + sfCount + thirdPlaceCount + finalCount;
+  const handleDuplicate = async (set) => {
+    setSaving(true);
+    try {
+      await predictionSetsAPI.duplicate(set.id, `${set.name} (copia)`);
+      loadPredictionSets();
+    } catch (err) {
+      setError('Error al duplicar prediccion');
+    } finally {
+      setSaving(false);
+    }
+  };
 
-  const hasPredictions = completedPlayoffs > 0 || completedGroups > 0 || bestThirdPlaces.length > 0 || totalKnockout > 0;
+  const handleDelete = async () => {
+    if (!selectedSet) return;
+    setSaving(true);
+    try {
+      await predictionSetsAPI.delete(selectedSet.id);
+      setShowDeleteDialog(false);
+      setSelectedSet(null);
+      loadPredictionSets();
+    } catch (err) {
+      setError('Error al eliminar prediccion');
+    } finally {
+      setSaving(false);
+    }
+  };
 
-  // Get champion prediction
-  const championId = knockoutPredictions[finalMatch.matchId];
-  const champion = championId ? getTeamById(championId) : null;
+  const handleRename = async () => {
+    if (!selectedSet || !newName.trim()) return;
+    setSaving(true);
+    try {
+      await predictionSetsAPI.update(selectedSet.id, newName.trim());
+      setShowRenameDialog(false);
+      setSelectedSet(null);
+      setNewName('');
+      loadPredictionSets();
+    } catch (err) {
+      setError('Error al renombrar prediccion');
+    } finally {
+      setSaving(false);
+    }
+  };
 
-  // Get third place prediction
-  const thirdPlaceWinnerId = knockoutPredictions[thirdPlaceMatch.matchId];
-  const thirdPlaceWinner = thirdPlaceWinnerId ? getTeamById(thirdPlaceWinnerId) : null;
+  const openDeleteDialog = (set) => {
+    setSelectedSet(set);
+    setShowDeleteDialog(true);
+  };
 
-  if (!hasPredictions) {
+  const openRenameDialog = (set) => {
+    setSelectedSet(set);
+    setNewName(set.name);
+    setShowRenameDialog(true);
+  };
+
+  const getCompletionStatus = (set) => {
+    const groupComplete = set.group_count >= 48; // 12 grupos * 4 equipos
+    const playoffComplete = set.playoff_count === 6;
+    const thirdComplete = set.third_places?.length === 8;
+    const knockoutComplete = set.knockout_count >= 32;
+
+    if (groupComplete && playoffComplete && thirdComplete && knockoutComplete) {
+      return { label: 'Completa', variant: 'default' };
+    }
+    if (set.group_count > 0 || set.playoff_count > 0 || set.third_places || set.knockout_count > 0) {
+      return { label: 'En Progreso', variant: 'secondary' };
+    }
+    return { label: 'Sin Iniciar', variant: 'outline' };
+  };
+
+  // Loading state
+  if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center gap-2 mb-6 text-sm text-muted-foreground">
@@ -115,22 +142,10 @@ export default function MyPredictions() {
           <span>/</span>
           <span className="font-medium text-foreground">Mis Predicciones</span>
         </div>
-
         <h1 className="text-2xl font-bold mb-6">Mis Predicciones</h1>
-
-        <Alert>
-          <AlertDescription>
-            Aun no has hecho ninguna prediccion.
-            <Link to="/repechajes" className="ml-1 underline hover:no-underline">
-              Comienza aqui
-            </Link>
-          </AlertDescription>
-        </Alert>
-
-        <div className="mt-6">
-          <Button asChild>
-            <Link to="/repechajes">Hacer Predicciones</Link>
-          </Button>
+        <div className="text-center py-12">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-solid border-current border-r-transparent"></div>
+          <p className="mt-4 text-muted-foreground">Cargando predicciones...</p>
         </div>
       </div>
     );
@@ -146,314 +161,194 @@ export default function MyPredictions() {
 
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Mis Predicciones</h1>
-        <Button variant="outline" asChild>
-          <Link to="/repechajes">Editar Predicciones</Link>
+        <Button onClick={() => setShowCreateDialog(true)}>
+          <Plus className="w-4 h-4 mr-2" />
+          Nueva Prediccion
         </Button>
       </div>
 
-      {/* Champion Display */}
-      {champion && (
-        <Card className="mb-6 border-yellow-400 bg-yellow-50">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-center gap-4">
-              <span className="text-4xl">🏆</span>
-              <div className="text-center">
-                <p className="text-sm text-muted-foreground mb-1">Tu prediccion de Campeon</p>
-                <div className="flex items-center gap-3">
-                  <img
-                    src={champion.flag_url}
-                    alt={champion.name}
-                    className="w-12 h-8 object-cover rounded shadow"
-                  />
-                  <span className="text-2xl font-bold">{champion.name}</span>
-                </div>
-              </div>
-              <span className="text-4xl">🏆</span>
-            </div>
-          </CardContent>
-        </Card>
+      {error && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
-      {/* Progress Summary */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        <Badge variant={completedPlayoffs === 6 ? 'default' : 'secondary'}>
-          Repechajes: {completedPlayoffs}/6
-        </Badge>
-        <Badge variant={completedGroups === 12 ? 'default' : 'secondary'}>
-          Grupos: {completedGroups}/12
-        </Badge>
-        <Badge variant={bestThirdPlaces.length === 8 && thirdPlaceCombination ? 'default' : 'secondary'}>
-          Terceros: {bestThirdPlaces.length}/8
-        </Badge>
-        <Badge variant={totalKnockout === 32 ? 'default' : 'secondary'}>
-          Eliminatorias: {totalKnockout}/32
-        </Badge>
-      </div>
-
-      {/* Repechajes Section */}
-      <Card className="mb-6">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Repechajes Intercontinentales</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {playoffs.map(playoff => {
-              const winner = getPlayoffWinner(playoff.id);
-              return (
-                <div
-                  key={playoff.id}
-                  className={`p-3 rounded-lg border ${winner ? 'bg-green-50 border-green-200' : 'bg-muted'}`}
-                >
-                  <p className="text-xs text-muted-foreground mb-1">{playoff.name}</p>
-                  {winner ? (
-                    <div className="flex items-center gap-2">
-                      <img
-                        src={winner.flag_url}
-                        alt={winner.name}
-                        className="w-6 h-4 object-cover rounded"
-                      />
-                      <span className="text-sm font-medium">{winner.name}</span>
+      {predictionSets.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Trophy className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-lg font-medium mb-2">Sin predicciones</h3>
+            <p className="text-muted-foreground mb-4">
+              Crea tu primera prediccion para el Mundial 2026
+            </p>
+            <Button onClick={() => setShowCreateDialog(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Crear Prediccion
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {predictionSets.map((set) => {
+            const status = getCompletionStatus(set);
+            return (
+              <Card key={set.id} className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-lg truncate">{set.name}</CardTitle>
+                      <CardDescription className="text-xs">
+                        Creada: {new Date(set.created_at).toLocaleDateString()}
+                      </CardDescription>
                     </div>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">Sin seleccionar</span>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-1">
-                    → Grupo {playoff.destinationGroup}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Groups Section */}
-      <Card className="mb-6">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Predicciones de Grupos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {groups.map(group => {
-              const teamIds = predictions[group] || [];
-              return (
-                <div key={group} className="border rounded-lg p-3">
-                  <p className="text-sm font-medium mb-2">Grupo {group}</p>
-                  {teamIds.length > 0 ? (
-                    <div className="space-y-1">
-                      {teamIds.map((teamId, index) => {
-                        const team = getTeamById(teamId);
-                        if (!team) return null;
-                        const qualifies = index < 2;
-                        const isThird = index === 2;
-                        return (
-                          <div
-                            key={teamId}
-                            className={`flex items-center gap-2 text-xs p-1 rounded
-                              ${qualifies ? 'bg-green-50' : ''}
-                              ${isThird ? 'bg-yellow-50' : ''}
-                            `}
-                          >
-                            <span className="w-4 text-muted-foreground">{index + 1}.</span>
-                            <img
-                              src={team.flag_url}
-                              alt={team.name}
-                              className="w-5 h-3 object-cover rounded"
-                            />
-                            <span className="truncate">{team.name}</span>
-                          </div>
-                        );
-                      })}
+                    <Badge variant={status.variant}>{status.label}</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {/* Progress indicators */}
+                  <div className="grid grid-cols-2 gap-2 text-xs mb-4">
+                    <div className="flex items-center gap-1">
+                      <div className={`w-2 h-2 rounded-full ${set.playoff_count === 6 ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      <span>Repechajes: {set.playoff_count}/6</span>
                     </div>
-                  ) : (
-                    <span className="text-xs text-muted-foreground">Sin prediccion</span>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                    <div className="flex items-center gap-1">
+                      <div className={`w-2 h-2 rounded-full ${set.group_count >= 48 ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      <span>Grupos: {Math.floor(set.group_count / 4)}/12</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className={`w-2 h-2 rounded-full ${set.third_places?.length === 8 ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      <span>Terceros: {set.third_places?.length || 0}/8</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className={`w-2 h-2 rounded-full ${set.knockout_count >= 32 ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      <span>Bracket: {set.knockout_count}/32</span>
+                    </div>
+                  </div>
 
-      {/* Best Third Places Section */}
-      <Card className="mb-6">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Mejores Terceros Lugares</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {bestThirdPlaces.length > 0 ? (
-            <>
-              <div className="flex flex-wrap gap-2 mb-3">
-                {bestThirdPlaces.map(group => {
-                  const teamIds = predictions[group] || [];
-                  const thirdPlaceId = teamIds[2];
-                  const team = thirdPlaceId ? getTeamById(thirdPlaceId) : null;
-                  return (
-                    <div
-                      key={group}
-                      className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded"
+                  {/* Action buttons */}
+                  <div className="flex gap-2 flex-wrap">
+                    <Button
+                      variant="default"
+                      size="sm"
+                      asChild
                     >
-                      <span className="text-xs text-muted-foreground">3{group}</span>
-                      {team && (
-                        <>
-                          <img
-                            src={team.flag_url}
-                            alt={team.name}
-                            className="w-5 h-3 object-cover rounded"
-                          />
-                          <span className="text-sm">{team.name}</span>
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              {thirdPlaceCombination ? (
-                <Badge variant="outline" className="text-green-600 border-green-300">
-                  Combinacion valida (Opcion {thirdPlaceCombination.option})
-                </Badge>
-              ) : bestThirdPlaces.length === 8 ? (
-                <Badge variant="outline" className="text-red-600 border-red-300">
-                  Combinacion no valida
-                </Badge>
-              ) : null}
-            </>
-          ) : (
-            <span className="text-sm text-muted-foreground">Sin seleccionar</span>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Knockout Predictions Section */}
-      {totalKnockout > 0 && (
-        <Card className="mb-6">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Eliminatorias</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {/* Round breakdown */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
-              <RoundSummary label="R32" count={r32Count} total={16} />
-              <RoundSummary label="R16" count={r16Count} total={8} />
-              <RoundSummary label="Cuartos" count={qfCount} total={4} />
-              <RoundSummary label="Semis" count={sfCount} total={2} />
-              <RoundSummary label="3er Lugar" count={thirdPlaceCount} total={1} />
-              <RoundSummary label="Final" count={finalCount} total={1} />
-            </div>
-
-            {/* Final Four Display */}
-            {sfCount === 2 && (
-              <div className="border-t pt-4 mt-4">
-                <p className="text-sm font-medium mb-3">Tus Semifinalistas</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {semiFinalsStructure.map(sf => {
-                    const teamAId = knockoutPredictions[sf.teamA.from];
-                    const teamBId = knockoutPredictions[sf.teamB.from];
-                    const teamA = teamAId ? getTeamById(teamAId) : null;
-                    const teamB = teamBId ? getTeamById(teamBId) : null;
-                    return [teamA, teamB].filter(Boolean).map((team, idx) => (
-                      <div key={`${sf.matchId}-${idx}`} className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded">
-                        <img
-                          src={team.flag_url}
-                          alt={team.name}
-                          className="w-6 h-4 object-cover rounded"
-                        />
-                        <span className="text-sm font-medium">{team.name}</span>
-                      </div>
-                    ));
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Podium */}
-            {(champion || thirdPlaceWinner) && (
-              <div className="border-t pt-4 mt-4">
-                <p className="text-sm font-medium mb-3">Tu Podio</p>
-                <div className="flex justify-center gap-4 flex-wrap">
-                  {/* Second Place */}
-                  {champion && knockoutPredictions[finalMatch.matchId] && (
-                    <div className="text-center">
-                      <div className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center mb-2">
-                        <span className="text-3xl">🥈</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">2do Lugar</p>
-                      {(() => {
-                        const finalistA = knockoutPredictions[semiFinalsStructure[0].matchId];
-                        const finalistB = knockoutPredictions[semiFinalsStructure[1].matchId];
-                        const runnerUpId = championId === finalistA ? finalistB : finalistA;
-                        const runnerUp = runnerUpId ? getTeamById(runnerUpId) : null;
-                        return runnerUp ? (
-                          <div className="flex items-center justify-center gap-1 mt-1">
-                            <img src={runnerUp.flag_url} alt={runnerUp.name} className="w-5 h-3 object-cover rounded" />
-                            <span className="text-xs">{runnerUp.name}</span>
-                          </div>
-                        ) : null;
-                      })()}
-                    </div>
-                  )}
-
-                  {/* Champion */}
-                  {champion && (
-                    <div className="text-center -mt-4">
-                      <div className="w-24 h-24 bg-yellow-100 border-2 border-yellow-400 rounded-lg flex items-center justify-center mb-2">
-                        <span className="text-4xl">🥇</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">Campeon</p>
-                      <div className="flex items-center justify-center gap-1 mt-1">
-                        <img src={champion.flag_url} alt={champion.name} className="w-5 h-3 object-cover rounded" />
-                        <span className="text-xs font-bold">{champion.name}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Third Place */}
-                  {thirdPlaceWinner && (
-                    <div className="text-center">
-                      <div className="w-20 h-20 bg-amber-100 rounded-lg flex items-center justify-center mb-2">
-                        <span className="text-3xl">🥉</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">3er Lugar</p>
-                      <div className="flex items-center justify-center gap-1 mt-1">
-                        <img src={thirdPlaceWinner.flag_url} alt={thirdPlaceWinner.name} className="w-5 h-3 object-cover rounded" />
-                        <span className="text-xs">{thirdPlaceWinner.name}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            <div className="mt-4">
-              <Button variant="outline" size="sm" asChild>
-                <Link to="/eliminatorias">Ver/Editar Bracket Completo</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+                      <Link to={`/prediccion/${set.id}`}>
+                        <Eye className="w-4 h-4 mr-1" />
+                        Ver
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                    >
+                      <Link to={`/repechajes?setId=${set.id}`}>
+                        <Edit2 className="w-4 h-4 mr-1" />
+                        Editar
+                      </Link>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDuplicate(set)}
+                      disabled={saving}
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openRenameDialog(set)}
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openDeleteDialog(set)}
+                      className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
       )}
 
-      {/* Navigation */}
-      <div className="flex justify-between pt-6 border-t">
-        <Button variant="outline" asChild>
-          <Link to="/">Volver al Inicio</Link>
-        </Button>
-        <Button asChild>
-          <Link to="/repechajes">Editar Predicciones</Link>
-        </Button>
-      </div>
-    </div>
-  );
-}
+      {/* Create Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nueva Prediccion</DialogTitle>
+            <DialogDescription>
+              Dale un nombre a tu prediccion para identificarla facilmente
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            placeholder="Ej: Mi prediccion optimista"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreate} disabled={!newName.trim() || saving}>
+              {saving ? 'Creando...' : 'Crear y Comenzar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-function RoundSummary({ label, count, total }) {
-  const isComplete = count === total;
-  return (
-    <div className={`p-3 rounded-lg border text-center ${isComplete ? 'bg-green-50 border-green-200' : 'bg-muted'}`}>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={`text-lg font-bold ${isComplete ? 'text-green-600' : ''}`}>
-        {count}/{total}
-      </p>
+      {/* Delete Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Eliminar Prediccion</DialogTitle>
+            <DialogDescription>
+              Estas seguro de eliminar "{selectedSet?.name}"? Esta accion no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={saving}>
+              {saving ? 'Eliminando...' : 'Eliminar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Rename Dialog */}
+      <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Renombrar Prediccion</DialogTitle>
+            <DialogDescription>
+              Ingresa un nuevo nombre para esta prediccion
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            placeholder="Nuevo nombre"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleRename()}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRenameDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleRename} disabled={!newName.trim() || saving}>
+              {saving ? 'Guardando...' : 'Guardar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
