@@ -7,6 +7,14 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { mockTeams, getAllGroups } from '@/data/mockData';
 import { playoffs } from '@/data/playoffsData';
 import { getThirdPlaceCombination } from '@/data/thirdPlaceCombinations';
+import {
+  roundOf32Structure,
+  roundOf16Structure,
+  quarterFinalsStructure,
+  semiFinalsStructure,
+  thirdPlaceMatch,
+  finalMatch
+} from '@/data/knockoutBracket';
 
 // Mapeo de playoff ID a team ID en mockTeams
 const playoffToTeamId = {
@@ -22,6 +30,7 @@ export default function MyPredictions() {
   const [predictions, setPredictions] = useState({});
   const [playoffSelections, setPlayoffSelections] = useState({});
   const [bestThirdPlaces, setBestThirdPlaces] = useState([]);
+  const [knockoutPredictions, setKnockoutPredictions] = useState({});
 
   useEffect(() => {
     const savedPredictions = localStorage.getItem('natalia_predictions');
@@ -37,6 +46,11 @@ export default function MyPredictions() {
     const savedThirdPlaces = localStorage.getItem('natalia_best_third_places');
     if (savedThirdPlaces) {
       setBestThirdPlaces(JSON.parse(savedThirdPlaces));
+    }
+
+    const savedKnockout = localStorage.getItem('natalia_knockout');
+    if (savedKnockout) {
+      setKnockoutPredictions(JSON.parse(savedKnockout));
     }
   }, []);
 
@@ -74,7 +88,24 @@ export default function MyPredictions() {
     ? getThirdPlaceCombination(bestThirdPlaces)
     : null;
 
-  const hasPredictions = completedPlayoffs > 0 || completedGroups > 0 || bestThirdPlaces.length > 0;
+  // Count knockout predictions
+  const r32Count = roundOf32Structure.filter(m => knockoutPredictions[m.matchId]).length;
+  const r16Count = roundOf16Structure.filter(m => knockoutPredictions[m.matchId]).length;
+  const qfCount = quarterFinalsStructure.filter(m => knockoutPredictions[m.matchId]).length;
+  const sfCount = semiFinalsStructure.filter(m => knockoutPredictions[m.matchId]).length;
+  const thirdPlaceCount = knockoutPredictions[thirdPlaceMatch.matchId] ? 1 : 0;
+  const finalCount = knockoutPredictions[finalMatch.matchId] ? 1 : 0;
+  const totalKnockout = r32Count + r16Count + qfCount + sfCount + thirdPlaceCount + finalCount;
+
+  const hasPredictions = completedPlayoffs > 0 || completedGroups > 0 || bestThirdPlaces.length > 0 || totalKnockout > 0;
+
+  // Get champion prediction
+  const championId = knockoutPredictions[finalMatch.matchId];
+  const champion = championId ? getTeamById(championId) : null;
+
+  // Get third place prediction
+  const thirdPlaceWinnerId = knockoutPredictions[thirdPlaceMatch.matchId];
+  const thirdPlaceWinner = thirdPlaceWinnerId ? getTeamById(thirdPlaceWinnerId) : null;
 
   if (!hasPredictions) {
     return (
@@ -120,6 +151,29 @@ export default function MyPredictions() {
         </Button>
       </div>
 
+      {/* Champion Display */}
+      {champion && (
+        <Card className="mb-6 border-yellow-400 bg-yellow-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-center gap-4">
+              <span className="text-4xl">🏆</span>
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground mb-1">Tu prediccion de Campeon</p>
+                <div className="flex items-center gap-3">
+                  <img
+                    src={champion.flag_url}
+                    alt={champion.name}
+                    className="w-12 h-8 object-cover rounded shadow"
+                  />
+                  <span className="text-2xl font-bold">{champion.name}</span>
+                </div>
+              </div>
+              <span className="text-4xl">🏆</span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Progress Summary */}
       <div className="flex flex-wrap gap-2 mb-6">
         <Badge variant={completedPlayoffs === 6 ? 'default' : 'secondary'}>
@@ -130,6 +184,9 @@ export default function MyPredictions() {
         </Badge>
         <Badge variant={bestThirdPlaces.length === 8 && thirdPlaceCombination ? 'default' : 'secondary'}>
           Terceros: {bestThirdPlaces.length}/8
+        </Badge>
+        <Badge variant={totalKnockout === 32 ? 'default' : 'secondary'}>
+          Eliminatorias: {totalKnockout}/32
         </Badge>
       </div>
 
@@ -267,6 +324,115 @@ export default function MyPredictions() {
         </CardContent>
       </Card>
 
+      {/* Knockout Predictions Section */}
+      {totalKnockout > 0 && (
+        <Card className="mb-6">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Eliminatorias</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Round breakdown */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
+              <RoundSummary label="R32" count={r32Count} total={16} />
+              <RoundSummary label="R16" count={r16Count} total={8} />
+              <RoundSummary label="Cuartos" count={qfCount} total={4} />
+              <RoundSummary label="Semis" count={sfCount} total={2} />
+              <RoundSummary label="3er Lugar" count={thirdPlaceCount} total={1} />
+              <RoundSummary label="Final" count={finalCount} total={1} />
+            </div>
+
+            {/* Final Four Display */}
+            {sfCount === 2 && (
+              <div className="border-t pt-4 mt-4">
+                <p className="text-sm font-medium mb-3">Tus Semifinalistas</p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {semiFinalsStructure.map(sf => {
+                    const teamAId = knockoutPredictions[sf.teamA.from];
+                    const teamBId = knockoutPredictions[sf.teamB.from];
+                    const teamA = teamAId ? getTeamById(teamAId) : null;
+                    const teamB = teamBId ? getTeamById(teamBId) : null;
+                    return [teamA, teamB].filter(Boolean).map((team, idx) => (
+                      <div key={`${sf.matchId}-${idx}`} className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded">
+                        <img
+                          src={team.flag_url}
+                          alt={team.name}
+                          className="w-6 h-4 object-cover rounded"
+                        />
+                        <span className="text-sm font-medium">{team.name}</span>
+                      </div>
+                    ));
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Podium */}
+            {(champion || thirdPlaceWinner) && (
+              <div className="border-t pt-4 mt-4">
+                <p className="text-sm font-medium mb-3">Tu Podio</p>
+                <div className="flex justify-center gap-4 flex-wrap">
+                  {/* Second Place */}
+                  {champion && knockoutPredictions[finalMatch.matchId] && (
+                    <div className="text-center">
+                      <div className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center mb-2">
+                        <span className="text-3xl">🥈</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">2do Lugar</p>
+                      {(() => {
+                        const finalistA = knockoutPredictions[semiFinalsStructure[0].matchId];
+                        const finalistB = knockoutPredictions[semiFinalsStructure[1].matchId];
+                        const runnerUpId = championId === finalistA ? finalistB : finalistA;
+                        const runnerUp = runnerUpId ? getTeamById(runnerUpId) : null;
+                        return runnerUp ? (
+                          <div className="flex items-center justify-center gap-1 mt-1">
+                            <img src={runnerUp.flag_url} alt={runnerUp.name} className="w-5 h-3 object-cover rounded" />
+                            <span className="text-xs">{runnerUp.name}</span>
+                          </div>
+                        ) : null;
+                      })()}
+                    </div>
+                  )}
+
+                  {/* Champion */}
+                  {champion && (
+                    <div className="text-center -mt-4">
+                      <div className="w-24 h-24 bg-yellow-100 border-2 border-yellow-400 rounded-lg flex items-center justify-center mb-2">
+                        <span className="text-4xl">🥇</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Campeon</p>
+                      <div className="flex items-center justify-center gap-1 mt-1">
+                        <img src={champion.flag_url} alt={champion.name} className="w-5 h-3 object-cover rounded" />
+                        <span className="text-xs font-bold">{champion.name}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Third Place */}
+                  {thirdPlaceWinner && (
+                    <div className="text-center">
+                      <div className="w-20 h-20 bg-amber-100 rounded-lg flex items-center justify-center mb-2">
+                        <span className="text-3xl">🥉</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">3er Lugar</p>
+                      <div className="flex items-center justify-center gap-1 mt-1">
+                        <img src={thirdPlaceWinner.flag_url} alt={thirdPlaceWinner.name} className="w-5 h-3 object-cover rounded" />
+                        <span className="text-xs">{thirdPlaceWinner.name}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            <div className="mt-4">
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/eliminatorias">Ver/Editar Bracket Completo</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Navigation */}
       <div className="flex justify-between pt-6 border-t">
         <Button variant="outline" asChild>
@@ -276,6 +442,18 @@ export default function MyPredictions() {
           <Link to="/repechajes">Editar Predicciones</Link>
         </Button>
       </div>
+    </div>
+  );
+}
+
+function RoundSummary({ label, count, total }) {
+  const isComplete = count === total;
+  return (
+    <div className={`p-3 rounded-lg border text-center ${isComplete ? 'bg-green-50 border-green-200' : 'bg-muted'}`}>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className={`text-lg font-bold ${isComplete ? 'text-green-600' : ''}`}>
+        {count}/{total}
+      </p>
     </div>
   );
 }

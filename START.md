@@ -1,16 +1,36 @@
 # START.md - Inicio Rapido
 
-## Para Claude (Nueva Sesion)
+## INSTRUCCIONES OBLIGATORIAS PARA CLAUDE
 
-Si es una nueva sesion o hubo un crash:
+Cuando leas este archivo, DEBES ejecutar AUTOMATICAMENTE los siguientes pasos SIN preguntar:
 
-1. **Leer documentacion:**
-   - `CLAUDE.md` - Instrucciones tecnicas, estructura, reglas
-   - `SESSION.md` - Estado actual, que esta completo, que falta
+### Paso 1: Leer documentacion (OBLIGATORIO)
+Inmediatamente despues de leer START.md, usa la herramienta Read para leer estos archivos:
+- `CLAUDE.md` - Instrucciones tecnicas, estructura, reglas
+- `SESSION.md` - Estado actual, que esta completo, que falta
 
-2. **NO hacer auditoria del codigo** - La documentacion ya tiene todo
+### Paso 2: Arrancar servidores (OBLIGATORIO)
+Despues de leer la documentacion, arranca AMBOS servidores automaticamente:
 
-3. **Preguntar al usuario** que quiere hacer en esta sesion
+Terminal 1 (Frontend):
+```bash
+cd natalia-frontend && npm run dev
+```
+
+Terminal 2 (Backend):
+```bash
+cd natalia-backend && npm run dev
+```
+
+Ejecuta ambos comandos en background para que sigan corriendo.
+
+### Paso 3: Confirmar y preguntar
+Una vez que los servidores esten corriendo, confirma al usuario:
+- Que leiste la documentacion
+- Que los servidores estan corriendo
+- Pregunta que quiere hacer en esta sesion
+
+**IMPORTANTE:** NO hacer auditoria del codigo - La documentacion ya tiene todo
 
 ---
 

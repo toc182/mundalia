@@ -104,14 +104,14 @@ export default function ThirdPlaces() {
     localStorage.setItem('natalia_best_third_places', JSON.stringify(bestThirdPlaces));
     setSaved(true);
     setTimeout(() => {
-      navigate('/');
-    }, 1000);
+      navigate('/eliminatorias');
+    }, 500);
   };
 
   return (
     <div className="container mx-auto px-4 py-8">
       {/* Progress indicator */}
-      <div className="flex items-center gap-2 mb-6 text-sm text-muted-foreground">
+      <div className="flex items-center gap-2 mb-6 text-sm text-muted-foreground flex-wrap">
         <Link to="/" className="hover:text-foreground">Inicio</Link>
         <span>/</span>
         <Link to="/repechajes" className="hover:text-foreground">Paso 1: Repechajes</Link>
@@ -119,6 +119,8 @@ export default function ThirdPlaces() {
         <Link to="/grupos" className="hover:text-foreground">Paso 2: Grupos</Link>
         <span>/</span>
         <span className="font-medium text-foreground">Paso 3: Terceros</span>
+        <span>/</span>
+        <span>Paso 4: Eliminatorias</span>
       </div>
 
       <div className="flex justify-between items-center mb-6">
@@ -128,7 +130,7 @@ export default function ThirdPlaces() {
             {bestThirdPlaces.length}/8 seleccionados
           </Badge>
           <Button onClick={handleFinish} disabled={!isComplete}>
-            Finalizar
+            Continuar
           </Button>
         </div>
       </div>
@@ -136,7 +138,7 @@ export default function ThirdPlaces() {
       {saved && (
         <Alert className="mb-6">
           <AlertDescription>
-            Predicciones guardadas correctamente. Redirigiendo...
+            Seleccion guardada. Continuando a eliminatorias...
           </AlertDescription>
         </Alert>
       )}
@@ -248,7 +250,7 @@ export default function ThirdPlaces() {
           <Link to="/grupos">Volver a Grupos</Link>
         </Button>
         <Button onClick={handleFinish} disabled={!isComplete} size="lg">
-          Finalizar Predicciones
+          Continuar a Eliminatorias
         </Button>
       </div>
     </div>

@@ -1,6 +1,6 @@
 # SESSION.md - Estado Actual del Proyecto
 
-## Ultima Actualizacion: 2025-12-09
+## Ultima Actualizacion: 2025-12-10
 
 ---
 
@@ -40,7 +40,21 @@
 - [x] Seleccion de 8 de 12 terceros
 - [x] Validacion contra 495 combinaciones FIFA
 - [x] Muestra emparejamientos cuando combinacion valida
-- [x] Boton "Finalizar" regresa a Home
+- [x] Boton "Continuar" navega a eliminatorias
+
+**Paso 4: Eliminatorias Completas** (`/eliminatorias`)
+- [x] Nueva pagina Knockout.jsx con todas las rondas
+- [x] Estructura basada en knockoutBracket.js (tabla oficial FIFA)
+- [x] Round of 32: 16 partidos (M73-M88)
+- [x] Round of 16: 8 partidos (M89-M96)
+- [x] Cuartos de Final: 4 partidos (M97-M100)
+- [x] Semifinales: 2 partidos (M101-M102)
+- [x] Tercer Lugar: 1 partido (M103)
+- [x] Final: 1 partido (M104)
+- [x] Tabs para navegar entre rondas
+- [x] Dependencias: cambiar ganador limpia predicciones dependientes
+- [x] Display de campeon al seleccionar ganador de la final
+- [x] Total: 32 partidos para completar
 
 #### 4. Ver Mis Predicciones (`/mis-predicciones`)
 - [x] Nueva pagina MyPredictions.jsx
@@ -55,6 +69,7 @@
 | `/repechajes` | Playoffs | Paso 1 - Repechajes |
 | `/grupos` | Predictions | Paso 2 - Grupos |
 | `/terceros` | ThirdPlaces | Paso 3 - Terceros |
+| `/eliminatorias` | Knockout | Paso 4 - Round of 32 |
 | `/mis-predicciones` | MyPredictions | Ver resumen |
 | `/ranking` | Leaderboard | (futuro) |
 | `/mis-grupos` | Groups | (futuro) |
@@ -106,7 +121,8 @@
 7. [x] Implementar navegacion wizard entre pasos
 
 ### Proxima Prioridad
-- [ ] Implementar pagina Knockout.jsx con bracket Round of 32
+- [x] Implementar pagina Knockout.jsx con bracket Round of 32
+- [x] Implementar Round of 16, Cuartos, Semis y Final
 - [ ] Conectar frontend con backend real
 - [ ] Panel admin para cargar resultados
 - [ ] Restaurar sistema de login/autenticacion
@@ -128,7 +144,11 @@ Home ─────────────────────────
   │         │         [Continuar a Terceros]
   │         │             │
   │         │             v
-  │         └─> Paso 3: Mejores Terceros (/terceros)
+  │         ├─> Paso 3: Mejores Terceros (/terceros)
+  │         │         [Continuar a Eliminatorias]
+  │         │             │
+  │         │             v
+  │         └─> Paso 4: Round of 32 (/eliminatorias)
   │                   [Finalizar] -> Home
   │
   └─> "Ver Mis Predicciones" ─> /mis-predicciones
