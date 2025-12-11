@@ -137,11 +137,6 @@ export default function MyPredictions() {
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center gap-2 mb-6 text-sm text-muted-foreground">
-          <Link to="/" className="hover:text-foreground">Inicio</Link>
-          <span>/</span>
-          <span className="font-medium text-foreground">Mis Predicciones</span>
-        </div>
         <h1 className="text-2xl font-bold mb-6">Mis Predicciones</h1>
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-solid border-current border-r-transparent"></div>
@@ -153,12 +148,6 @@ export default function MyPredictions() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center gap-2 mb-6 text-sm text-muted-foreground">
-        <Link to="/" className="hover:text-foreground">Inicio</Link>
-        <span>/</span>
-        <span className="font-medium text-foreground">Mis Predicciones</span>
-      </div>
-
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Mis Predicciones</h1>
         <Button onClick={() => setShowCreateDialog(true)}>

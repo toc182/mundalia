@@ -1,6 +1,6 @@
 # SESSION.md - Estado Actual del Proyecto
 
-## Ultima Actualizacion: 2025-12-11 (22:00 UTC)
+## Ultima Actualizacion: 2025-12-11 (23:30 UTC)
 
 ---
 
@@ -24,6 +24,7 @@
 - [x] **Fase 3.12: Fix combinaciones de terceros lugares (495/495)**
 - [x] **Fase 3.13: Rediseno UI - TopBar fijo + layout mejorado**
 - [x] **Fase 3.14: Mejoras UX - Knockout botones, PredictionDetail fixes**
+- [x] **Fase 3.15: Pagina Cuenta + mejoras vista predicciones**
 - [ ] Fase 4: Leaderboard
 - [ ] Fase 5: Grupos privados
 - [x] Fase 6: Deploy a produccion
@@ -136,6 +137,28 @@ Al seleccionar 8 terceros lugares, algunas combinaciones mostraban "Combinacion 
 - [x] Fix: Campeon muestra nombre real (ej: Italia) en vez de placeholder (Playoff Europa A)
 - [x] Fix: Manejo de string vs number en IDs de equipos de repechaje
 - [x] Ganadores de repechajes se muestran correctamente en la seccion de Repechajes
+
+---
+
+## COMPLETADO - Fase 3.15: Pagina Cuenta + Vista Predicciones
+
+### Pagina Cuenta (NUEVA)
+- [x] Ruta: `/cuenta`
+- [x] Accesible desde TopBar (menu usuario → Cuenta)
+- [x] Editar nombre de usuario
+- [x] Ver email (no editable) y fecha de registro
+- [x] Boton "Cerrar Sesion"
+- [x] Backend: PUT /api/users/me actualiza nombre
+- [x] AuthContext: `updateUser()` actualiza estado + localStorage
+
+### PredictionDetail.jsx - Eliminatorias Reordenadas
+- [x] Orden correcto: Dieciseisavos → Octavos → Cuartos → Semifinal → Ganador 3er Puesto → Campeon → Podio
+- [x] Semifinal muestra solo los GANADORES (no los 4 semifinalistas)
+- [x] Podio movido al final de la seccion
+
+### Breadcrumbs Eliminados
+- [x] Eliminado de PredictionDetail.jsx (loading state y main return)
+- [x] Eliminado de MyPredictions.jsx (loading state y main return)
 
 ---
 

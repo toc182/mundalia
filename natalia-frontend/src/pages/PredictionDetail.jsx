@@ -352,9 +352,72 @@ export default function PredictionDetail() {
             <CardTitle className="text-lg">Eliminatorias</CardTitle>
           </CardHeader>
           <CardContent>
-            {/* Podium at top */}
+            {/* Round by round teams - from early rounds to finals */}
+            <div className="space-y-4">
+              {/* Dieciseisavos (Round of 32) */}
+              {r32Count > 0 && (
+                <RoundTeams
+                  label="Dieciseisavos"
+                  teams={roundOf32Structure.map(m => knockoutPredictions[m.matchId]).filter(Boolean).map(id => getTeamById(id)).filter(Boolean)}
+                  bgColor="bg-gray-50"
+                  borderColor="border-gray-200"
+                />
+              )}
+
+              {/* Octavos de Final */}
+              {r16Count > 0 && (
+                <RoundTeams
+                  label="Octavos de Final"
+                  teams={roundOf16Structure.map(m => knockoutPredictions[m.matchId]).filter(Boolean).map(id => getTeamById(id)).filter(Boolean)}
+                  bgColor="bg-green-50"
+                  borderColor="border-green-200"
+                />
+              )}
+
+              {/* Cuartos de Final */}
+              {qfCount > 0 && (
+                <RoundTeams
+                  label="Cuartos de Final"
+                  teams={quarterFinalsStructure.map(m => knockoutPredictions[m.matchId]).filter(Boolean).map(id => getTeamById(id)).filter(Boolean)}
+                  bgColor="bg-blue-50"
+                  borderColor="border-blue-200"
+                />
+              )}
+
+              {/* Semifinal - solo los ganadores */}
+              {sfCount > 0 && (
+                <RoundTeams
+                  label="Semifinal"
+                  teams={semiFinalsStructure.map(sf => knockoutPredictions[sf.matchId]).filter(Boolean).map(id => getTeamById(id)).filter(Boolean)}
+                  bgColor="bg-purple-50"
+                  borderColor="border-purple-200"
+                />
+              )}
+
+              {/* Ganador Tercer Puesto */}
+              {thirdPlaceWinner && (
+                <RoundTeams
+                  label="Ganador Tercer Puesto"
+                  teams={[thirdPlaceWinner]}
+                  bgColor="bg-amber-50"
+                  borderColor="border-amber-200"
+                />
+              )}
+
+              {/* Campeon */}
+              {champion && (
+                <RoundTeams
+                  label="Campeon"
+                  teams={[champion]}
+                  bgColor="bg-yellow-50"
+                  borderColor="border-yellow-300"
+                />
+              )}
+            </div>
+
+            {/* Podium at bottom */}
             {(champion || thirdPlaceWinner) && (
-              <div className="mb-6 pb-4 border-b">
+              <div className="mt-6 pt-4 border-t">
                 <p className="text-sm font-medium mb-3">Podio</p>
                 <div className="flex justify-center gap-4 flex-wrap">
                   {/* Second Place */}
@@ -407,53 +470,6 @@ export default function PredictionDetail() {
                 </div>
               </div>
             )}
-
-            {/* Round by round teams */}
-            <div className="space-y-4">
-              {/* Semifinalistas */}
-              {sfCount > 0 && (
-                <RoundTeams
-                  label="Semifinalistas"
-                  teams={semiFinalsStructure.flatMap(sf => {
-                    const teamAId = knockoutPredictions[sf.teamA.from];
-                    const teamBId = knockoutPredictions[sf.teamB.from];
-                    return [teamAId, teamBId].filter(Boolean).map(id => getTeamById(id)).filter(Boolean);
-                  })}
-                  bgColor="bg-purple-50"
-                  borderColor="border-purple-200"
-                />
-              )}
-
-              {/* Cuartos de Final */}
-              {qfCount > 0 && (
-                <RoundTeams
-                  label="Cuartos de Final"
-                  teams={quarterFinalsStructure.map(m => knockoutPredictions[m.matchId]).filter(Boolean).map(id => getTeamById(id)).filter(Boolean)}
-                  bgColor="bg-blue-50"
-                  borderColor="border-blue-200"
-                />
-              )}
-
-              {/* Octavos de Final */}
-              {r16Count > 0 && (
-                <RoundTeams
-                  label="Octavos de Final"
-                  teams={roundOf16Structure.map(m => knockoutPredictions[m.matchId]).filter(Boolean).map(id => getTeamById(id)).filter(Boolean)}
-                  bgColor="bg-green-50"
-                  borderColor="border-green-200"
-                />
-              )}
-
-              {/* Round of 32 */}
-              {r32Count > 0 && (
-                <RoundTeams
-                  label="Round of 32"
-                  teams={roundOf32Structure.map(m => knockoutPredictions[m.matchId]).filter(Boolean).map(id => getTeamById(id)).filter(Boolean)}
-                  bgColor="bg-gray-50"
-                  borderColor="border-gray-200"
-                />
-              )}
-            </div>
 
             <div className="mt-4 pt-4 border-t">
               <Button variant="outline" size="sm" asChild>
