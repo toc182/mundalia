@@ -1,6 +1,6 @@
 # SESSION.md - Estado Actual del Proyecto
 
-## Ultima Actualizacion: 2025-12-11 (16:30 UTC)
+## Ultima Actualizacion: 2025-12-11 (16:45 UTC)
 
 ---
 
@@ -16,7 +16,8 @@
 - [x] Fase 3: Predicciones (TODAS conectadas con API)
 - [x] **Fase 3.5: Multiples Predicciones**
 - [x] **Fase 3.6: Sin Auto-Relleno**
-- [x] **Fase 3.7: Fix boton Comenzar** (EN PROGRESO)
+- [x] **Fase 3.7: Fix boton Comenzar**
+- [x] **Fase 3.8: Fix Database Constraints**
 - [ ] Fase 4: Leaderboard
 - [ ] Fase 5: Grupos privados
 - [x] Fase 6: Deploy a produccion
@@ -45,9 +46,25 @@
 - **Problema:** Queries SQL incluian `OR prediction_set_id IS NULL` que cargaba datos legacy
 - **Solucion:** Eliminado fallback a `IS NULL` en todas las queries de predictions.js
 
-### 5. Boton "Comenzar" cargaba datos de localStorage (EN PROGRESO)
+### 5. Boton "Comenzar" cargaba datos de localStorage
 - **Problema:** Boton "Comenzar" en Home iba a `/repechajes` sin `setId`, cargando localStorage
 - **Solucion:** Cambiado para crear prediction set automaticamente antes de navegar
+
+### 6. Repechajes no se guardaban (UNIQUE constraint violation)
+- **Problema:** Al guardar repechajes, el backend daba error "duplicate key violates unique constraint"
+- **Causa:** Los UNIQUE constraints en las tablas de predicciones NO incluian `prediction_set_id`
+  - `playoff_predictions` tenia `UNIQUE (user_id, playoff_id)` - solo 1 prediccion por usuario
+  - `group_predictions` tenia `UNIQUE (user_id, group_letter, team_id)`
+  - `third_place_predictions` tenia `UNIQUE (user_id)`
+  - `knockout_predictions` tenia `UNIQUE (user_id, match_key)`
+- **Solucion:** Actualizados todos los constraints para incluir `prediction_set_id`:
+  ```sql
+  -- playoff_predictions: UNIQUE (user_id, prediction_set_id, playoff_id)
+  -- group_predictions: UNIQUE (user_id, prediction_set_id, group_letter, predicted_position)
+  -- third_place_predictions: UNIQUE (user_id, prediction_set_id)
+  -- knockout_predictions: UNIQUE (user_id, prediction_set_id, match_key)
+  ```
+- **Datos Legacy:** Se borraron predicciones con `prediction_set_id IS NULL` (48 grupos, 1 terceros, 32 knockout)
 
 ---
 
@@ -58,6 +75,7 @@
 |---------|--------|
 | `server.js` | CORS permite localhost y vercel.app |
 | `routes/predictions.js` | Removido `OR prediction_set_id IS NULL` de todas las queries |
+| **Database** | Constraints actualizados para incluir prediction_set_id en todas las tablas |
 
 ### Frontend
 | Archivo | Cambio |
