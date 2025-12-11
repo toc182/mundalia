@@ -419,16 +419,14 @@ export default function Knockout() {
     try {
       await predictionsAPI.saveKnockout(knockoutPredictions, setId);
       setSaved(true);
-      setTimeout(() => {
-        window.scrollTo(0, 0);
-        navigate(nextUrl);
-      }, 1000);
+      window.scrollTo(0, 0);
+      navigate(nextUrl);
     } catch (err) {
       setError('Error al guardar en servidor - Continuando con guardado local');
       setTimeout(() => {
         window.scrollTo(0, 0);
         navigate(nextUrl);
-      }, 1500);
+      }, 800);
     } finally {
       setSaving(false);
     }

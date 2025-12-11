@@ -159,16 +159,14 @@ export default function ThirdPlaces() {
       const selectedGroups = bestThirdPlaces.sort().join('');
       await predictionsAPI.saveThirdPlaces(selectedGroups, setId);
       setSaved(true);
-      setTimeout(() => {
-        window.scrollTo(0, 0);
-        navigate(nextUrl);
-      }, 500);
+      window.scrollTo(0, 0);
+      navigate(nextUrl);
     } catch (err) {
       setError('Error al guardar en servidor - Continuando con guardado local');
       setTimeout(() => {
         window.scrollTo(0, 0);
         navigate(nextUrl);
-      }, 1500);
+      }, 800);
     } finally {
       setSaving(false);
     }

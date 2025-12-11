@@ -103,17 +103,15 @@ export default function Playoffs() {
       const response = await predictionsAPI.savePlayoffs(selections, setId);
       console.log('[PLAYOFFS] savePlayoffs response:', response.data);
       setSaved(true);
-      setTimeout(() => {
-        window.scrollTo(0, 0);
-        navigate(nextUrl);
-      }, 500);
+      window.scrollTo(0, 0);
+      navigate(nextUrl);
     } catch (err) {
       console.error('[PLAYOFFS] savePlayoffs error:', err.response?.data || err.message);
       setError('Error al guardar en servidor - Continuando con guardado local');
       setTimeout(() => {
         window.scrollTo(0, 0);
         navigate(nextUrl);
-      }, 1500);
+      }, 800);
     } finally {
       setSaving(false);
     }

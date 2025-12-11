@@ -222,10 +222,8 @@ export default function Predictions() {
       await predictionsAPI.saveGroups(predictionsArray, setId);
       setSaved(true);
       setSaving(false);
-      setTimeout(() => {
-        window.scrollTo(0, 0);
-        navigate(nextUrl);
-      }, 500);
+      window.scrollTo(0, 0);
+      navigate(nextUrl);
     } catch (err) {
       // Aunque falle el servidor, permitir continuar (ya está en localStorage)
       setError('Error al guardar en servidor - Continuando con guardado local');
@@ -233,7 +231,7 @@ export default function Predictions() {
       setTimeout(() => {
         window.scrollTo(0, 0);
         navigate(nextUrl);
-      }, 1500);
+      }, 800);
     }
   };
 
