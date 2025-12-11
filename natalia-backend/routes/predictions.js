@@ -143,13 +143,20 @@ router.get('/playoffs', auth, async (req, res) => {
       [req.user.id, setId]
     );
 
+    // Helper to convert to number if it's a numeric string
+    const toNumberIfPossible = (val) => {
+      if (val === null || val === undefined) return null;
+      const num = Number(val);
+      return !isNaN(num) ? num : val;
+    };
+
     // Convert to object format { playoff_id: { semifinal_winner_1, semifinal_winner_2, final_winner } }
     const predictions = {};
     result.rows.forEach(row => {
       predictions[row.playoff_id] = {
-        semi1: row.semifinal_winner_1,
-        semi2: row.semifinal_winner_2,
-        final: row.final_winner
+        semi1: toNumberIfPossible(row.semifinal_winner_1),
+        semi2: toNumberIfPossible(row.semifinal_winner_2),
+        final: toNumberIfPossible(row.final_winner)
       };
     });
 
