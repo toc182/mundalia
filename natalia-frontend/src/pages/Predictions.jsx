@@ -331,14 +331,16 @@ function GroupCard({ group, teamIds, getTeamById, onMove }) {
                 <button
                   onClick={() => onMove(group, index, -1)}
                   disabled={index === 0}
-                  className="w-8 h-8 flex items-center justify-center rounded bg-muted hover:bg-muted/80 disabled:opacity-30 text-lg font-bold"
+                  className="w-10 h-10 flex items-center justify-center rounded bg-muted hover:bg-muted/80 active:bg-muted/60 disabled:opacity-30 text-xl font-bold select-none"
+                  style={{ touchAction: 'manipulation' }}
                 >
                   ▲
                 </button>
                 <button
                   onClick={() => onMove(group, index, 1)}
                   disabled={index === 3}
-                  className="w-8 h-8 flex items-center justify-center rounded bg-muted hover:bg-muted/80 disabled:opacity-30 text-lg font-bold"
+                  className="w-10 h-10 flex items-center justify-center rounded bg-muted hover:bg-muted/80 active:bg-muted/60 disabled:opacity-30 text-xl font-bold select-none"
+                  style={{ touchAction: 'manipulation' }}
                 >
                   ▼
                 </button>
