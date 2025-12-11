@@ -1,6 +1,6 @@
 # SESSION.md - Estado Actual del Proyecto
 
-## Ultima Actualizacion: 2025-12-11 (16:45 UTC)
+## Ultima Actualizacion: 2025-12-11 (17:00 UTC)
 
 ---
 
@@ -18,6 +18,8 @@
 - [x] **Fase 3.6: Sin Auto-Relleno**
 - [x] **Fase 3.7: Fix boton Comenzar**
 - [x] **Fase 3.8: Fix Database Constraints**
+- [x] **Fase 3.9: Fix breadcrumbs perdian setId**
+- [x] **Fase 3.10: Fix tipos string/number en playoffs**
 - [ ] Fase 4: Leaderboard
 - [ ] Fase 5: Grupos privados
 - [x] Fase 6: Deploy a produccion
@@ -50,7 +52,15 @@
 - **Problema:** Boton "Comenzar" en Home iba a `/repechajes` sin `setId`, cargando localStorage
 - **Solucion:** Cambiado para crear prediction set automaticamente antes de navegar
 
-### 6. Repechajes no se guardaban (UNIQUE constraint violation)
+### 6. Breadcrumbs perdian setId
+- **Problema:** Los links de navegacion (Paso 1, Paso 2, etc) no incluian `?setId=X`
+- **Solucion:** Actualizados todos los breadcrumbs en Predictions.jsx, ThirdPlaces.jsx, Knockout.jsx
+
+### 7. Playoffs no se mostraban correctamente (string vs number)
+- **Problema:** La DB devolvia team IDs como strings ("101") pero el frontend esperaba numeros (101)
+- **Solucion:** Agregado `toNumberIfPossible()` en el endpoint GET /playoffs para convertir
+
+### 8. Repechajes no se guardaban (UNIQUE constraint violation)
 - **Problema:** Al guardar repechajes, el backend daba error "duplicate key violates unique constraint"
 - **Causa:** Los UNIQUE constraints en las tablas de predicciones NO incluian `prediction_set_id`
   - `playoff_predictions` tenia `UNIQUE (user_id, playoff_id)` - solo 1 prediccion por usuario
