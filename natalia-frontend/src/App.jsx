@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
+import TopBar from '@/components/TopBar';
 import Home from '@/pages/Home';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
@@ -76,7 +77,10 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <div className="min-h-screen bg-background">
-          <AppRoutes />
+          <TopBar />
+          <div className="pt-14">
+            <AppRoutes />
+          </div>
         </div>
       </BrowserRouter>
     </AuthProvider>

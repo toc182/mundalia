@@ -1,6 +1,6 @@
 # SESSION.md - Estado Actual del Proyecto
 
-## Ultima Actualizacion: 2025-12-11 (17:00 UTC)
+## Ultima Actualizacion: 2025-12-11 (22:00 UTC)
 
 ---
 
@@ -20,6 +20,10 @@
 - [x] **Fase 3.8: Fix Database Constraints**
 - [x] **Fase 3.9: Fix breadcrumbs perdian setId**
 - [x] **Fase 3.10: Fix tipos string/number en playoffs**
+- [x] **Fase 3.11: UX Grupos - pre-llenado + drag&drop tactil**
+- [x] **Fase 3.12: Fix combinaciones de terceros lugares (495/495)**
+- [x] **Fase 3.13: Rediseno UI - TopBar fijo + layout mejorado**
+- [x] **Fase 3.14: Mejoras UX - Knockout botones, PredictionDetail fixes**
 - [ ] Fase 4: Leaderboard
 - [ ] Fase 5: Grupos privados
 - [x] Fase 6: Deploy a produccion
@@ -60,7 +64,82 @@
 - **Problema:** La DB devolvia team IDs como strings ("101") pero el frontend esperaba numeros (101)
 - **Solucion:** Agregado `toNumberIfPossible()` en el endpoint GET /playoffs para convertir
 
-### 8. Repechajes no se guardaban (UNIQUE constraint violation)
+### 9. UX Grupos - Drag & Drop tactil
+- **Problema:** Drag & drop nativo no funciona en movil
+- **Solucion:** Implementado touch events (onTouchStart/Move/End) + botones ▲▼ como alternativa
+- **Commits:** c31cacd, f6a79a3, bf84f2f
+
+---
+
+## PROBLEMA RESUELTO - Combinaciones de Terceros Lugares (2025-12-11)
+
+### Sintoma original
+Al seleccionar 8 terceros lugares, algunas combinaciones mostraban "Combinacion no valida"
+
+### Solucion
+- El CSV fuente (`combinations.csv`) tenia las 495 combinaciones correctas
+- El archivo JS (`thirdPlaceCombinations.js`) se regenero desde el CSV
+- **Commit:** `1aa620e` - Fix: Regenerate thirdPlaceCombinations.js from official FIFA CSV
+- **Verificacion:** 495/495 combinaciones, 0 faltantes, 0 extra, asignaciones identicas al CSV
+
+### Archivos
+- `combinations.csv` - Fuente oficial FIFA (495 filas)
+- `generate-combinations.js` - Script para regenerar el JS desde CSV
+- `natalia-frontend/src/data/thirdPlaceCombinations.js` - Archivo corregido
+
+---
+
+## COMPLETADO - Fase 3.13: Rediseno UI
+
+### Completado (primera ronda)
+- [x] TopBar fijo con logo "Natalia" centrado
+- [x] Eliminados breadcrumbs de todas las paginas
+- [x] Botones Atras/Siguiente en header y footer
+- [x] Predictions.jsx muestra todos los grupos juntos
+
+### Completado (segunda ronda)
+- [x] **TopBar mejorado**
+   - Icono de menu hamburguesa a la IZQUIERDA con opciones: Nueva prediccion, Ver predicciones, Ranking, Grupos
+   - Logo "Natalia" en el CENTRO
+   - Icono de usuario a la DERECHA con menu dropdown: Cuenta, Salir
+   - Menus solo visibles para usuarios logueados
+
+- [x] **Home.jsx limpiado**
+   - Eliminado "Hola, [nombre]"
+   - Eliminado boton "Salir" (ahora esta en TopBar)
+
+- [x] **Layout de botones navegacion**
+   - Botones Atras/Siguiente en LINEA SEPARADA debajo del titulo
+   - Atras pegado a la izquierda, Siguiente pegado a la derecha
+   - Sin scroll horizontal en ninguna pagina
+
+- [x] **Scroll to top**
+   - Al hacer click en Siguiente o Atras, la pagina carga desde arriba
+   - Implementado window.scrollTo(0, 0) en todas las navegaciones
+
+---
+
+## COMPLETADO - Fase 3.14: Mejoras UX
+
+### Knockout.jsx
+- [x] Boton "Siguiente" en rondas R32, R16, Cuartos, Semis
+- [x] Boton "Finalizar" solo visible en la ronda Final
+- [x] Ambos botones (top y bottom) respetan esta logica
+
+### ThirdPlaces.jsx
+- [x] Eliminado mensaje "Combinacion valida (Option X)"
+- [x] Solo se muestra alerta cuando la combinacion NO es valida
+- [x] Eliminada seccion de "Emparejamientos Round of 32" (se ve en Eliminatorias)
+
+### PredictionDetail.jsx
+- [x] Eliminado mensaje "Combinacion valida" en terceros lugares
+- [x] Fix: Campeon muestra nombre real (ej: Italia) en vez de placeholder (Playoff Europa A)
+- [x] Fix: Manejo de string vs number en IDs de equipos de repechaje
+- [x] Ganadores de repechajes se muestran correctamente en la seccion de Repechajes
+
+---
+
+### 10. Repechajes no se guardaban (UNIQUE constraint violation)
 - **Problema:** Al guardar repechajes, el backend daba error "duplicate key violates unique constraint"
 - **Causa:** Los UNIQUE constraints en las tablas de predicciones NO incluian `prediction_set_id`
   - `playoff_predictions` tenia `UNIQUE (user_id, playoff_id)` - solo 1 prediccion por usuario

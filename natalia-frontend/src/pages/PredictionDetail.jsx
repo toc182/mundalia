@@ -95,16 +95,20 @@ export default function PredictionDetail() {
     if (!selection?.final) return null;
     const playoff = playoffs.find(p => p.id === playoffId);
     if (!playoff) return null;
-    return playoff.teams.find(t => t.id === selection.final);
+    // Handle string vs number comparison
+    const finalId = typeof selection.final === 'string' ? parseInt(selection.final, 10) : selection.final;
+    return playoff.teams.find(t => t.id === finalId);
   };
 
   // Get team by ID
   const getTeamById = (teamId) => {
-    const team = mockTeams.find(t => t.id === teamId);
+    // Handle string vs number
+    const numId = typeof teamId === 'string' ? parseInt(teamId, 10) : teamId;
+    const team = mockTeams.find(t => t.id === numId);
     if (!team) return null;
 
     if (team.is_playoff) {
-      const playoffEntry = Object.entries(playoffToTeamId).find(([_, tid]) => tid === teamId);
+      const playoffEntry = Object.entries(playoffToTeamId).find(([_, tid]) => tid === numId);
       if (playoffEntry) {
         const playoffId = playoffEntry[0];
         const winner = getPlayoffWinner(playoffId);
@@ -325,42 +329,31 @@ export default function PredictionDetail() {
         </CardHeader>
         <CardContent>
           {bestThirdPlaces.length > 0 ? (
-            <>
-              <div className="flex flex-wrap gap-2 mb-3">
-                {bestThirdPlaces.map(group => {
-                  const teamIds = predictions[group] || [];
-                  const thirdPlaceId = teamIds[2];
-                  const team = thirdPlaceId ? getTeamById(thirdPlaceId) : null;
-                  return (
-                    <div
-                      key={group}
-                      className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded"
-                    >
-                      <span className="text-xs text-muted-foreground">3{group}</span>
-                      {team && (
-                        <>
-                          <img
-                            src={team.flag_url}
-                            alt={team.name}
-                            className="w-5 h-3 object-cover rounded"
-                          />
-                          <span className="text-sm">{team.name}</span>
-                        </>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              {thirdPlaceCombination ? (
-                <Badge variant="outline" className="text-green-600 border-green-300">
-                  Combinacion valida (Opcion {thirdPlaceCombination.option})
-                </Badge>
-              ) : bestThirdPlaces.length === 8 ? (
-                <Badge variant="outline" className="text-red-600 border-red-300">
-                  Combinacion no valida
-                </Badge>
-              ) : null}
-            </>
+            <div className="flex flex-wrap gap-2">
+              {bestThirdPlaces.map(group => {
+                const teamIds = predictions[group] || [];
+                const thirdPlaceId = teamIds[2];
+                const team = thirdPlaceId ? getTeamById(thirdPlaceId) : null;
+                return (
+                  <div
+                    key={group}
+                    className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded"
+                  >
+                    <span className="text-xs text-muted-foreground">3{group}</span>
+                    {team && (
+                      <>
+                        <img
+                          src={team.flag_url}
+                          alt={team.name}
+                          className="w-5 h-3 object-cover rounded"
+                        />
+                        <span className="text-sm">{team.name}</span>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           ) : (
             <span className="text-sm text-muted-foreground">Sin seleccionar</span>
           )}

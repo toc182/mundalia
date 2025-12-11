@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
 import { mockTeams } from '@/data/mockData';
 import { playoffs } from '@/data/playoffsData';
 import {
@@ -419,11 +420,13 @@ export default function Knockout() {
       await predictionsAPI.saveKnockout(knockoutPredictions, setId);
       setSaved(true);
       setTimeout(() => {
+        window.scrollTo(0, 0);
         navigate(nextUrl);
       }, 1000);
     } catch (err) {
       setError('Error al guardar en servidor - Continuando con guardado local');
       setTimeout(() => {
+        window.scrollTo(0, 0);
         navigate(nextUrl);
       }, 1500);
     } finally {
@@ -431,26 +434,60 @@ export default function Knockout() {
     }
   };
 
+  const handleBack = () => {
+    const backUrl = setId ? `/terceros?setId=${setId}` : '/terceros';
+    window.scrollTo(0, 0);
+    navigate(backUrl);
+  };
+
+  const BackButton = ({ size = 'default' }) => (
+    <Button variant="outline" onClick={handleBack} size={size}>
+      <ChevronLeft className="mr-1 h-4 w-4" />
+      Atras
+    </Button>
+  );
+
+  const FinishButton = ({ size = 'default' }) => (
+    <Button onClick={handleFinish} disabled={!isComplete || saving} size={size}>
+      {saving ? 'Guardando...' : 'Finalizar'}
+      <Trophy className="ml-1 h-4 w-4" />
+    </Button>
+  );
+
+  const NextRoundButton = ({ size = 'default' }) => (
+    <Button
+      onClick={() => {
+        window.scrollTo(0, 0);
+        setActiveRound(currentRound?.next);
+      }}
+      disabled={!isCurrentRoundComplete}
+      size={size}
+    >
+      Siguiente
+      <ChevronRight className="ml-1 h-4 w-4" />
+    </Button>
+  );
+
+  // Determinar que boton mostrar segun la ronda activa
+  const showFinishButton = activeRound === 'final';
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Progress indicator */}
-      <div className="flex items-center gap-2 mb-6 text-sm text-muted-foreground flex-wrap">
-        <Link to="/" className="hover:text-foreground">Inicio</Link>
-        <span>/</span>
-        <Link to={setId ? `/repechajes?setId=${setId}` : '/repechajes'} className="hover:text-foreground">Paso 1</Link>
-        <span>/</span>
-        <Link to={setId ? `/grupos?setId=${setId}` : '/grupos'} className="hover:text-foreground">Paso 2</Link>
-        <span>/</span>
-        <Link to={setId ? `/terceros?setId=${setId}` : '/terceros'} className="hover:text-foreground">Paso 3</Link>
-        <span>/</span>
-        <span className="font-medium text-foreground">Paso 4: Eliminatorias</span>
+    <div className="container mx-auto px-4 py-6">
+      {/* Header con titulo */}
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold">Eliminatorias</h1>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-sm text-muted-foreground">32 partidos de eliminacion directa</span>
+          <Badge variant={isComplete ? 'default' : 'secondary'}>
+            {totalComplete}/{totalMatches}
+          </Badge>
+        </div>
       </div>
 
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Eliminatorias</h1>
-        <Badge variant={isComplete ? 'default' : 'secondary'}>
-          {totalComplete}/{totalMatches} partidos
-        </Badge>
+      {/* Botones de navegacion en linea separada */}
+      <div className="flex justify-between mb-6">
+        <BackButton />
+        {showFinishButton ? <FinishButton /> : <NextRoundButton />}
       </div>
 
       {saved && (
@@ -504,15 +541,6 @@ export default function Knockout() {
               />
             ))}
           </div>
-          <div className="flex justify-end mt-6">
-            <Button
-              onClick={handleNextRound}
-              disabled={!isCurrentRoundComplete}
-              size="lg"
-            >
-              Continuar a Round of 16
-            </Button>
-          </div>
         </>
       )}
 
@@ -531,15 +559,6 @@ export default function Knockout() {
                 showFrom={true}
               />
             ))}
-          </div>
-          <div className="flex justify-end mt-6">
-            <Button
-              onClick={handleNextRound}
-              disabled={!isCurrentRoundComplete}
-              size="lg"
-            >
-              Continuar a Cuartos
-            </Button>
           </div>
         </>
       )}
@@ -560,15 +579,6 @@ export default function Knockout() {
               />
             ))}
           </div>
-          <div className="flex justify-end mt-6">
-            <Button
-              onClick={handleNextRound}
-              disabled={!isCurrentRoundComplete}
-              size="lg"
-            >
-              Continuar a Semifinales
-            </Button>
-          </div>
         </>
       )}
 
@@ -587,15 +597,6 @@ export default function Knockout() {
                 showFrom={true}
               />
             ))}
-          </div>
-          <div className="flex justify-end mt-6">
-            <Button
-              onClick={handleNextRound}
-              disabled={!isCurrentRoundComplete}
-              size="lg"
-            >
-              Continuar a la Final
-            </Button>
           </div>
         </>
       )}
@@ -639,24 +640,13 @@ export default function Knockout() {
             </div>
           )}
 
-          {/* Finalizar button */}
-          <div className="flex justify-end mt-6">
-            <Button
-              onClick={handleFinish}
-              disabled={!isCurrentRoundComplete || saving}
-              size="lg"
-            >
-              {saving ? 'Guardando...' : 'Finalizar Predicciones'}
-            </Button>
-          </div>
         </>
       )}
 
-      {/* Bottom navigation - only show back button */}
-      <div className="mt-8 pt-6 border-t">
-        <Button variant="outline" asChild>
-          <Link to={setId ? `/terceros?setId=${setId}` : '/terceros'}>Volver a Terceros</Link>
-        </Button>
+      {/* Bottom navigation */}
+      <div className="flex justify-between mt-8 pt-6 border-t">
+        <BackButton size="lg" />
+        {showFinishButton ? <FinishButton size="lg" /> : <NextRoundButton size="lg" />}
       </div>
     </div>
   );

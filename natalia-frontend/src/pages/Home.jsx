@@ -12,20 +12,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { LogOut, Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { predictionSetsAPI } from '@/services/api';
 
 export default function Home() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newName, setNewName] = useState('');
   const [saving, setSaving] = useState(false);
-
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
@@ -44,17 +39,6 @@ export default function Home() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Header con usuario y logout */}
-      <div className="flex justify-between items-center mb-8">
-        <div className="text-sm text-muted-foreground">
-          Hola, <span className="font-medium text-foreground">{user?.name || user?.email}</span>
-        </div>
-        <Button variant="ghost" size="sm" onClick={handleLogout}>
-          <LogOut className="h-4 w-4 mr-2" />
-          Salir
-        </Button>
-      </div>
-
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold mb-4">Quiniela Mundial 2026</h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">

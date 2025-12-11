@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { mockTeams, getAllGroups } from '@/data/mockData';
 import { playoffs } from '@/data/playoffsData';
 import { getThirdPlaceCombination } from '@/data/thirdPlaceCombinations';
@@ -159,11 +160,13 @@ export default function ThirdPlaces() {
       await predictionsAPI.saveThirdPlaces(selectedGroups, setId);
       setSaved(true);
       setTimeout(() => {
+        window.scrollTo(0, 0);
         navigate(nextUrl);
       }, 500);
     } catch (err) {
       setError('Error al guardar en servidor - Continuando con guardado local');
       setTimeout(() => {
+        window.scrollTo(0, 0);
         navigate(nextUrl);
       }, 1500);
     } finally {
@@ -171,31 +174,43 @@ export default function ThirdPlaces() {
     }
   };
 
+  const handleBack = () => {
+    const backUrl = setId ? `/grupos?setId=${setId}` : '/grupos';
+    window.scrollTo(0, 0);
+    navigate(backUrl);
+  };
+
+  const BackButton = ({ size = 'default' }) => (
+    <Button variant="outline" onClick={handleBack} size={size}>
+      <ChevronLeft className="mr-1 h-4 w-4" />
+      Atras
+    </Button>
+  );
+
+  const NextButton = ({ size = 'default' }) => (
+    <Button onClick={handleFinish} disabled={!isComplete || saving} size={size}>
+      {saving ? 'Guardando...' : 'Siguiente'}
+      <ChevronRight className="ml-1 h-4 w-4" />
+    </Button>
+  );
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Progress indicator */}
-      <div className="flex items-center gap-2 mb-6 text-sm text-muted-foreground flex-wrap">
-        <Link to="/" className="hover:text-foreground">Inicio</Link>
-        <span>/</span>
-        <Link to={setId ? `/repechajes?setId=${setId}` : '/repechajes'} className="hover:text-foreground">Paso 1: Repechajes</Link>
-        <span>/</span>
-        <Link to={setId ? `/grupos?setId=${setId}` : '/grupos'} className="hover:text-foreground">Paso 2: Grupos</Link>
-        <span>/</span>
-        <span className="font-medium text-foreground">Paso 3: Terceros</span>
-        <span>/</span>
-        <span>Paso 4: Eliminatorias</span>
+    <div className="container mx-auto px-4 py-6">
+      {/* Header con titulo */}
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold">Mejores Terceros Lugares</h1>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-sm text-muted-foreground">Selecciona 8 de 12 terceros</span>
+          <Badge variant={isComplete ? 'default' : 'secondary'}>
+            {bestThirdPlaces.length}/8
+          </Badge>
+        </div>
       </div>
 
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Mejores Terceros Lugares</h1>
-        <div className="flex items-center gap-3">
-          <Badge variant={isComplete ? 'default' : 'secondary'}>
-            {bestThirdPlaces.length}/8 seleccionados
-          </Badge>
-          <Button onClick={handleFinish} disabled={!isComplete || saving}>
-            {saving ? 'Guardando...' : 'Continuar'}
-          </Button>
-        </div>
+      {/* Botones de navegacion en linea separada */}
+      <div className="flex justify-between mb-6">
+        <BackButton />
+        <NextButton />
       </div>
 
       {saved && (
@@ -212,23 +227,13 @@ export default function ThirdPlaces() {
         </Alert>
       )}
 
-      <p className="text-muted-foreground mb-4">
-        Selecciona los 8 equipos que crees que clasificaran como mejores terceros lugares.
-        Solo 8 de los 12 terceros avanzan a la siguiente ronda.
-      </p>
-
-      <div className="flex flex-wrap items-center gap-2 mb-6">
-        {bestThirdPlaces.length === 8 && thirdPlaceCombination && (
-          <Badge variant="outline" className="text-green-600 border-green-300">
-            Combinacion valida (Option {thirdPlaceCombination.option})
-          </Badge>
-        )}
-        {bestThirdPlaces.length === 8 && !thirdPlaceCombination && (
-          <Badge variant="outline" className="text-red-600 border-red-300">
-            Combinacion no valida - selecciona otra
-          </Badge>
-        )}
-      </div>
+      {bestThirdPlaces.length === 8 && !thirdPlaceCombination && (
+        <Alert variant="destructive" className="mb-6">
+          <AlertDescription>
+            Combinacion no valida - selecciona otra combinacion de terceros lugares
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card className="mb-6">
         <CardContent className="pt-6">
@@ -281,46 +286,10 @@ export default function ThirdPlaces() {
         </CardContent>
       </Card>
 
-      {bestThirdPlaces.length === 8 && thirdPlaceCombination && (
-        <Card className="mb-6">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Emparejamientos Round of 32</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-3">
-              Segun tu seleccion, estos serian los emparejamientos de terceros lugares:
-            </p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-              {Object.entries(thirdPlaceCombination.assignments).map(([winner, third]) => {
-                const thirdTeam = thirdPlaceTeams.find(t => t.group === third)?.team;
-                return (
-                  <div key={winner} className="flex items-center gap-2 p-2 bg-muted rounded">
-                    <span className="font-medium">{winner}</span>
-                    <span className="text-muted-foreground">vs</span>
-                    <span className="font-medium">3{third}</span>
-                    {thirdTeam && (
-                      <img
-                        src={thirdTeam.flag_url}
-                        alt={thirdTeam.name}
-                        className="w-5 h-3 object-cover rounded ml-auto"
-                      />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Bottom navigation */}
       <div className="flex justify-between mt-8 pt-6 border-t">
-        <Button variant="outline" asChild>
-          <Link to={setId ? `/grupos?setId=${setId}` : '/grupos'}>Volver a Grupos</Link>
-        </Button>
-        <Button onClick={handleFinish} disabled={!isComplete || saving} size="lg">
-          {saving ? 'Guardando...' : 'Continuar a Eliminatorias'}
-        </Button>
+        <BackButton size="lg" />
+        <NextButton size="lg" />
       </div>
     </div>
   );

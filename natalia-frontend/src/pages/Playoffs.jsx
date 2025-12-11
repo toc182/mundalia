@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ChevronRight } from 'lucide-react';
 import { playoffs } from '@/data/playoffsData';
 import { predictionsAPI } from '@/services/api';
 
@@ -103,12 +104,14 @@ export default function Playoffs() {
       console.log('[PLAYOFFS] savePlayoffs response:', response.data);
       setSaved(true);
       setTimeout(() => {
+        window.scrollTo(0, 0);
         navigate(nextUrl);
       }, 500);
     } catch (err) {
       console.error('[PLAYOFFS] savePlayoffs error:', err.response?.data || err.message);
       setError('Error al guardar en servidor - Continuando con guardado local');
       setTimeout(() => {
+        window.scrollTo(0, 0);
         navigate(nextUrl);
       }, 1500);
     } finally {
@@ -122,35 +125,33 @@ export default function Playoffs() {
 
   const completedCount = playoffs.filter(p => selections[p.id]?.final).length;
 
+  const NextButton = ({ size = 'default' }) => (
+    <Button
+      onClick={handleContinue}
+      disabled={!isComplete() || saving}
+      size={size}
+    >
+      {saving ? 'Guardando...' : 'Siguiente'}
+      <ChevronRight className="ml-1 h-4 w-4" />
+    </Button>
+  );
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Progress indicator */}
-      <div className="flex items-center gap-2 mb-6 text-sm text-muted-foreground">
-        <Link to="/" className="hover:text-foreground">Inicio</Link>
-        <span>/</span>
-        <span className="font-medium text-foreground">Paso 1: Repechajes</span>
-        <span>/</span>
-        <span>Paso 2: Grupos</span>
-        <span>/</span>
-        <span>Paso 3: Terceros</span>
+    <div className="container mx-auto px-4 py-6">
+      {/* Header con titulo */}
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold">Repechajes Intercontinentales</h1>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-sm text-muted-foreground">Marzo 2026</span>
+          <Badge variant={isComplete() ? 'default' : 'secondary'}>
+            {completedCount}/{playoffs.length}
+          </Badge>
+        </div>
       </div>
 
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold">Repechajes Intercontinentales</h1>
-          <p className="text-muted-foreground">Marzo 2026</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Badge variant={isComplete() ? 'default' : 'secondary'}>
-            {completedCount}/{playoffs.length} completos
-          </Badge>
-          <Button
-            onClick={handleContinue}
-            disabled={!isComplete() || saving}
-          >
-            {saving ? 'Guardando...' : 'Continuar'}
-          </Button>
-        </div>
+      {/* Botones de navegacion en linea separada */}
+      <div className="flex justify-end mb-6">
+        <NextButton />
       </div>
 
       {saved && (
@@ -204,17 +205,8 @@ export default function Playoffs() {
       </div>
 
       {/* Bottom navigation */}
-      <div className="flex justify-between mt-8 pt-6 border-t">
-        <Button variant="outline" asChild>
-          <Link to="/">Volver al Inicio</Link>
-        </Button>
-        <Button
-          onClick={handleContinue}
-          disabled={!isComplete() || saving}
-          size="lg"
-        >
-          {saving ? 'Guardando...' : 'Continuar a Grupos'}
-        </Button>
+      <div className="flex justify-end mt-8 pt-6 border-t">
+        <NextButton size="lg" />
       </div>
     </div>
   );

@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { mockTeams, getAllGroups } from '@/data/mockData';
 import { playoffs } from '@/data/playoffsData';
 import { predictionsAPI } from '@/services/api';
@@ -27,7 +28,6 @@ export default function Predictions() {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  const [activeGroup, setActiveGroup] = useState('A');
 
   // Helper para inicializar todos los grupos con orden por defecto
   const getDefaultPredictions = () => {
@@ -223,6 +223,7 @@ export default function Predictions() {
       setSaved(true);
       setSaving(false);
       setTimeout(() => {
+        window.scrollTo(0, 0);
         navigate(nextUrl);
       }, 500);
     } catch (err) {
@@ -230,29 +231,46 @@ export default function Predictions() {
       setError('Error al guardar en servidor - Continuando con guardado local');
       setSaving(false);
       setTimeout(() => {
+        window.scrollTo(0, 0);
         navigate(nextUrl);
       }, 1500);
     }
   };
 
+  const handleBack = () => {
+    const backUrl = setId ? `/repechajes?setId=${setId}` : '/repechajes';
+    window.scrollTo(0, 0);
+    navigate(backUrl);
+  };
+
+  const BackButton = ({ size = 'default' }) => (
+    <Button variant="outline" onClick={handleBack} size={size}>
+      <ChevronLeft className="mr-1 h-4 w-4" />
+      Atras
+    </Button>
+  );
+
+  const NextButton = ({ size = 'default' }) => (
+    <Button onClick={handleContinue} disabled={!isComplete || saving} size={size}>
+      {saving ? 'Guardando...' : 'Siguiente'}
+      <ChevronRight className="ml-1 h-4 w-4" />
+    </Button>
+  );
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Progress indicator */}
-      <div className="flex items-center gap-2 mb-6 text-sm text-muted-foreground">
-        <Link to="/" className="hover:text-foreground">Inicio</Link>
-        <span>/</span>
-        <Link to={setId ? `/repechajes?setId=${setId}` : '/repechajes'} className="hover:text-foreground">Paso 1: Repechajes</Link>
-        <span>/</span>
-        <span className="font-medium text-foreground">Paso 2: Grupos</span>
-        <span>/</span>
-        <span>Paso 3: Terceros</span>
+    <div className="container mx-auto px-4 py-6">
+      {/* Header con titulo */}
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold">Predicciones de Grupos</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Ordena los equipos de cada grupo. Top 2 clasifican, 3ro puede avanzar.
+        </p>
       </div>
 
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Predicciones de Grupos</h1>
-        <Button onClick={handleContinue} disabled={!isComplete || saving}>
-          {saving ? 'Guardando...' : 'Continuar'}
-        </Button>
+      {/* Botones de navegacion en linea separada */}
+      <div className="flex justify-between mb-6">
+        <BackButton />
+        <NextButton />
       </div>
 
       {saved && (
@@ -269,41 +287,8 @@ export default function Predictions() {
         </Alert>
       )}
 
-      <p className="text-muted-foreground mb-4">
-        Arrastra los equipos o usa los botones ▲▼ para ordenarlos.
-        Los primeros 2 clasifican directamente. El 3ro puede clasificar como mejor tercero.
-      </p>
-
-      {/* Group selector for mobile */}
-      <div className="flex flex-wrap gap-2 mb-6 md:hidden">
-        {groups.map(group => (
-          <Button
-            key={group}
-            variant={activeGroup === group ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setActiveGroup(group)}
-          >
-            Grupo {group}
-          </Button>
-        ))}
-      </div>
-
-      {/* Mobile view - one group at a time */}
-      <div className="md:hidden">
-        <GroupCard
-          group={activeGroup}
-          teamIds={predictions[activeGroup] || []}
-          getTeamById={getTeamById}
-          onMove={moveTeam}
-          onReorder={reorderTeams}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-        />
-      </div>
-
-      {/* Desktop view - grid of all groups */}
-      <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {/* Grid de todos los grupos */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {groups.map(group => (
           <GroupCard
             key={group}
@@ -321,12 +306,8 @@ export default function Predictions() {
 
       {/* Bottom navigation */}
       <div className="flex justify-between mt-8 pt-6 border-t">
-        <Button variant="outline" asChild>
-          <Link to={setId ? `/repechajes?setId=${setId}` : '/repechajes'}>Volver a Repechajes</Link>
-        </Button>
-        <Button onClick={handleContinue} size="lg" disabled={!isComplete || saving}>
-          {saving ? 'Guardando...' : 'Continuar a Terceros'}
-        </Button>
+        <BackButton size="lg" />
+        <NextButton size="lg" />
       </div>
     </div>
   );
