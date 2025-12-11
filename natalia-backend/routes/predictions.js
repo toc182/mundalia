@@ -44,7 +44,7 @@ router.get('/my', auth, async (req, res) => {
         SELECT gp.*, t.name as team_name, t.code as team_code, t.flag_url
         FROM group_predictions gp
         JOIN teams t ON gp.team_id = t.id
-        WHERE gp.user_id = $1 AND (gp.prediction_set_id = $2 OR gp.prediction_set_id IS NULL)
+        WHERE gp.user_id = $1 AND gp.prediction_set_id = $2
         ORDER BY gp.group_letter, gp.predicted_position
       `, [req.user.id, setId])
     ]);
@@ -139,7 +139,7 @@ router.get('/playoffs', auth, async (req, res) => {
     const setId = req.query.setId || await getOrCreateDefaultSet(req.user.id);
 
     const result = await db.query(
-      'SELECT * FROM playoff_predictions WHERE user_id = $1 AND (prediction_set_id = $2 OR prediction_set_id IS NULL)',
+      'SELECT * FROM playoff_predictions WHERE user_id = $1 AND prediction_set_id = $2',
       [req.user.id, setId]
     );
 
@@ -195,7 +195,7 @@ router.get('/third-places', auth, async (req, res) => {
     const setId = req.query.setId || await getOrCreateDefaultSet(req.user.id);
 
     const result = await db.query(
-      'SELECT selected_groups FROM third_place_predictions WHERE user_id = $1 AND (prediction_set_id = $2 OR prediction_set_id IS NULL)',
+      'SELECT selected_groups FROM third_place_predictions WHERE user_id = $1 AND prediction_set_id = $2',
       [req.user.id, setId]
     );
 
@@ -239,7 +239,7 @@ router.get('/knockout', auth, async (req, res) => {
     const setId = req.query.setId || await getOrCreateDefaultSet(req.user.id);
 
     const result = await db.query(
-      'SELECT match_key, winner_team_id FROM knockout_predictions WHERE user_id = $1 AND (prediction_set_id = $2 OR prediction_set_id IS NULL)',
+      'SELECT match_key, winner_team_id FROM knockout_predictions WHERE user_id = $1 AND prediction_set_id = $2',
       [req.user.id, setId]
     );
 
@@ -295,12 +295,12 @@ router.get('/all', auth, async (req, res) => {
         SELECT gp.*, t.name as team_name, t.code as team_code, t.flag_url
         FROM group_predictions gp
         JOIN teams t ON gp.team_id = t.id
-        WHERE gp.user_id = $1 AND (gp.prediction_set_id = $2 OR gp.prediction_set_id IS NULL)
+        WHERE gp.user_id = $1 AND gp.prediction_set_id = $2
         ORDER BY gp.group_letter, gp.predicted_position
       `, [req.user.id, setId]),
-      db.query('SELECT * FROM playoff_predictions WHERE user_id = $1 AND (prediction_set_id = $2 OR prediction_set_id IS NULL)', [req.user.id, setId]),
-      db.query('SELECT selected_groups FROM third_place_predictions WHERE user_id = $1 AND (prediction_set_id = $2 OR prediction_set_id IS NULL)', [req.user.id, setId]),
-      db.query('SELECT match_key, winner_team_id FROM knockout_predictions WHERE user_id = $1 AND (prediction_set_id = $2 OR prediction_set_id IS NULL)', [req.user.id, setId])
+      db.query('SELECT * FROM playoff_predictions WHERE user_id = $1 AND prediction_set_id = $2', [req.user.id, setId]),
+      db.query('SELECT selected_groups FROM third_place_predictions WHERE user_id = $1 AND prediction_set_id = $2', [req.user.id, setId]),
+      db.query('SELECT match_key, winner_team_id FROM knockout_predictions WHERE user_id = $1 AND prediction_set_id = $2', [req.user.id, setId])
     ]);
 
     // Format playoff predictions
