@@ -164,25 +164,33 @@ router.get('/playoffs', auth, async (req, res) => {
 router.post('/playoffs', auth, async (req, res) => {
   const { predictions, setId: requestSetId } = req.body; // { playoff_id: { semi1, semi2, final } }
 
+  console.log('[PLAYOFFS POST] user:', req.user.id, 'requestSetId:', requestSetId);
+  console.log('[PLAYOFFS POST] predictions:', JSON.stringify(predictions));
+
   try {
     const setId = requestSetId || await getOrCreateDefaultSet(req.user.id);
+    console.log('[PLAYOFFS POST] resolved setId:', setId);
 
     // Delete existing predictions for this set
-    await db.query('DELETE FROM playoff_predictions WHERE user_id = $1 AND prediction_set_id = $2', [req.user.id, setId]);
+    const deleteResult = await db.query('DELETE FROM playoff_predictions WHERE user_id = $1 AND prediction_set_id = $2', [req.user.id, setId]);
+    console.log('[PLAYOFFS POST] deleted rows:', deleteResult.rowCount);
 
     // Insert new predictions
+    let insertedCount = 0;
     for (const [playoffId, selection] of Object.entries(predictions)) {
       if (selection && (selection.semi1 || selection.semi2 || selection.final)) {
         await db.query(`
           INSERT INTO playoff_predictions (user_id, playoff_id, semifinal_winner_1, semifinal_winner_2, final_winner, prediction_set_id)
           VALUES ($1, $2, $3, $4, $5, $6)
         `, [req.user.id, playoffId, selection.semi1 || null, selection.semi2 || null, selection.final || null, setId]);
+        insertedCount++;
       }
     }
+    console.log('[PLAYOFFS POST] inserted rows:', insertedCount);
 
     res.json({ message: 'Playoff predictions saved successfully', setId });
   } catch (err) {
-    console.error(err);
+    console.error('[PLAYOFFS POST] error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });

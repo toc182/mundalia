@@ -239,7 +239,7 @@ export default function Predictions() {
       <div className="flex items-center gap-2 mb-6 text-sm text-muted-foreground">
         <Link to="/" className="hover:text-foreground">Inicio</Link>
         <span>/</span>
-        <Link to="/repechajes" className="hover:text-foreground">Paso 1: Repechajes</Link>
+        <Link to={setId ? `/repechajes?setId=${setId}` : '/repechajes'} className="hover:text-foreground">Paso 1: Repechajes</Link>
         <span>/</span>
         <span className="font-medium text-foreground">Paso 2: Grupos</span>
         <span>/</span>

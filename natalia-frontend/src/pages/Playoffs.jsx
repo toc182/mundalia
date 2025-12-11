@@ -19,23 +19,30 @@ export default function Playoffs() {
 
   useEffect(() => {
     const loadSelections = async () => {
+      console.log('[PLAYOFFS] loadSelections called, setId:', setId);
       // Si hay setId, solo cargar del servidor (sin fallback a localStorage)
       if (setId) {
         try {
           const response = await predictionsAPI.getPlayoffs(setId);
+          console.log('[PLAYOFFS] getPlayoffs response:', response.data);
           if (response.data && Object.keys(response.data).length > 0) {
             setSelections(response.data);
+            console.log('[PLAYOFFS] Loaded selections from API');
+          } else {
+            console.log('[PLAYOFFS] No data from API, starting blank');
           }
           // Si no hay datos en servidor, empezar en blanco (no cargar localStorage)
         } catch (err) {
           // Error de servidor, empezar en blanco
-          console.error('Error loading playoffs:', err);
+          console.error('[PLAYOFFS] Error loading playoffs:', err);
         }
       } else {
         // Sin setId: comportamiento legacy con localStorage
+        console.log('[PLAYOFFS] No setId, checking localStorage');
         const savedSelections = localStorage.getItem('natalia_playoffs');
         if (savedSelections) {
           setSelections(JSON.parse(savedSelections));
+          console.log('[PLAYOFFS] Loaded from localStorage');
         }
       }
     };
@@ -87,13 +94,19 @@ export default function Playoffs() {
 
     const nextUrl = setId ? `/grupos?setId=${setId}` : '/grupos';
 
+    console.log('[PLAYOFFS] handleContinue called');
+    console.log('[PLAYOFFS] setId:', setId);
+    console.log('[PLAYOFFS] selections:', selections);
+
     try {
-      await predictionsAPI.savePlayoffs(selections, setId);
+      const response = await predictionsAPI.savePlayoffs(selections, setId);
+      console.log('[PLAYOFFS] savePlayoffs response:', response.data);
       setSaved(true);
       setTimeout(() => {
         navigate(nextUrl);
       }, 500);
     } catch (err) {
+      console.error('[PLAYOFFS] savePlayoffs error:', err.response?.data || err.message);
       setError('Error al guardar en servidor - Continuando con guardado local');
       setTimeout(() => {
         navigate(nextUrl);
