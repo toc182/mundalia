@@ -1,41 +1,95 @@
 # SESSION.md - Estado Actual del Proyecto
 
-## Ultima Actualizacion: 2025-12-11
+## Ultima Actualizacion: 2025-12-11 (16:30 UTC)
 
 ---
 
-## COMPLETADO: Sistema de Multiples Predicciones + Sin Auto-Relleno
+## PRODUCCION FUNCIONANDO
 
-**Nueva funcionalidad:** Los usuarios pueden crear multiples predicciones con nombres personalizados.
-**Mejora reciente:** Las nuevas predicciones empiezan completamente en blanco, sin auto-relleno de localStorage.
+- **Login/Registro:** Funcionando
+- **Predicciones:** Sistema de multiples predicciones funcional
+- **Deploy:** Frontend en Vercel, Backend en Railway
 
 ### Estado de las Fases
 - [x] Fase 1: Infraestructura API (api.js, vite.config)
 - [x] Fase 2: Autenticacion (AuthContext, Login, Register, ProtectedRoute)
 - [x] Fase 3: Predicciones (TODAS conectadas con API)
 - [x] **Fase 3.5: Multiples Predicciones**
-- [x] **Fase 3.6: Sin Auto-Relleno (NUEVO)**
+- [x] **Fase 3.6: Sin Auto-Relleno**
+- [x] **Fase 3.7: Fix boton Comenzar** (EN PROGRESO)
 - [ ] Fase 4: Leaderboard
 - [ ] Fase 5: Grupos privados
 - [x] Fase 6: Deploy a produccion
 
 ---
 
-## Cambios Recientes (2025-12-11)
+## Problemas Resueltos (2025-12-11)
 
-### Sin Auto-Relleno de localStorage
-- Nuevas predicciones empiezan completamente en blanco
-- Solo se cargan datos del servidor para el setId especifico
-- Sin fallback a localStorage cuando hay setId
-- Grupos muestran equipos pero sin colores de "clasificado" hasta interactuar
-- Contador de progreso: "X/12 grupos" completados
-- Validacion: debe ordenar todos los grupos para continuar
+### 1. CORS Error en Produccion
+- **Problema:** Frontend en Vercel no podia conectar con Backend en Railway
+- **Error:** `Access-Control-Allow-Origin header has value 'http://localhost:5174'`
+- **Solucion:** Actualizado `server.js` para permitir multiples origenes:
+  ```js
+  const allowedOrigins = ['http://localhost:5174', 'https://mundalia.vercel.app'];
+  ```
 
-### Deploy a Produccion
-- Codigo subido a GitHub (commit 1537f4e)
-- Frontend desplegado en Vercel
-- Backend desplegado en Railway
-- Base de datos de produccion verificada con todas las tablas/columnas
+### 2. API URL no configurada en Produccion
+- **Problema:** Frontend en produccion usaba `http://localhost:5001/api`
+- **Solucion:** Creado `.env.production` con `VITE_API_URL=https://mundalia-production.up.railway.app/api`
+
+### 3. Vercel 404 en rutas directas
+- **Problema:** Acceder directamente a `/login` daba 404
+- **Solucion:** Creado `vercel.json` con rewrites para SPA routing
+
+### 4. Predicciones cargando datos de sets anteriores
+- **Problema:** Queries SQL incluian `OR prediction_set_id IS NULL` que cargaba datos legacy
+- **Solucion:** Eliminado fallback a `IS NULL` en todas las queries de predictions.js
+
+### 5. Boton "Comenzar" cargaba datos de localStorage (EN PROGRESO)
+- **Problema:** Boton "Comenzar" en Home iba a `/repechajes` sin `setId`, cargando localStorage
+- **Solucion:** Cambiado para crear prediction set automaticamente antes de navegar
+
+---
+
+## Cambios de Esta Sesion
+
+### Backend
+| Archivo | Cambio |
+|---------|--------|
+| `server.js` | CORS permite localhost y vercel.app |
+| `routes/predictions.js` | Removido `OR prediction_set_id IS NULL` de todas las queries |
+
+### Frontend
+| Archivo | Cambio |
+|---------|--------|
+| `.env.production` | NUEVO - VITE_API_URL para produccion |
+| `vercel.json` | NUEVO - SPA rewrites |
+| `src/context/AuthContext.jsx` | Console logs para debug (temporales) |
+| `src/pages/Login.jsx` | Console logs para debug (temporales) |
+| `src/pages/Home.jsx` | Boton "Comenzar" ahora crea prediction set antes de navegar |
+
+---
+
+## Flujo Correcto de Usuario
+
+```
+Home.jsx
+    |
+    +-> "Comenzar" -> Crea prediction set -> /repechajes?setId=X (en blanco)
+    |
+    +-> "Ver Mis Predicciones" -> /mis-predicciones
+            |
+            +-> "Nueva Prediccion" -> Dialog nombre -> /repechajes?setId=X (en blanco)
+            +-> Card existente -> Ver/Editar/Duplicar/Eliminar
+```
+
+---
+
+## Deploy a Produccion
+- Codigo en GitHub: https://github.com/toc182/mundalia
+- Frontend: https://mundalia.vercel.app
+- Backend: https://mundalia-production.up.railway.app
+- DB: Railway PostgreSQL (maglev.proxy.rlwy.net:32570)
 
 ---
 

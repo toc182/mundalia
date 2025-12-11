@@ -1,16 +1,34 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LogOut } from 'lucide-react';
+import { predictionSetsAPI } from '@/services/api';
 
 export default function Home() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [starting, setStarting] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const handleStart = async () => {
+    setStarting(true);
+    try {
+      // Crear un nuevo prediction set y navegar con setId
+      const response = await predictionSetsAPI.create('Mi Prediccion');
+      navigate(`/repechajes?setId=${response.data.id}`);
+    } catch (err) {
+      console.error('Error creating prediction set:', err);
+      // Fallback: ir sin setId (modo legacy)
+      navigate('/repechajes');
+    } finally {
+      setStarting(false);
+    }
   };
 
   return (
@@ -42,8 +60,8 @@ export default function Home() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button asChild className="w-full" size="lg">
-              <Link to="/repechajes">Comenzar</Link>
+            <Button className="w-full" size="lg" onClick={handleStart} disabled={starting}>
+              {starting ? 'Creando...' : 'Comenzar'}
             </Button>
           </CardContent>
         </Card>
