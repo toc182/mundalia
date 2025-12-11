@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -135,6 +135,33 @@ export default function Predictions() {
     return team;
   };
 
+  // Drag & drop handlers (desktop)
+  const handleDragStart = (e, teamId) => {
+    e.dataTransfer.setData('teamId', teamId.toString());
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e, targetIndex, group) => {
+    e.preventDefault();
+    const draggedTeamId = parseInt(e.dataTransfer.getData('teamId'));
+    const currentOrder = [...(predictions[group] || [])];
+    const draggedIndex = currentOrder.indexOf(draggedTeamId);
+
+    if (draggedIndex === targetIndex || draggedIndex === -1) return;
+
+    currentOrder.splice(draggedIndex, 1);
+    currentOrder.splice(targetIndex, 0, draggedTeamId);
+
+    setPredictions(prev => ({
+      ...prev,
+      [group]: currentOrder
+    }));
+    setSaved(false);
+  };
+
   const moveTeam = (group, fromIndex, direction) => {
     const toIndex = fromIndex + direction;
     if (toIndex < 0 || toIndex > 3) return;
@@ -143,6 +170,20 @@ export default function Predictions() {
     const temp = currentOrder[fromIndex];
     currentOrder[fromIndex] = currentOrder[toIndex];
     currentOrder[toIndex] = temp;
+
+    setPredictions(prev => ({
+      ...prev,
+      [group]: currentOrder
+    }));
+    setSaved(false);
+  };
+
+  // Reorder teams (for touch drag)
+  const reorderTeams = (group, fromIndex, toIndex) => {
+    if (fromIndex === toIndex) return;
+    const currentOrder = [...(predictions[group] || [])];
+    const [removed] = currentOrder.splice(fromIndex, 1);
+    currentOrder.splice(toIndex, 0, removed);
 
     setPredictions(prev => ({
       ...prev,
@@ -229,7 +270,7 @@ export default function Predictions() {
       )}
 
       <p className="text-muted-foreground mb-4">
-        Usa los botones ▲▼ para ordenar los equipos segun como crees que terminaran.
+        Arrastra los equipos o usa los botones ▲▼ para ordenarlos.
         Los primeros 2 clasifican directamente. El 3ro puede clasificar como mejor tercero.
       </p>
 
@@ -254,6 +295,10 @@ export default function Predictions() {
           teamIds={predictions[activeGroup] || []}
           getTeamById={getTeamById}
           onMove={moveTeam}
+          onReorder={reorderTeams}
+          onDragStart={handleDragStart}
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
         />
       </div>
 
@@ -266,6 +311,10 @@ export default function Predictions() {
             teamIds={predictions[group] || []}
             getTeamById={getTeamById}
             onMove={moveTeam}
+            onReorder={reorderTeams}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
           />
         ))}
       </div>
@@ -283,11 +332,47 @@ export default function Predictions() {
   );
 }
 
-function GroupCard({ group, teamIds, getTeamById, onMove }) {
+function GroupCard({ group, teamIds, getTeamById, onMove, onReorder, onDragStart, onDragOver, onDrop }) {
+  const [draggedIndex, setDraggedIndex] = useState(null);
+  const [touchY, setTouchY] = useState(null);
+  const itemRefs = useRef([]);
+
   // Si no hay teamIds, obtener equipos del grupo desde mockTeams
   const displayTeamIds = teamIds.length > 0 ? teamIds : mockTeams
     .filter(t => t.group_letter === group)
     .map(t => t.id);
+
+  // Touch handlers for mobile drag
+  const handleTouchStart = (e, index) => {
+    setDraggedIndex(index);
+    setTouchY(e.touches[0].clientY);
+  };
+
+  const handleTouchMove = (e, currentIndex) => {
+    if (draggedIndex === null) return;
+
+    const currentY = e.touches[0].clientY;
+    const diff = currentY - touchY;
+
+    // Determinar si se movió lo suficiente para cambiar posición
+    const itemHeight = 56; // altura aproximada de cada item
+
+    if (Math.abs(diff) > itemHeight / 2) {
+      const direction = diff > 0 ? 1 : -1;
+      const newIndex = draggedIndex + direction;
+
+      if (newIndex >= 0 && newIndex <= 3) {
+        onReorder(group, draggedIndex, newIndex);
+        setDraggedIndex(newIndex);
+        setTouchY(currentY);
+      }
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setDraggedIndex(null);
+    setTouchY(null);
+  };
 
   return (
     <Card>
@@ -302,17 +387,30 @@ function GroupCard({ group, teamIds, getTeamById, onMove }) {
           // Siempre mostrar colores de clasificacion
           const qualifies = index < 2;
           const isThird = index === 2;
+          const isDragging = draggedIndex === index;
 
           return (
             <div
               key={team.id}
-              className={`flex items-center gap-2 p-2 rounded-lg border transition-colors
+              ref={el => itemRefs.current[index] = el}
+              draggable
+              onDragStart={(e) => onDragStart(e, team.id)}
+              onDragOver={onDragOver}
+              onDrop={(e) => onDrop(e, index, group)}
+              onTouchStart={(e) => handleTouchStart(e, index)}
+              onTouchMove={(e) => handleTouchMove(e, index)}
+              onTouchEnd={handleTouchEnd}
+              className={`flex items-center gap-2 p-2 rounded-lg border transition-all cursor-grab active:cursor-grabbing select-none
                 ${qualifies ? 'bg-green-50 border-green-200' : ''}
-                ${isThird ? 'bg-yellow-50 border-yellow-200' : ''}`}
+                ${isThird ? 'bg-yellow-50 border-yellow-200' : ''}
+                ${isDragging ? 'opacity-50 scale-105 shadow-lg' : ''}
+                hover:shadow-md`}
+              style={{ touchAction: 'none' }}
             >
               <span className="text-sm font-medium text-muted-foreground w-5">
                 {index + 1}
               </span>
+              <span className="text-lg cursor-grab">☰</span>
               <img
                 src={team.flag_url}
                 alt={team.name}
@@ -329,7 +427,7 @@ function GroupCard({ group, teamIds, getTeamById, onMove }) {
               </div>
               <div className="flex gap-1">
                 <button
-                  onClick={() => onMove(group, index, -1)}
+                  onClick={(e) => { e.stopPropagation(); onMove(group, index, -1); }}
                   disabled={index === 0}
                   className="w-10 h-10 flex items-center justify-center rounded bg-muted hover:bg-muted/80 active:bg-muted/60 disabled:opacity-30 text-xl font-bold select-none"
                   style={{ touchAction: 'manipulation' }}
@@ -337,7 +435,7 @@ function GroupCard({ group, teamIds, getTeamById, onMove }) {
                   ▲
                 </button>
                 <button
-                  onClick={() => onMove(group, index, 1)}
+                  onClick={(e) => { e.stopPropagation(); onMove(group, index, 1); }}
                   disabled={index === 3}
                   className="w-10 h-10 flex items-center justify-center rounded bg-muted hover:bg-muted/80 active:bg-muted/60 disabled:opacity-30 text-xl font-bold select-none"
                   style={{ touchAction: 'manipulation' }}
