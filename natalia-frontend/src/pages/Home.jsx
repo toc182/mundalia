@@ -1,10 +1,31 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { LogOut } from 'lucide-react';
 
 export default function Home() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
   return (
     <div className="container mx-auto px-4 py-8">
+      {/* Header con usuario y logout */}
+      <div className="flex justify-between items-center mb-8">
+        <div className="text-sm text-muted-foreground">
+          Hola, <span className="font-medium text-foreground">{user?.name || user?.email}</span>
+        </div>
+        <Button variant="ghost" size="sm" onClick={handleLogout}>
+          <LogOut className="h-4 w-4 mr-2" />
+          Salir
+        </Button>
+      </div>
+
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold mb-4">Quiniela Mundial 2026</h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">

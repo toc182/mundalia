@@ -1,21 +1,41 @@
 # SESSION.md - Estado Actual del Proyecto
 
-## Ultima Actualizacion: 2025-12-10
+## Ultima Actualizacion: 2025-12-11
 
 ---
 
-## COMPLETADO: Sistema de Multiples Predicciones
+## COMPLETADO: Sistema de Multiples Predicciones + Sin Auto-Relleno
 
 **Nueva funcionalidad:** Los usuarios pueden crear multiples predicciones con nombres personalizados.
+**Mejora reciente:** Las nuevas predicciones empiezan completamente en blanco, sin auto-relleno de localStorage.
 
 ### Estado de las Fases
 - [x] Fase 1: Infraestructura API (api.js, vite.config)
 - [x] Fase 2: Autenticacion (AuthContext, Login, Register, ProtectedRoute)
 - [x] Fase 3: Predicciones (TODAS conectadas con API)
-- [x] **Fase 3.5: Multiples Predicciones (NUEVO)**
+- [x] **Fase 3.5: Multiples Predicciones**
+- [x] **Fase 3.6: Sin Auto-Relleno (NUEVO)**
 - [ ] Fase 4: Leaderboard
 - [ ] Fase 5: Grupos privados
-- [ ] Fase 6: Ajustes backend (parcialmente completado)
+- [x] Fase 6: Deploy a produccion
+
+---
+
+## Cambios Recientes (2025-12-11)
+
+### Sin Auto-Relleno de localStorage
+- Nuevas predicciones empiezan completamente en blanco
+- Solo se cargan datos del servidor para el setId especifico
+- Sin fallback a localStorage cuando hay setId
+- Grupos muestran equipos pero sin colores de "clasificado" hasta interactuar
+- Contador de progreso: "X/12 grupos" completados
+- Validacion: debe ordenar todos los grupos para continuar
+
+### Deploy a Produccion
+- Codigo subido a GitHub (commit 1537f4e)
+- Frontend desplegado en Vercel
+- Backend desplegado en Railway
+- Base de datos de produccion verificada con todas las tablas/columnas
 
 ---
 
@@ -80,33 +100,33 @@ Todos los endpoints de `/api/predictions/*` ahora aceptan `setId` como parametro
      |
      +-> "Nueva Prediccion" -> Dialog nombre
      |         |
-     |         +-> "Crear y Comenzar" -> /repechajes?setId=X
+     |         +-> "Crear y Comenzar" -> /repechajes?setId=X (en blanco)
      |
      +-> Card de prediccion existente
              |
              +-> "Ver" -> /prediccion/X
-             +-> "Editar" -> /repechajes?setId=X
+             +-> "Editar" -> /repechajes?setId=X (carga datos existentes)
              +-> "Duplicar" -> Crea copia
              +-> "Renombrar" -> Dialog
              +-> "Eliminar" -> Confirmacion
 
-/repechajes?setId=X
+/repechajes?setId=X (empieza en blanco si es nuevo)
      |
      v
-/grupos?setId=X
-     |
+/grupos?setId=X (muestra equipos, sin colores hasta interactuar)
+     |           (contador X/12 grupos, debe completar todos)
      v
 /terceros?setId=X
      |
      v
 /eliminatorias?setId=X
      |
-     +-> "Finalizar" -> /prediccion/X (o /mis-predicciones si no hay setId)
+     +-> "Finalizar" -> /prediccion/X
 ```
 
 ---
 
-## Archivos Creados/Modificados (Sesion Actual)
+## Archivos Creados/Modificados
 
 ### Backend
 | Archivo | Cambio |
@@ -121,10 +141,10 @@ Todos los endpoints de `/api/predictions/*` ahora aceptan `setId` como parametro
 | `src/services/api.js` | Agregado predictionSetsAPI + actualizado predictionsAPI con setId |
 | `src/pages/MyPredictions.jsx` | REESCRITO - Lista de prediction sets |
 | `src/pages/PredictionDetail.jsx` | NUEVO - Detalle de una prediccion |
-| `src/pages/Playoffs.jsx` | Actualizado - Lee/guarda con setId |
-| `src/pages/Predictions.jsx` | Actualizado - Lee/guarda con setId |
-| `src/pages/ThirdPlaces.jsx` | Actualizado - Lee/guarda con setId |
-| `src/pages/Knockout.jsx` | Actualizado - Lee/guarda con setId |
+| `src/pages/Playoffs.jsx` | Sin fallback a localStorage cuando hay setId |
+| `src/pages/Predictions.jsx` | Sin auto-relleno, contador X/12, validacion |
+| `src/pages/ThirdPlaces.jsx` | Sin fallback a localStorage cuando hay setId |
+| `src/pages/Knockout.jsx` | Sin fallback a localStorage cuando hay setId |
 | `src/App.jsx` | Nueva ruta /prediccion/:id |
 
 ---
@@ -143,12 +163,12 @@ Todos los endpoints de `/api/predictions/*` ahora aceptan `setId` como parametro
 
 ## Base de Datos (Railway PostgreSQL)
 
-### Tablas
+### Tablas (Verificadas en Produccion)
 | Tabla | Estado | Descripcion |
 |-------|--------|-------------|
 | `users` | OK | Usuarios registrados |
 | `teams` | OK | 48 equipos del Mundial |
-| `prediction_sets` | NUEVA | Sets de predicciones con nombre |
+| `prediction_sets` | OK | Sets de predicciones con nombre |
 | `group_predictions` | OK + prediction_set_id | Predicciones de grupos |
 | `playoff_predictions` | OK + prediction_set_id | Predicciones de repechajes |
 | `third_place_predictions` | OK + prediction_set_id | Predicciones de terceros lugares |
@@ -159,16 +179,20 @@ Todos los endpoints de `/api/predictions/*` ahora aceptan `setId` como parametro
 | `private_group_members` | OK | Miembros de grupos |
 | `user_scores` | OK | Puntuaciones |
 | `settings` | OK | Configuracion (deadlines) |
+| `group_standings` | OK | Posiciones de grupos |
 
 ---
 
-## Comportamiento de Guardado
+## Comportamiento de Guardado (Actualizado)
 
-Todas las paginas siguen el mismo patron:
-1. **Al cargar:** Intenta API primero (con setId si existe), fallback a localStorage
-2. **Al guardar:** Guarda en localStorage primero, luego intenta API (con setId)
-3. **Si API falla:** Muestra error pero continua (graceful degradation)
-4. **Navegacion:** Mantiene setId en query params entre pasos del wizard
+### Con setId (nueva prediccion o editando existente):
+1. **Al cargar:** Solo carga del servidor para ese setId
+2. **Sin fallback:** No usa localStorage (empieza en blanco si no hay datos)
+3. **Al guardar:** Guarda en servidor con setId
+
+### Sin setId (modo legacy):
+1. **Al cargar:** Intenta localStorage
+2. **Al guardar:** Guarda en localStorage
 
 ---
 
@@ -179,6 +203,8 @@ Todas las paginas siguen el mismo patron:
 - [x] Fase 2: Autenticacion
 - [x] Fase 3: Predicciones (todas las paginas)
 - [x] Fase 3.5: Multiples predicciones
+- [x] Fase 3.6: Sin auto-relleno de localStorage
+- [x] Deploy a produccion
 
 ### Pendiente (Media Prioridad)
 - [ ] Fase 4: Leaderboard funcional (GET /api/leaderboard)
@@ -186,5 +212,4 @@ Todas las paginas siguen el mismo patron:
 - [ ] Panel admin para cargar resultados reales
 
 ### Pendiente (Baja Prioridad)
-- [ ] Deploy a produccion con cambios actuales
 - [ ] Calcular puntuaciones automaticamente

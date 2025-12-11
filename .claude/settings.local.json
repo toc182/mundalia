@@ -13,7 +13,22 @@
       "Bash(curl:*)",
       "Bash(taskkill:*)",
       "Bash(git reset:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(gh repo create:*)",
+      "Bash(git remote add:*)",
+      "Bash(git push:*)",
+      "WebSearch",
+      "WebFetch(domain:en.wikipedia.org)",
+      "WebFetch(domain:worldcupwiki.com)",
+      "WebFetch(domain:www.fifa.com)",
+      "WebFetch(domain:digitalhub.fifa.com)",
+      "Bash(node generate-combinations.js:*)",
+      "Bash(mkdir:*)",
+      "Bash(node -e:*)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)",
+      "Bash(PGPASSWORD=flRbVFywRIeAPZhzaaeDYGoIIubVOXyb psql:*)"
     ],
     "deny": [],
     "ask": []

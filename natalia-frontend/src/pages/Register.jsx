@@ -34,9 +34,11 @@ export default function Register() {
     setLoading(true);
 
     try {
-      const result = register(name, email, password);
+      const result = await register(name, email, password);
       if (result.success) {
         navigate('/');
+      } else {
+        setError(result.error || 'Error al registrar');
       }
     } catch (err) {
       setError('Error al registrar');
