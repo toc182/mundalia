@@ -53,6 +53,9 @@ export const authAPI = {
 
   getMe: () =>
     api.get('/users/me'),
+
+  updateProfile: (name) =>
+    api.put('/users/me', { name }),
 };
 
 // ============ TEAMS ============

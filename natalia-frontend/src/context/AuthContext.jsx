@@ -74,6 +74,11 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const updateUser = (updatedUser) => {
+    setUser(updatedUser);
+    localStorage.setItem('natalia_user', JSON.stringify(updatedUser));
+  };
+
   const clearError = () => setError(null);
 
   return (
@@ -82,6 +87,7 @@ export function AuthProvider({ children }) {
       login,
       register,
       logout,
+      updateUser,
       loading,
       error,
       clearError,

@@ -140,13 +140,6 @@ export default function PredictionDetail() {
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center gap-2 mb-6 text-sm text-muted-foreground">
-          <Link to="/" className="hover:text-foreground">Inicio</Link>
-          <span>/</span>
-          <Link to="/mis-predicciones" className="hover:text-foreground">Mis Predicciones</Link>
-          <span>/</span>
-          <span className="font-medium text-foreground">Cargando...</span>
-        </div>
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-solid border-current border-r-transparent"></div>
           <p className="mt-4 text-muted-foreground">Cargando prediccion...</p>
@@ -178,14 +171,6 @@ export default function PredictionDetail() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center gap-2 mb-6 text-sm text-muted-foreground">
-        <Link to="/" className="hover:text-foreground">Inicio</Link>
-        <span>/</span>
-        <Link to="/mis-predicciones" className="hover:text-foreground">Mis Predicciones</Link>
-        <span>/</span>
-        <span className="font-medium text-foreground">{predictionSet.name}</span>
-      </div>
-
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold">{predictionSet.name}</h1>
@@ -367,53 +352,18 @@ export default function PredictionDetail() {
             <CardTitle className="text-lg">Eliminatorias</CardTitle>
           </CardHeader>
           <CardContent>
-            {/* Round breakdown */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
-              <RoundSummary label="R32" count={r32Count} total={16} />
-              <RoundSummary label="R16" count={r16Count} total={8} />
-              <RoundSummary label="Cuartos" count={qfCount} total={4} />
-              <RoundSummary label="Semis" count={sfCount} total={2} />
-              <RoundSummary label="3er Lugar" count={thirdPlaceCount} total={1} />
-              <RoundSummary label="Final" count={finalCount} total={1} />
-            </div>
-
-            {/* Final Four Display */}
-            {sfCount === 2 && (
-              <div className="border-t pt-4 mt-4">
-                <p className="text-sm font-medium mb-3">Semifinalistas</p>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {semiFinalsStructure.map(sf => {
-                    const teamAId = knockoutPredictions[sf.teamA.from];
-                    const teamBId = knockoutPredictions[sf.teamB.from];
-                    const teamA = teamAId ? getTeamById(teamAId) : null;
-                    const teamB = teamBId ? getTeamById(teamBId) : null;
-                    return [teamA, teamB].filter(Boolean).map((team, idx) => (
-                      <div key={`${sf.matchId}-${idx}`} className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded">
-                        <img
-                          src={team.flag_url}
-                          alt={team.name}
-                          className="w-6 h-4 object-cover rounded"
-                        />
-                        <span className="text-sm font-medium">{team.name}</span>
-                      </div>
-                    ));
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* Podium */}
+            {/* Podium at top */}
             {(champion || thirdPlaceWinner) && (
-              <div className="border-t pt-4 mt-4">
+              <div className="mb-6 pb-4 border-b">
                 <p className="text-sm font-medium mb-3">Podio</p>
                 <div className="flex justify-center gap-4 flex-wrap">
                   {/* Second Place */}
                   {champion && knockoutPredictions[finalMatch.matchId] && (
                     <div className="text-center">
-                      <div className="w-20 h-20 bg-gray-200 rounded-lg flex items-center justify-center mb-2">
-                        <span className="text-3xl">🥈</span>
+                      <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center mb-1">
+                        <span className="text-2xl">🥈</span>
                       </div>
-                      <p className="text-xs text-muted-foreground">2do Lugar</p>
+                      <p className="text-xs text-muted-foreground">2do</p>
                       {(() => {
                         const finalistA = knockoutPredictions[semiFinalsStructure[0].matchId];
                         const finalistB = knockoutPredictions[semiFinalsStructure[1].matchId];
@@ -422,7 +372,6 @@ export default function PredictionDetail() {
                         return runnerUp ? (
                           <div className="flex items-center justify-center gap-1 mt-1">
                             <img src={runnerUp.flag_url} alt={runnerUp.name} className="w-5 h-3 object-cover rounded" />
-                            <span className="text-xs">{runnerUp.name}</span>
                           </div>
                         ) : null;
                       })()}
@@ -431,9 +380,9 @@ export default function PredictionDetail() {
 
                   {/* Champion */}
                   {champion && (
-                    <div className="text-center -mt-4">
-                      <div className="w-24 h-24 bg-yellow-100 border-2 border-yellow-400 rounded-lg flex items-center justify-center mb-2">
-                        <span className="text-4xl">🥇</span>
+                    <div className="text-center -mt-2">
+                      <div className="w-20 h-20 bg-yellow-100 border-2 border-yellow-400 rounded-lg flex items-center justify-center mb-1">
+                        <span className="text-3xl">🥇</span>
                       </div>
                       <p className="text-xs text-muted-foreground">Campeon</p>
                       <div className="flex items-center justify-center gap-1 mt-1">
@@ -446,13 +395,12 @@ export default function PredictionDetail() {
                   {/* Third Place */}
                   {thirdPlaceWinner && (
                     <div className="text-center">
-                      <div className="w-20 h-20 bg-amber-100 rounded-lg flex items-center justify-center mb-2">
-                        <span className="text-3xl">🥉</span>
+                      <div className="w-16 h-16 bg-amber-100 rounded-lg flex items-center justify-center mb-1">
+                        <span className="text-2xl">🥉</span>
                       </div>
-                      <p className="text-xs text-muted-foreground">3er Lugar</p>
+                      <p className="text-xs text-muted-foreground">3ro</p>
                       <div className="flex items-center justify-center gap-1 mt-1">
                         <img src={thirdPlaceWinner.flag_url} alt={thirdPlaceWinner.name} className="w-5 h-3 object-cover rounded" />
-                        <span className="text-xs">{thirdPlaceWinner.name}</span>
                       </div>
                     </div>
                   )}
@@ -460,7 +408,54 @@ export default function PredictionDetail() {
               </div>
             )}
 
-            <div className="mt-4">
+            {/* Round by round teams */}
+            <div className="space-y-4">
+              {/* Semifinalistas */}
+              {sfCount > 0 && (
+                <RoundTeams
+                  label="Semifinalistas"
+                  teams={semiFinalsStructure.flatMap(sf => {
+                    const teamAId = knockoutPredictions[sf.teamA.from];
+                    const teamBId = knockoutPredictions[sf.teamB.from];
+                    return [teamAId, teamBId].filter(Boolean).map(id => getTeamById(id)).filter(Boolean);
+                  })}
+                  bgColor="bg-purple-50"
+                  borderColor="border-purple-200"
+                />
+              )}
+
+              {/* Cuartos de Final */}
+              {qfCount > 0 && (
+                <RoundTeams
+                  label="Cuartos de Final"
+                  teams={quarterFinalsStructure.map(m => knockoutPredictions[m.matchId]).filter(Boolean).map(id => getTeamById(id)).filter(Boolean)}
+                  bgColor="bg-blue-50"
+                  borderColor="border-blue-200"
+                />
+              )}
+
+              {/* Octavos de Final */}
+              {r16Count > 0 && (
+                <RoundTeams
+                  label="Octavos de Final"
+                  teams={roundOf16Structure.map(m => knockoutPredictions[m.matchId]).filter(Boolean).map(id => getTeamById(id)).filter(Boolean)}
+                  bgColor="bg-green-50"
+                  borderColor="border-green-200"
+                />
+              )}
+
+              {/* Round of 32 */}
+              {r32Count > 0 && (
+                <RoundTeams
+                  label="Round of 32"
+                  teams={roundOf32Structure.map(m => knockoutPredictions[m.matchId]).filter(Boolean).map(id => getTeamById(id)).filter(Boolean)}
+                  bgColor="bg-gray-50"
+                  borderColor="border-gray-200"
+                />
+              )}
+            </div>
+
+            <div className="mt-4 pt-4 border-t">
               <Button variant="outline" size="sm" asChild>
                 <Link to={`/eliminatorias?setId=${id}`}>Ver/Editar Bracket Completo</Link>
               </Button>
@@ -482,14 +477,23 @@ export default function PredictionDetail() {
   );
 }
 
-function RoundSummary({ label, count, total }) {
-  const isComplete = count === total;
+function RoundTeams({ label, teams, bgColor, borderColor }) {
+  if (!teams || teams.length === 0) return null;
   return (
-    <div className={`p-3 rounded-lg border text-center ${isComplete ? 'bg-green-50 border-green-200' : 'bg-muted'}`}>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className={`text-lg font-bold ${isComplete ? 'text-green-600' : ''}`}>
-        {count}/{total}
-      </p>
+    <div>
+      <p className="text-sm font-medium mb-2">{label} ({teams.length})</p>
+      <div className="flex flex-wrap gap-2">
+        {teams.map((team, idx) => (
+          <div key={`${team.id}-${idx}`} className={`flex items-center gap-2 px-2 py-1 ${bgColor} border ${borderColor} rounded text-sm`}>
+            <img
+              src={team.flag_url}
+              alt={team.name}
+              className="w-5 h-3 object-cover rounded"
+            />
+            <span>{team.name}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

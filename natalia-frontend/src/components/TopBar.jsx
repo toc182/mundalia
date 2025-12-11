@@ -66,7 +66,7 @@ export default function TopBar() {
               />
               <div className="absolute right-0 top-full mt-1 w-48 bg-background border rounded-lg shadow-lg z-50">
                 <button
-                  onClick={() => { setUserMenuOpen(false); /* TODO: navigate to cuenta */ }}
+                  onClick={() => { navigate('/cuenta'); setUserMenuOpen(false); }}
                   className="w-full flex items-center gap-2 px-4 py-3 hover:bg-muted text-left"
                 >
                   <UserCircle className="h-4 w-4" />
