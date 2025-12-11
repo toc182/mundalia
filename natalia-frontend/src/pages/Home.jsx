@@ -3,31 +3,42 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LogOut } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { LogOut, Plus } from 'lucide-react';
 import { predictionSetsAPI } from '@/services/api';
 
 export default function Home() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [starting, setStarting] = useState(false);
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  const handleStart = async () => {
-    setStarting(true);
+  const handleCreate = async () => {
+    if (!newName.trim()) return;
+    setSaving(true);
     try {
-      // Crear un nuevo prediction set y navegar con setId
-      const response = await predictionSetsAPI.create('Mi Prediccion');
+      const response = await predictionSetsAPI.create(newName.trim());
+      setShowCreateDialog(false);
+      setNewName('');
       navigate(`/repechajes?setId=${response.data.id}`);
     } catch (err) {
       console.error('Error creating prediction set:', err);
-      // Fallback: ir sin setId (modo legacy)
-      navigate('/repechajes');
     } finally {
-      setStarting(false);
+      setSaving(false);
     }
   };
 
@@ -60,8 +71,9 @@ export default function Home() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button className="w-full" size="lg" onClick={handleStart} disabled={starting}>
-              {starting ? 'Creando...' : 'Comenzar'}
+            <Button className="w-full" size="lg" onClick={() => setShowCreateDialog(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Nueva Prediccion
             </Button>
           </CardContent>
         </Card>
@@ -154,6 +166,32 @@ export default function Home() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Create Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nueva Prediccion</DialogTitle>
+            <DialogDescription>
+              Dale un nombre a tu prediccion para identificarla facilmente
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            placeholder="Ej: Mi prediccion optimista"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreate} disabled={!newName.trim() || saving}>
+              {saving ? 'Creando...' : 'Crear y Comenzar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
