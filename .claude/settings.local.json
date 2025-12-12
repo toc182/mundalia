@@ -28,7 +28,9 @@
       "Bash(node -e:*)",
       "Bash(netstat:*)",
       "Bash(findstr:*)",
-      "Bash(PGPASSWORD=flRbVFywRIeAPZhzaaeDYGoIIubVOXyb psql:*)"
+      "Bash(PGPASSWORD=flRbVFywRIeAPZhzaaeDYGoIIubVOXyb psql:*)",
+      "Bash(PGPASSWORD=Dinocore51720 psql:*)",
+      "Bash(PGPASSWORD=flRbVFywRIeAPZhzaaeDYGoIIubVOXyb pg_dump:*)"
     ],
     "deny": [],
     "ask": []

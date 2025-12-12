@@ -1,6 +1,21 @@
 # SESSION.md - Estado Actual del Proyecto
 
-## Ultima Actualizacion: 2025-12-12 (14:50 UTC)
+## Ultima Actualizacion: 2025-12-12 (18:30 UTC)
+
+## EN PROGRESO - Swipe Gestures para Knockout (Mobile)
+
+### Objetivo
+Permitir al usuario cambiar entre rondas de eliminatorias deslizando con el dedo (como en una app nativa).
+
+### Implementacion elegida: CSS scroll-snap
+- Mejor UX: feedback visual inmediato mientras desliza
+- Nativo del navegador: física de scroll optimizada por iOS/Android
+- Sin dependencias externas
+
+### CHECKPOINT antes de cambios
+- Commit actual: `153093d` - puede revertirse si no gusta el resultado
+
+---
 
 ---
 
@@ -26,9 +41,53 @@
 - [x] **Fase 3.14: Mejoras UX - Knockout botones, PredictionDetail fixes**
 - [x] **Fase 3.15: Pagina Cuenta + mejoras vista predicciones**
 - [x] **Fase 3.16: Separacion DB dev/prod**
+- [x] **Fase 3.17: Bracket visual eliminatorias (Knockout.jsx)**
+- [x] **Fase 3.18: MyPredictions cleanup + PredictionDetail mejorado**
 - [ ] Fase 4: Leaderboard
 - [ ] Fase 5: Grupos privados
 - [x] Fase 6: Deploy a produccion
+
+---
+
+## COMPLETADO HOY (2025-12-12)
+
+### Fase 3.18: MyPredictions Cleanup + PredictionDetail Mejorado
+
+#### MyPredictions.jsx - Limpieza
+- [x] **Eliminado** boton "Copiar prediccion" (icono Copy)
+- [x] **Eliminado** boton "Editar nombre" (icono Edit2 para renombrar)
+- [x] **Eliminado** dialogo de Rename y funciones asociadas
+- [x] **Corregido** indicador de Repechajes siempre gris
+  - **Causa:** PostgreSQL COUNT() devuelve bigint que se convierte a string ("6")
+  - **Problema:** `set.playoff_count === 6` fallaba porque `"6" !== 6`
+  - **Solucion:** Usar `parseInt()` en todas las comparaciones de contadores
+- **Commit:** `1dd5dc3`
+
+#### PredictionDetail.jsx - Visualizacion de Eliminatorias Mejorada
+- [x] **Nuevo** diseño de partidos como cuadros con 2 equipos
+  - Cada partido muestra ambos equipos (uno arriba, otro abajo)
+  - El ganador se resalta con fondo verde + checkmark ✓
+  - Los equipos sin seleccionar muestran "Por definir"
+- [x] **Nuevo** componente `MatchBox` para mostrar partido individual
+- [x] **Nuevo** componente `RoundMatches` para mostrar ronda completa
+- [x] Soporte para resolver equipos desde:
+  - Grupos (1ro, 2do, 3ro con pools)
+  - Ganadores de partidos anteriores
+  - Perdedores de semifinales (para tercer puesto)
+- [x] Equipos de terceros lugares muestran grupo de origen (ej: "3A")
+- [x] Contador de partidos completados por ronda (ej: "16/16")
+- [x] **Eliminado** boton "Ver/Editar Bracket Completo"
+- **Commits:** `dbf282b`, `153093d`
+
+---
+
+## Commits de Esta Sesion
+
+| Commit | Descripcion |
+|--------|-------------|
+| `1dd5dc3` | MyPredictions: remove copy/rename buttons, fix playoff indicator |
+| `dbf282b` | PredictionDetail: show knockout matches as 2-team boxes |
+| `153093d` | Remove 'Ver/Editar Bracket Completo' button from PredictionDetail |
 
 ---
 
@@ -196,6 +255,23 @@ DB_PASSWORD=Dinocore51720
 
 ---
 
+## COMPLETADO - Fase 3.17: Bracket Visual Eliminatorias
+
+### Knockout.jsx Mejorado
+- [x] Vista Mobile: 4 tabs (R32→R16, R16→QF, QF→SF, SF→Final)
+- [x] Vista Desktop: Bracket completo horizontal con posicionamiento absoluto
+- [x] MatchPair con conectores SVG entre partidos
+- [x] Nombre de prediccion visible en header
+- [x] Texto instructivo "Seleccionar los ganadores de partidos de Eliminatoria"
+- [x] Boton "Reset" neutral (sin color rojo, sin icono Trash2)
+
+### Commits relacionados
+- `17550e6`: Mobile knockout - SVG connectors
+- `c355337`: 4 tabs + prediction set name header
+- `d4808a1`: Instruction text + neutral Reset button
+
+---
+
 ### 10. Repechajes no se guardaban (UNIQUE constraint violation)
 - **Problema:** Al guardar repechajes, el backend daba error "duplicate key violates unique constraint"
 - **Causa:** Los UNIQUE constraints en las tablas de predicciones NO incluian `prediction_set_id`
@@ -226,11 +302,8 @@ DB_PASSWORD=Dinocore51720
 ### Frontend
 | Archivo | Cambio |
 |---------|--------|
-| `.env.production` | NUEVO - VITE_API_URL para produccion |
-| `vercel.json` | NUEVO - SPA rewrites |
-| `src/context/AuthContext.jsx` | Console logs para debug (temporales) |
-| `src/pages/Login.jsx` | Console logs para debug (temporales) |
-| `src/pages/Home.jsx` | Boton "Comenzar" ahora crea prediction set antes de navegar |
+| `src/pages/MyPredictions.jsx` | Eliminados botones copiar/renombrar, fix parseInt en contadores |
+| `src/pages/PredictionDetail.jsx` | Nuevo MatchBox/RoundMatches para mostrar partidos, eliminado boton bracket |
 
 ---
 
@@ -244,7 +317,7 @@ Home.jsx
     +-> "Ver Mis Predicciones" -> /mis-predicciones
             |
             +-> "Nueva Prediccion" -> Dialog nombre -> /repechajes?setId=X (en blanco)
-            +-> Card existente -> Ver/Editar/Duplicar/Eliminar
+            +-> Card existente -> Ver/Editar/Eliminar
 ```
 
 ---
@@ -298,16 +371,17 @@ Todos los endpoints de `/api/predictions/*` ahora aceptan `setId` como parametro
 
 ## Nuevas Paginas Frontend
 
-### MyPredictions.jsx (reescrita completamente)
+### MyPredictions.jsx (actualizada)
 - Lista todas las predicciones del usuario
 - Muestra progreso de cada prediccion (repechajes, grupos, terceros, bracket)
-- Botones: Ver, Editar, Duplicar, Renombrar, Eliminar
+- Botones: Ver, Editar, Eliminar
 - Dialog para crear nueva prediccion con nombre
 
-### PredictionDetail.jsx (NUEVA)
+### PredictionDetail.jsx (mejorada)
 - Ruta: `/prediccion/:id`
 - Muestra detalle completo de una prediccion especifica
 - Campeon, grupos, terceros, eliminatorias
+- **NUEVO:** Eliminatorias muestran partidos como cuadros con 2 equipos y ganador resaltado
 
 ---
 
@@ -324,8 +398,6 @@ Todos los endpoints de `/api/predictions/*` ahora aceptan `setId` como parametro
              |
              +-> "Ver" -> /prediccion/X
              +-> "Editar" -> /repechajes?setId=X (carga datos existentes)
-             +-> "Duplicar" -> Crea copia
-             +-> "Renombrar" -> Dialog
              +-> "Eliminar" -> Confirmacion
 
 /repechajes?setId=X (empieza en blanco si es nuevo)
@@ -357,12 +429,12 @@ Todos los endpoints de `/api/predictions/*` ahora aceptan `setId` como parametro
 | Archivo | Cambio |
 |---------|--------|
 | `src/services/api.js` | Agregado predictionSetsAPI + actualizado predictionsAPI con setId |
-| `src/pages/MyPredictions.jsx` | REESCRITO - Lista de prediction sets |
-| `src/pages/PredictionDetail.jsx` | NUEVO - Detalle de una prediccion |
+| `src/pages/MyPredictions.jsx` | REESCRITO - Lista de prediction sets, limpieza botones |
+| `src/pages/PredictionDetail.jsx` | MEJORADO - MatchBox/RoundMatches para eliminatorias |
 | `src/pages/Playoffs.jsx` | Sin fallback a localStorage cuando hay setId |
 | `src/pages/Predictions.jsx` | Sin auto-relleno, contador X/12, validacion |
 | `src/pages/ThirdPlaces.jsx` | Sin fallback a localStorage cuando hay setId |
-| `src/pages/Knockout.jsx` | Sin fallback a localStorage cuando hay setId |
+| `src/pages/Knockout.jsx` | Bracket visual con tabs mobile + desktop |
 | `src/App.jsx` | Nueva ruta /prediccion/:id |
 
 ---
@@ -422,6 +494,8 @@ Todos los endpoints de `/api/predictions/*` ahora aceptan `setId` como parametro
 - [x] Fase 3: Predicciones (todas las paginas)
 - [x] Fase 3.5: Multiples predicciones
 - [x] Fase 3.6: Sin auto-relleno de localStorage
+- [x] Fase 3.17: Bracket visual Knockout.jsx
+- [x] Fase 3.18: MyPredictions cleanup + PredictionDetail mejorado
 - [x] Deploy a produccion
 
 ### Pendiente (Media Prioridad)

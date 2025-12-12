@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -41,6 +41,8 @@ export default function Knockout() {
   const [error, setError] = useState(null);
   const [activeRound, setActiveRound] = useState('r32');
   const [predictionSetName, setPredictionSetName] = useState('');
+  const scrollContainerRef = useRef(null);
+  const isScrolling = useRef(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -414,6 +416,43 @@ export default function Knockout() {
   const currentMobileRound = mobileRounds.find(r => r.id === activeRound);
   const isCurrentRoundComplete = currentMobileRound?.count === currentMobileRound?.total;
 
+  // Orden de los slides (para mapear índice a round id)
+  const slideRoundIds = ['r32', 'r16', 'qf', 'final'];
+
+  // Handler para detectar scroll y actualizar activeRound
+  const handleScroll = useCallback(() => {
+    if (isScrolling.current) return;
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const slideWidth = container.offsetWidth;
+    const scrollLeft = container.scrollLeft;
+    const newIndex = Math.round(scrollLeft / slideWidth);
+    const newRoundId = slideRoundIds[newIndex];
+
+    if (newRoundId && newRoundId !== activeRound) {
+      setActiveRound(newRoundId);
+    }
+  }, [activeRound]);
+
+  // Scroll programático a un slide específico
+  const scrollToRound = useCallback((roundId) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const index = slideRoundIds.indexOf(roundId);
+    if (index === -1) return;
+
+    isScrolling.current = true;
+    const slideWidth = container.offsetWidth;
+    container.scrollTo({ left: index * slideWidth, behavior: 'smooth' });
+
+    // Reset isScrolling después de la animación
+    setTimeout(() => {
+      isScrolling.current = false;
+    }, 300);
+  }, []);
+
   const handleNextRound = () => {
     // Save progress
     localStorage.setItem('natalia_knockout', JSON.stringify(knockoutPredictions));
@@ -471,8 +510,9 @@ export default function Knockout() {
   const NextRoundButton = ({ size = 'default' }) => (
     <Button
       onClick={() => {
-        window.scrollTo(0, 0);
-        setActiveRound(currentMobileRound?.next);
+        if (currentMobileRound?.next) {
+          scrollToRound(currentMobileRound.next);
+        }
       }}
       disabled={!isCurrentRoundComplete}
       size={size}
@@ -551,26 +591,15 @@ export default function Knockout() {
               key={round.id}
               variant={activeRound === round.id ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setActiveRound(round.id)}
+              onClick={() => scrollToRound(round.id)}
             >
               {round.label}
             </Button>
           ))}
         </div>
 
-        {/* Orden visual (igual que desktop) */}
+        {/* Scroll-snap container con slides */}
         {(() => {
-          const r32VisualOrder = ['M74', 'M77', 'M73', 'M75', 'M83', 'M84', 'M81', 'M82', 'M76', 'M78', 'M79', 'M80', 'M86', 'M88', 'M85', 'M87'];
-          const r16VisualOrder = ['M89', 'M90', 'M93', 'M94', 'M91', 'M92', 'M95', 'M96'];
-          const qfVisualOrder = ['M97', 'M98', 'M99', 'M100'];
-          const sfVisualOrder = ['M101', 'M102'];
-
-          const getMatchById = (matches, id) => matches.find(m => m.matchId === id);
-          const r32Ordered = r32VisualOrder.map(id => getMatchById(r32Matches, id)).filter(Boolean);
-          const r16Ordered = r16VisualOrder.map(id => getMatchById(r16Matches, id)).filter(Boolean);
-          const qfOrdered = qfVisualOrder.map(id => getMatchById(qfMatches, id)).filter(Boolean);
-          const sfOrdered = sfVisualOrder.map(id => getMatchById(sfMatches, id)).filter(Boolean);
-
           // Componente de caja de partido para móvil
           const MobileMatchBox = ({ match }) => {
             if (!match) return null;
@@ -615,38 +644,26 @@ export default function Knockout() {
 
           // Componente de par de partidos con siguiente ronda
           const MatchPair = ({ match1, match2, nextMatch }) => {
-            // Altura de cada partido: 2 equipos de 32px = 64px total
             const MATCH_H = 64;
-            const GAP = 4; // gap-1
-            const TOTAL_H = MATCH_H * 2 + GAP; // altura total de la columna izquierda
+            const GAP = 4;
+            const TOTAL_H = MATCH_H * 2 + GAP;
             const SVG_W = 20;
-
-            // Centros de los partidos
             const top1Center = MATCH_H / 2;
             const top2Center = MATCH_H + GAP + MATCH_H / 2;
             const midY = (top1Center + top2Center) / 2;
 
             return (
               <div className="flex items-center">
-                {/* Columna izquierda: 2 partidos de ronda actual */}
                 <div className="flex flex-col gap-1 flex-1 min-w-0">
                   <MobileMatchBox match={match1} />
                   <MobileMatchBox match={match2} />
                 </div>
-
-                {/* Conectores SVG */}
                 <svg width={SVG_W} height={TOTAL_H} className="shrink-0">
-                  {/* Línea horizontal desde partido 1 */}
                   <line x1="0" y1={top1Center} x2={SVG_W/2} y2={top1Center} stroke="#d1d5db" strokeWidth="1" />
-                  {/* Línea horizontal desde partido 2 */}
                   <line x1="0" y1={top2Center} x2={SVG_W/2} y2={top2Center} stroke="#d1d5db" strokeWidth="1" />
-                  {/* Línea vertical que une ambos */}
                   <line x1={SVG_W/2} y1={top1Center} x2={SVG_W/2} y2={top2Center} stroke="#d1d5db" strokeWidth="1" />
-                  {/* Línea horizontal hacia siguiente partido */}
                   <line x1={SVG_W/2} y1={midY} x2={SVG_W} y2={midY} stroke="#d1d5db" strokeWidth="1" />
                 </svg>
-
-                {/* Columna derecha: partido siguiente */}
                 <div className="flex-1 min-w-0">
                   <MobileMatchBox match={nextMatch} />
                 </div>
@@ -654,7 +671,6 @@ export default function Knockout() {
             );
           };
 
-          // Agrupar R32 en pares que alimentan a R16
           const r32Pairs = [
             { m1: 'M74', m2: 'M77', next: 'M89' },
             { m1: 'M73', m2: 'M75', next: 'M90' },
@@ -683,9 +699,14 @@ export default function Knockout() {
           };
 
           return (
-            <>
-              {/* Round of 32 */}
-              {activeRound === 'r32' && (
+            <div
+              ref={scrollContainerRef}
+              onScroll={handleScroll}
+              className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
+            >
+              {/* Slide 1: R32 → R16 */}
+              <div className="w-full flex-shrink-0 snap-start snap-always px-1">
                 <div className="space-y-4">
                   <div className="flex gap-2 text-xs text-muted-foreground font-medium">
                     <div className="flex-1 text-center">Dieciseisavos</div>
@@ -701,10 +722,10 @@ export default function Knockout() {
                     />
                   ))}
                 </div>
-              )}
+              </div>
 
-              {/* Round of 16 → Quarter Finals */}
-              {activeRound === 'r16' && (
+              {/* Slide 2: R16 → QF */}
+              <div className="w-full flex-shrink-0 snap-start snap-always px-1">
                 <div className="space-y-4">
                   <div className="flex gap-2 text-xs text-muted-foreground font-medium">
                     <div className="flex-1 text-center">Octavos</div>
@@ -720,10 +741,10 @@ export default function Knockout() {
                     />
                   ))}
                 </div>
-              )}
+              </div>
 
-              {/* Quarter Finals → Semi Finals */}
-              {activeRound === 'qf' && (
+              {/* Slide 3: QF → SF */}
+              <div className="w-full flex-shrink-0 snap-start snap-always px-1">
                 <div className="space-y-4">
                   <div className="flex gap-2 text-xs text-muted-foreground font-medium">
                     <div className="flex-1 text-center">Cuartos</div>
@@ -739,12 +760,11 @@ export default function Knockout() {
                     />
                   ))}
                 </div>
-              )}
+              </div>
 
-              {/* Final & Third Place */}
-              {activeRound === 'final' && (
+              {/* Slide 4: SF → Final + 3er Puesto */}
+              <div className="w-full flex-shrink-0 snap-start snap-always px-1">
                 <div className="space-y-4">
-                  {/* Semifinales → Final */}
                   <div className="flex gap-2 text-xs text-muted-foreground font-medium">
                     <div className="flex-1 text-center">Semifinales</div>
                     <div className="w-5"></div>
@@ -772,8 +792,8 @@ export default function Knockout() {
                     <MobileMatchBox match={thirdPlace} />
                   </div>
                 </div>
-              )}
-            </>
+              </div>
+            </div>
           );
         })()}
 
