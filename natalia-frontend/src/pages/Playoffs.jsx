@@ -215,122 +215,102 @@ function PlayoffBracket({ playoff, selections, onSelectWinner, getTeamById }) {
   const semi2Winner = selections.semi2;
   const finalWinner = selections.final;
 
-  const TeamButton = ({ teamId, round, isSelected, isEliminated }) => {
+  const TeamButton = ({ teamId, round, isSelected, isEliminated, compact = false }) => {
     const team = getTeamById(teamId);
     if (!team) return null;
 
     return (
       <button
         onClick={() => onSelectWinner(round, teamId)}
-        className={`flex items-center gap-2 p-2 rounded border w-full transition-all
+        className={`flex items-center gap-2 ${compact ? 'p-1.5' : 'p-2'} rounded border w-full transition-all
           ${isSelected ? 'bg-green-100 border-green-400 ring-2 ring-green-400' : ''}
           ${isEliminated ? 'opacity-40' : 'hover:bg-muted'}
         `}
       >
-        <img src={team.flag_url} alt={team.name} className="w-6 h-4 object-cover rounded" />
-        <span className="text-sm font-medium">{team.name}</span>
+        <img src={team.flag_url} alt={team.name} className="w-5 h-3 object-cover rounded" />
+        <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium truncate`}>{team.name}</span>
       </button>
+    );
+  };
+
+  const WinnerSlot = ({ teamId, round, isSelected, isEliminated, placeholder }) => {
+    if (teamId) {
+      return <TeamButton teamId={teamId} round={round} isSelected={isSelected} isEliminated={isEliminated} compact />;
+    }
+    return (
+      <div className="p-1.5 rounded border border-dashed text-center text-[10px] text-muted-foreground bg-muted/30">
+        {placeholder}
+      </div>
     );
   };
 
   return (
     <Card>
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="text-lg">{playoff.name}</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-base">{playoff.name}</CardTitle>
+            <CardDescription className="text-xs">
               Ganador va al Grupo {playoff.destinationGroup}
             </CardDescription>
           </div>
           {finalWinner && (
-            <Badge className="bg-green-500">Completo</Badge>
+            <Badge className="bg-green-500 text-xs">Completo</Badge>
           )}
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="flex gap-4">
-          {/* Semifinals */}
-          <div className="flex-1 space-y-4">
-            <p className="text-xs font-medium text-muted-foreground mb-2">SEMIFINALES</p>
-
+      <CardContent className="pt-0">
+        {/* Bracket visual */}
+        <div className="flex items-stretch gap-2">
+          {/* Columna Semifinales */}
+          <div className="flex flex-col justify-around flex-1 min-w-0 gap-2">
             {/* Semi 1 */}
-            <div className="space-y-1">
-              <TeamButton
-                teamId={playoff.bracket.semi1.teamA}
-                round="semi1"
-                isSelected={semi1Winner === playoff.bracket.semi1.teamA}
-                isEliminated={semi1Winner && semi1Winner !== playoff.bracket.semi1.teamA}
-              />
-              <TeamButton
-                teamId={playoff.bracket.semi1.teamB}
-                round="semi1"
-                isSelected={semi1Winner === playoff.bracket.semi1.teamB}
-                isEliminated={semi1Winner && semi1Winner !== playoff.bracket.semi1.teamB}
-              />
+            <div className="space-y-0.5">
+              <TeamButton teamId={playoff.bracket.semi1.teamA} round="semi1" isSelected={semi1Winner === playoff.bracket.semi1.teamA} isEliminated={semi1Winner && semi1Winner !== playoff.bracket.semi1.teamA} compact />
+              <TeamButton teamId={playoff.bracket.semi1.teamB} round="semi1" isSelected={semi1Winner === playoff.bracket.semi1.teamB} isEliminated={semi1Winner && semi1Winner !== playoff.bracket.semi1.teamB} compact />
             </div>
-
             {/* Semi 2 */}
-            <div className="space-y-1">
-              <TeamButton
-                teamId={playoff.bracket.semi2.teamA}
-                round="semi2"
-                isSelected={semi2Winner === playoff.bracket.semi2.teamA}
-                isEliminated={semi2Winner && semi2Winner !== playoff.bracket.semi2.teamA}
-              />
-              <TeamButton
-                teamId={playoff.bracket.semi2.teamB}
-                round="semi2"
-                isSelected={semi2Winner === playoff.bracket.semi2.teamB}
-                isEliminated={semi2Winner && semi2Winner !== playoff.bracket.semi2.teamB}
-              />
+            <div className="space-y-0.5">
+              <TeamButton teamId={playoff.bracket.semi2.teamA} round="semi2" isSelected={semi2Winner === playoff.bracket.semi2.teamA} isEliminated={semi2Winner && semi2Winner !== playoff.bracket.semi2.teamA} compact />
+              <TeamButton teamId={playoff.bracket.semi2.teamB} round="semi2" isSelected={semi2Winner === playoff.bracket.semi2.teamB} isEliminated={semi2Winner && semi2Winner !== playoff.bracket.semi2.teamB} compact />
             </div>
           </div>
 
-          {/* Final */}
-          <div className="flex-1">
-            <p className="text-xs font-medium text-muted-foreground mb-2">FINAL</p>
-            <div className="space-y-1">
-              {semi1Winner ? (
-                <TeamButton
-                  teamId={semi1Winner}
-                  round="final"
-                  isSelected={finalWinner === semi1Winner}
-                  isEliminated={finalWinner && finalWinner !== semi1Winner}
-                />
-              ) : (
-                <div className="p-2 rounded border border-dashed text-center text-xs text-muted-foreground">
-                  Ganador Semi 1
-                </div>
-              )}
-              {semi2Winner ? (
-                <TeamButton
-                  teamId={semi2Winner}
-                  round="final"
-                  isSelected={finalWinner === semi2Winner}
-                  isEliminated={finalWinner && finalWinner !== semi2Winner}
-                />
-              ) : (
-                <div className="p-2 rounded border border-dashed text-center text-xs text-muted-foreground">
-                  Ganador Semi 2
-                </div>
-              )}
+          {/* Lineas conectoras */}
+          <div className="w-4 flex flex-col justify-around py-2">
+            {/* Conector Semi 1 → Final */}
+            <div className="flex-1 flex items-center">
+              <div className="w-full border-t-2 border-r-2 border-b-2 border-muted-foreground/30 rounded-r h-8" />
             </div>
+            {/* Conector Semi 2 → Final */}
+            <div className="flex-1 flex items-center">
+              <div className="w-full border-t-2 border-r-2 border-b-2 border-muted-foreground/30 rounded-r h-8" />
+            </div>
+          </div>
 
-            {/* Winner */}
-            {finalWinner && (
-              <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
-                <p className="text-xs text-green-600 font-medium mb-1">CLASIFICADO</p>
-                <div className="flex items-center gap-2">
-                  <img
-                    src={getTeamById(finalWinner)?.flag_url}
-                    alt=""
-                    className="w-6 h-4 object-cover rounded"
-                  />
-                  <span className="font-semibold text-green-700">
-                    {getTeamById(finalWinner)?.name}
-                  </span>
+          {/* Columna Final */}
+          <div className="flex flex-col justify-center flex-1 min-w-0 gap-0.5">
+            <WinnerSlot teamId={semi1Winner} round="final" isSelected={finalWinner === semi1Winner} isEliminated={finalWinner && finalWinner !== semi1Winner} placeholder="Semi 1" />
+            <WinnerSlot teamId={semi2Winner} round="final" isSelected={finalWinner === semi2Winner} isEliminated={finalWinner && finalWinner !== semi2Winner} placeholder="Semi 2" />
+          </div>
+
+          {/* Linea al ganador */}
+          <div className="w-4 flex items-center">
+            <div className="w-full border-t-2 border-muted-foreground/30" />
+          </div>
+
+          {/* Columna Ganador */}
+          <div className="flex items-center min-w-[70px]">
+            {finalWinner ? (
+              <div className="p-2 bg-green-50 rounded-lg border border-green-300 w-full">
+                <div className="flex items-center gap-1.5">
+                  <img src={getTeamById(finalWinner)?.flag_url} alt="" className="w-5 h-3 object-cover rounded" />
+                  <span className="text-xs font-bold text-green-700 truncate">{getTeamById(finalWinner)?.name}</span>
                 </div>
+              </div>
+            ) : (
+              <div className="p-2 rounded border-2 border-dashed border-muted-foreground/30 text-center text-[10px] text-muted-foreground w-full">
+                Ganador
               </div>
             )}
           </div>
@@ -351,93 +331,84 @@ function PlayoffBracketFIFA({ playoff, selections, onSelectWinner, getTeamById }
     return (
       <button
         onClick={() => onSelectWinner(round, teamId)}
-        className={`flex items-center gap-2 p-2 rounded border w-full transition-all
+        className={`flex items-center gap-2 p-1.5 rounded border w-full transition-all
           ${isSelected ? 'bg-green-100 border-green-400 ring-2 ring-green-400' : ''}
           ${isEliminated ? 'opacity-40' : 'hover:bg-muted'}
         `}
       >
-        <img src={team.flag_url} alt={team.name} className="w-6 h-4 object-cover rounded" />
-        <span className="text-sm font-medium">{team.name}</span>
+        <img src={team.flag_url} alt={team.name} className="w-5 h-3 object-cover rounded" />
+        <span className="text-xs font-medium truncate">{team.name}</span>
       </button>
+    );
+  };
+
+  const WinnerSlot = ({ teamId, round, isSelected, isEliminated, placeholder }) => {
+    if (teamId) {
+      return <TeamButton teamId={teamId} round={round} isSelected={isSelected} isEliminated={isEliminated} />;
+    }
+    return (
+      <div className="p-1.5 rounded border border-dashed text-center text-[10px] text-muted-foreground bg-muted/30">
+        {placeholder}
+      </div>
     );
   };
 
   return (
     <Card>
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div>
-            <CardTitle className="text-lg">{playoff.name}</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-base">{playoff.name}</CardTitle>
+            <CardDescription className="text-xs">
               Ganador va al Grupo {playoff.destinationGroup}
             </CardDescription>
           </div>
           {finalWinner && (
-            <Badge className="bg-green-500">Completo</Badge>
+            <Badge className="bg-green-500 text-xs">Completo</Badge>
           )}
         </div>
       </CardHeader>
-      <CardContent>
-        <div className="flex gap-4">
-          {/* First Round */}
-          <div className="flex-1">
-            <p className="text-xs font-medium text-muted-foreground mb-2">PRIMERA RONDA</p>
-            <div className="space-y-1">
-              <TeamButton
-                teamId={playoff.bracket.semi1.teamA}
-                round="semi1"
-                isSelected={semi1Winner === playoff.bracket.semi1.teamA}
-                isEliminated={semi1Winner && semi1Winner !== playoff.bracket.semi1.teamA}
-              />
-              <TeamButton
-                teamId={playoff.bracket.semi1.teamB}
-                round="semi1"
-                isSelected={semi1Winner === playoff.bracket.semi1.teamB}
-                isEliminated={semi1Winner && semi1Winner !== playoff.bracket.semi1.teamB}
-              />
+      <CardContent className="pt-0">
+        {/* Bracket visual */}
+        <div className="flex items-stretch gap-2">
+          {/* Columna Primera Ronda */}
+          <div className="flex flex-col justify-center flex-1 min-w-0">
+            <div className="space-y-0.5">
+              <TeamButton teamId={playoff.bracket.semi1.teamA} round="semi1" isSelected={semi1Winner === playoff.bracket.semi1.teamA} isEliminated={semi1Winner && semi1Winner !== playoff.bracket.semi1.teamA} />
+              <TeamButton teamId={playoff.bracket.semi1.teamB} round="semi1" isSelected={semi1Winner === playoff.bracket.semi1.teamB} isEliminated={semi1Winner && semi1Winner !== playoff.bracket.semi1.teamB} />
             </div>
           </div>
 
-          {/* Final */}
-          <div className="flex-1">
-            <p className="text-xs font-medium text-muted-foreground mb-2">FINAL</p>
-            <div className="space-y-1">
-              {/* Waiting team */}
-              <TeamButton
-                teamId={playoff.bracket.finalTeamA}
-                round="final"
-                isSelected={finalWinner === playoff.bracket.finalTeamA}
-                isEliminated={finalWinner && finalWinner !== playoff.bracket.finalTeamA}
-              />
-              {/* Winner of first round */}
-              {semi1Winner ? (
-                <TeamButton
-                  teamId={semi1Winner}
-                  round="final"
-                  isSelected={finalWinner === semi1Winner}
-                  isEliminated={finalWinner && finalWinner !== semi1Winner}
-                />
-              ) : (
-                <div className="p-2 rounded border border-dashed text-center text-xs text-muted-foreground">
-                  Ganador Ronda 1
-                </div>
-              )}
-            </div>
+          {/* Linea conectora */}
+          <div className="w-4 flex items-center">
+            <div className="w-full border-t-2 border-r-2 border-b-2 border-muted-foreground/30 rounded-r h-8" />
+          </div>
 
-            {/* Winner */}
-            {finalWinner && (
-              <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
-                <p className="text-xs text-green-600 font-medium mb-1">CLASIFICADO</p>
-                <div className="flex items-center gap-2">
-                  <img
-                    src={getTeamById(finalWinner)?.flag_url}
-                    alt=""
-                    className="w-6 h-4 object-cover rounded"
-                  />
-                  <span className="font-semibold text-green-700">
-                    {getTeamById(finalWinner)?.name}
-                  </span>
+          {/* Columna Final */}
+          <div className="flex flex-col justify-center flex-1 min-w-0 gap-0.5">
+            {/* Equipo que espera en final */}
+            <TeamButton teamId={playoff.bracket.finalTeamA} round="final" isSelected={finalWinner === playoff.bracket.finalTeamA} isEliminated={finalWinner && finalWinner !== playoff.bracket.finalTeamA} />
+            {/* Ganador de primera ronda */}
+            <WinnerSlot teamId={semi1Winner} round="final" isSelected={finalWinner === semi1Winner} isEliminated={finalWinner && finalWinner !== semi1Winner} placeholder="Ganador R1" />
+          </div>
+
+          {/* Linea al ganador */}
+          <div className="w-4 flex items-center">
+            <div className="w-full border-t-2 border-muted-foreground/30" />
+          </div>
+
+          {/* Columna Ganador */}
+          <div className="flex items-center min-w-[70px]">
+            {finalWinner ? (
+              <div className="p-2 bg-green-50 rounded-lg border border-green-300 w-full">
+                <div className="flex items-center gap-1.5">
+                  <img src={getTeamById(finalWinner)?.flag_url} alt="" className="w-5 h-3 object-cover rounded" />
+                  <span className="text-xs font-bold text-green-700 truncate">{getTeamById(finalWinner)?.name}</span>
                 </div>
+              </div>
+            ) : (
+              <div className="p-2 rounded border-2 border-dashed border-muted-foreground/30 text-center text-[10px] text-muted-foreground w-full">
+                Ganador
               </div>
             )}
           </div>

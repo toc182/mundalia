@@ -1,6 +1,6 @@
 # SESSION.md - Estado Actual del Proyecto
 
-## Ultima Actualizacion: 2025-12-11 (23:30 UTC)
+## Ultima Actualizacion: 2025-12-12 (14:50 UTC)
 
 ---
 
@@ -25,6 +25,7 @@
 - [x] **Fase 3.13: Rediseno UI - TopBar fijo + layout mejorado**
 - [x] **Fase 3.14: Mejoras UX - Knockout botones, PredictionDetail fixes**
 - [x] **Fase 3.15: Pagina Cuenta + mejoras vista predicciones**
+- [x] **Fase 3.16: Separacion DB dev/prod**
 - [ ] Fase 4: Leaderboard
 - [ ] Fase 5: Grupos privados
 - [x] Fase 6: Deploy a produccion
@@ -159,6 +160,39 @@ Al seleccionar 8 terceros lugares, algunas combinaciones mostraban "Combinacion 
 ### Breadcrumbs Eliminados
 - [x] Eliminado de PredictionDetail.jsx (loading state y main return)
 - [x] Eliminado de MyPredictions.jsx (loading state y main return)
+
+---
+
+## COMPLETADO - Fase 3.16: Separacion DB Dev/Prod
+
+### Problema
+- Desarrollo y produccion usaban la misma DB (Railway PostgreSQL)
+- Cambios de prueba en desarrollo afectaban datos reales de produccion
+
+### Solucion Implementada
+- **Desarrollo local:** PostgreSQL localhost:5432 / `natalia_dev`
+- **Produccion (Railway):** Sigue usando `DATABASE_URL` auto-inyectada
+
+### Archivos Modificados
+| Archivo | Cambio |
+|---------|--------|
+| `config/db.js` | Logica condicional: si existe DATABASE_URL usa prod, si no usa vars individuales |
+| `.env` | Agregadas DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD para local |
+
+### Configuracion Local
+```
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=natalia_dev
+DB_USER=postgres
+DB_PASSWORD=Dinocore51720
+```
+
+### Schema y Datos Importados
+- Se hizo `pg_dump` del schema de produccion
+- Se importo a la DB local incluyendo las 14 tablas
+- Se importaron los 48 equipos (teams)
+- Se importaron los 4 usuarios existentes (para usar mismo login en dev)
 
 ---
 

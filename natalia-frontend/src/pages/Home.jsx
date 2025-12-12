@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,9 +18,19 @@ import { predictionSetsAPI } from '@/services/api';
 export default function Home() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newName, setNewName] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // Abrir modal si viene de menu con ?newPrediction=true
+  useEffect(() => {
+    if (searchParams.get('newPrediction') === 'true') {
+      setShowCreateDialog(true);
+      // Limpiar el query param
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams]);
 
   const handleCreate = async () => {
     if (!newName.trim()) return;

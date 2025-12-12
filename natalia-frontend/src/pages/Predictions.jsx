@@ -397,9 +397,6 @@ function GroupCard({ group, teamIds, getTeamById, onMove, onReorder, onDragStart
               />
               <div className="flex-1 min-w-0">
                 <span className="font-medium text-sm truncate block">{team.name}</span>
-                {team.isPlayoffWinner && (
-                  <p className="text-xs text-blue-600">Ganador Repechaje</p>
-                )}
                 {team.is_playoff && !team.isPlayoffWinner && (
                   <p className="text-xs text-muted-foreground truncate">{team.playoff_teams}</p>
                 )}
