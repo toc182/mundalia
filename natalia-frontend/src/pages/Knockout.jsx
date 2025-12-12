@@ -611,19 +611,36 @@ export default function Knockout() {
 
           // Componente de par de partidos con siguiente ronda
           const MatchPair = ({ match1, match2, nextMatch }) => {
+            // Altura de cada partido: 2 equipos de 32px = 64px total
+            const MATCH_H = 64;
+            const GAP = 4; // gap-1
+            const TOTAL_H = MATCH_H * 2 + GAP; // altura total de la columna izquierda
+            const SVG_W = 20;
+
+            // Centros de los partidos
+            const top1Center = MATCH_H / 2;
+            const top2Center = MATCH_H + GAP + MATCH_H / 2;
+            const midY = (top1Center + top2Center) / 2;
+
             return (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center">
                 {/* Columna izquierda: 2 partidos de ronda actual */}
                 <div className="flex flex-col gap-1 flex-1 min-w-0">
                   <MobileMatchBox match={match1} />
                   <MobileMatchBox match={match2} />
                 </div>
 
-                {/* Conectores */}
-                <div className="flex flex-col items-center justify-center w-5 shrink-0">
-                  <div className="w-3 h-[32px] border-t border-r border-gray-300 rounded-tr"></div>
-                  <div className="w-3 h-[32px] border-b border-r border-gray-300 rounded-br"></div>
-                </div>
+                {/* Conectores SVG */}
+                <svg width={SVG_W} height={TOTAL_H} className="shrink-0">
+                  {/* Línea horizontal desde partido 1 */}
+                  <line x1="0" y1={top1Center} x2={SVG_W/2} y2={top1Center} stroke="#d1d5db" strokeWidth="1" />
+                  {/* Línea horizontal desde partido 2 */}
+                  <line x1="0" y1={top2Center} x2={SVG_W/2} y2={top2Center} stroke="#d1d5db" strokeWidth="1" />
+                  {/* Línea vertical que une ambos */}
+                  <line x1={SVG_W/2} y1={top1Center} x2={SVG_W/2} y2={top2Center} stroke="#d1d5db" strokeWidth="1" />
+                  {/* Línea horizontal hacia siguiente partido */}
+                  <line x1={SVG_W/2} y1={midY} x2={SVG_W} y2={midY} stroke="#d1d5db" strokeWidth="1" />
+                </svg>
 
                 {/* Columna derecha: partido siguiente */}
                 <div className="flex-1 min-w-0">
