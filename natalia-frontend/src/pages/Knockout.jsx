@@ -389,8 +389,8 @@ export default function Knockout() {
   // Tabs para móvil (cada tab muestra 2 rondas)
   const mobileRounds = [
     { id: 'r32', label: 'R32 → R16', count: r32Complete + r16Complete, total: 24, next: 'qf' },
-    { id: 'qf', label: 'QF → SF', count: qfComplete + sfComplete, total: 6, next: 'final' },
-    { id: 'final', label: 'Final', count: thirdPlaceComplete + finalComplete, total: 2, next: null },
+    { id: 'qf', label: 'QF → SF', count: qfComplete, total: 4, next: 'final' },
+    { id: 'final', label: 'Final', count: sfComplete + thirdPlaceComplete + finalComplete, total: 4, next: null },
   ];
 
   // Mantener rounds original para desktop badge contador
@@ -705,32 +705,23 @@ export default function Knockout() {
                       nextMatch={getMatch(pair.next)}
                     />
                   ))}
-
-                  {/* También mostrar SF → Final en el mismo tab */}
-                  <div className="pt-4 border-t mt-4">
-                    <div className="flex gap-4 text-[10px] text-muted-foreground font-medium mb-4">
-                      <div className="w-[120px] text-center">Semifinales</div>
-                      <div className="w-4"></div>
-                      <div className="w-[120px] text-center">Final</div>
-                    </div>
-                    <MatchPair
-                      match1={sfMatches.find(m => m.matchId === 'M101')}
-                      match2={sfMatches.find(m => m.matchId === 'M102')}
-                      nextMatch={final}
-                    />
-                  </div>
                 </div>
               )}
 
               {/* Final & Third Place */}
               {activeRound === 'final' && (
                 <div className="space-y-4">
-                  <div>
-                    <div className="text-xs font-semibold text-muted-foreground mb-2">Gran Final</div>
-                    <div className="w-[140px]">
-                      <MobileMatchBox match={final} />
-                    </div>
+                  {/* Semifinales → Final */}
+                  <div className="flex gap-4 text-[10px] text-muted-foreground font-medium">
+                    <div className="w-[120px] text-center">Semifinales</div>
+                    <div className="w-4"></div>
+                    <div className="w-[120px] text-center">Final</div>
                   </div>
+                  <MatchPair
+                    match1={sfMatches.find(m => m.matchId === 'M101')}
+                    match2={sfMatches.find(m => m.matchId === 'M102')}
+                    nextMatch={final}
+                  />
 
                   {final.selectedWinner && (
                     <div className="p-2 bg-yellow-50 border-2 border-yellow-400 rounded-lg w-fit">
@@ -743,7 +734,7 @@ export default function Knockout() {
                     </div>
                   )}
 
-                  <div>
+                  <div className="pt-4 border-t">
                     <div className="text-xs font-semibold text-muted-foreground mb-2">3er Puesto</div>
                     <div className="w-[140px]">
                       <MobileMatchBox match={thirdPlace} />
