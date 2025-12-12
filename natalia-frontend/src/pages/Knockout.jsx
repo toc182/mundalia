@@ -548,15 +548,8 @@ export default function Knockout() {
               variant={activeRound === round.id ? 'default' : 'outline'}
               size="sm"
               onClick={() => setActiveRound(round.id)}
-              className="relative"
             >
               {round.label}
-              <Badge
-                variant={round.count === round.total ? 'default' : 'secondary'}
-                className="ml-2 text-xs"
-              >
-                {round.count}/{round.total}
-              </Badge>
             </Button>
           ))}
         </div>
@@ -585,7 +578,7 @@ export default function Knockout() {
 
               if (!team) {
                 return (
-                  <div className={`h-[22px] px-1.5 py-0.5 text-[10px] text-muted-foreground bg-muted/30 border-x border-t ${!isTop ? 'border-b rounded-b' : 'rounded-t'} border-dashed border-gray-300`}>
+                  <div className={`h-[28px] px-2 py-1 text-[12px] text-muted-foreground bg-muted/30 border-x border-t ${!isTop ? 'border-b rounded-b' : 'rounded-t'} border-dashed border-gray-300 flex items-center`}>
                     Por definir
                   </div>
                 );
@@ -595,15 +588,15 @@ export default function Knockout() {
                 <button
                   onClick={() => canSelect && selectWinner(match.matchId, team.id)}
                   disabled={!canSelect}
-                  className={`flex items-center gap-1 h-[22px] px-1.5 py-0.5 text-left w-full transition-colors
+                  className={`flex items-center gap-1.5 h-[28px] px-2 py-1 text-left w-full transition-colors
                     ${isTop ? 'rounded-t border-x border-t' : 'rounded-b border'}
                     ${isSelected ? 'bg-green-100 border-green-500 font-semibold' : isEliminated ? 'bg-gray-50 border-gray-300' : 'bg-white border-gray-300'}
                     ${!isSelected && !isEliminated && canSelect ? 'hover:bg-blue-50 active:bg-blue-100' : ''}
                   `}
                 >
-                  <img src={team.flag_url} alt="" className={`w-4 h-2.5 object-cover rounded shrink-0 ${isEliminated ? 'opacity-50' : ''}`} />
-                  <span className={`text-[10px] truncate ${isEliminated ? 'text-gray-400' : ''}`}>{team.name}</span>
-                  {team.thirdPlaceFrom && <span className="text-[8px] text-muted-foreground ml-auto">3{team.thirdPlaceFrom}</span>}
+                  <img src={team.flag_url} alt="" className={`w-5 h-3 object-cover rounded shrink-0 ${isEliminated ? 'opacity-50' : ''}`} />
+                  <span className={`text-[12px] truncate ${isEliminated ? 'text-gray-400' : ''}`}>{team.name}</span>
+                  {team.thirdPlaceFrom && <span className="text-[9px] text-muted-foreground ml-auto">3{team.thirdPlaceFrom}</span>}
                 </button>
               );
             };
@@ -621,19 +614,19 @@ export default function Knockout() {
             return (
               <div className="flex items-center gap-1">
                 {/* Columna izquierda: 2 partidos de ronda actual */}
-                <div className="flex flex-col gap-1 w-[120px] shrink-0">
+                <div className="flex flex-col gap-1 w-[140px] shrink-0">
                   <MobileMatchBox match={match1} />
                   <MobileMatchBox match={match2} />
                 </div>
 
                 {/* Conectores */}
                 <div className="flex flex-col items-center justify-center w-4 shrink-0">
-                  <div className="w-2 h-[22px] border-t border-r border-gray-300 rounded-tr"></div>
-                  <div className="w-2 h-[22px] border-b border-r border-gray-300 rounded-br"></div>
+                  <div className="w-2 h-[28px] border-t border-r border-gray-300 rounded-tr"></div>
+                  <div className="w-2 h-[28px] border-b border-r border-gray-300 rounded-br"></div>
                 </div>
 
                 {/* Columna derecha: partido siguiente */}
-                <div className="w-[120px] shrink-0">
+                <div className="w-[140px] shrink-0">
                   <MobileMatchBox match={nextMatch} />
                 </div>
               </div>
@@ -674,9 +667,9 @@ export default function Knockout() {
               {activeRound === 'r32' && (
                 <div className="space-y-4">
                   <div className="flex gap-4 text-[10px] text-muted-foreground font-medium">
-                    <div className="w-[120px] text-center">Dieciseisavos</div>
+                    <div className="w-[140px] text-center">Dieciseisavos</div>
                     <div className="w-4"></div>
-                    <div className="w-[120px] text-center">Octavos</div>
+                    <div className="w-[140px] text-center">Octavos</div>
                   </div>
                   {r32Pairs.map((pair, i) => (
                     <MatchPair
@@ -693,9 +686,9 @@ export default function Knockout() {
               {activeRound === 'qf' && (
                 <div className="space-y-4">
                   <div className="flex gap-4 text-[10px] text-muted-foreground font-medium">
-                    <div className="w-[120px] text-center">Cuartos</div>
+                    <div className="w-[140px] text-center">Cuartos</div>
                     <div className="w-4"></div>
-                    <div className="w-[120px] text-center">Semifinales</div>
+                    <div className="w-[140px] text-center">Semifinales</div>
                   </div>
                   {qfPairs.map((pair, i) => (
                     <MatchPair
@@ -713,9 +706,9 @@ export default function Knockout() {
                 <div className="space-y-4">
                   {/* Semifinales → Final */}
                   <div className="flex gap-4 text-[10px] text-muted-foreground font-medium">
-                    <div className="w-[120px] text-center">Semifinales</div>
+                    <div className="w-[140px] text-center">Semifinales</div>
                     <div className="w-4"></div>
-                    <div className="w-[120px] text-center">Final</div>
+                    <div className="w-[140px] text-center">Final</div>
                   </div>
                   <MatchPair
                     match1={sfMatches.find(m => m.matchId === 'M101')}
