@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ChevronLeft, ChevronRight, Trophy, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
 import { mockTeams } from '@/data/mockData';
 import { playoffs } from '@/data/playoffsData';
 import {
@@ -493,6 +493,7 @@ export default function Knockout() {
           <div className="text-sm text-muted-foreground mb-1">{predictionSetName}</div>
         )}
         <h1 className="text-2xl font-bold">Eliminatorias</h1>
+        <p className="text-sm text-muted-foreground mt-1">Seleccionar los ganadores de partidos de Eliminatoria</p>
       </div>
 
       {/* Botones de navegacion en linea separada */}
@@ -534,10 +535,8 @@ export default function Knockout() {
           <Button
             variant="outline"
             onClick={() => setKnockoutPredictions({})}
-            className="text-red-600 border-red-300 hover:bg-red-50"
           >
-            <Trash2 className="w-4 h-4 mr-2" />
-            Limpiar Selecciones
+            Reset
           </Button>
           <FinishButton size="lg" />
         </div>
@@ -785,9 +784,8 @@ export default function Knockout() {
             variant="outline"
             size="sm"
             onClick={() => setKnockoutPredictions({})}
-            className="text-red-600 border-red-300 hover:bg-red-50"
           >
-            <Trash2 className="w-4 h-4" />
+            Reset
           </Button>
           {showFinishButton ? <FinishButton size="lg" /> : <NextRoundButton size="lg" />}
         </div>
