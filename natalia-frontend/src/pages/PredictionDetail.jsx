@@ -474,11 +474,6 @@ export default function PredictionDetail() {
               </div>
             )}
 
-            <div className="mt-4 pt-4 border-t">
-              <Button variant="outline" size="sm" asChild>
-                <Link to={`/eliminatorias?setId=${id}`}>Ver/Editar Bracket Completo</Link>
-              </Button>
-            </div>
           </CardContent>
         </Card>
       )}
