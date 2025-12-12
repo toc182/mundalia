@@ -116,6 +116,43 @@ export default function Knockout() {
     loadData();
   }, [setId]);
 
+  // Orden de los slides (para mapear índice a round id) - definido aquí para usar en useCallback
+  const slideRoundIds = ['r32', 'r16', 'qf', 'final'];
+
+  // Handler para detectar scroll y actualizar activeRound
+  const handleScroll = useCallback(() => {
+    if (isScrolling.current) return;
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const slideWidth = container.offsetWidth;
+    const scrollLeft = container.scrollLeft;
+    const newIndex = Math.round(scrollLeft / slideWidth);
+    const newRoundId = slideRoundIds[newIndex];
+
+    if (newRoundId && newRoundId !== activeRound) {
+      setActiveRound(newRoundId);
+    }
+  }, [activeRound]);
+
+  // Scroll programático a un slide específico
+  const scrollToRound = useCallback((roundId) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const index = slideRoundIds.indexOf(roundId);
+    if (index === -1) return;
+
+    isScrolling.current = true;
+    const slideWidth = container.offsetWidth;
+    container.scrollTo({ left: index * slideWidth, behavior: 'smooth' });
+
+    // Reset isScrolling después de la animación
+    setTimeout(() => {
+      isScrolling.current = false;
+    }, 300);
+  }, []);
+
   // Get the winning team from a playoff
   const getPlayoffWinner = (playoffId) => {
     const selection = playoffSelections[playoffId];
@@ -415,43 +452,6 @@ export default function Knockout() {
   const currentRound = rounds.find(r => r.id === activeRound);
   const currentMobileRound = mobileRounds.find(r => r.id === activeRound);
   const isCurrentRoundComplete = currentMobileRound?.count === currentMobileRound?.total;
-
-  // Orden de los slides (para mapear índice a round id)
-  const slideRoundIds = ['r32', 'r16', 'qf', 'final'];
-
-  // Handler para detectar scroll y actualizar activeRound
-  const handleScroll = useCallback(() => {
-    if (isScrolling.current) return;
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const slideWidth = container.offsetWidth;
-    const scrollLeft = container.scrollLeft;
-    const newIndex = Math.round(scrollLeft / slideWidth);
-    const newRoundId = slideRoundIds[newIndex];
-
-    if (newRoundId && newRoundId !== activeRound) {
-      setActiveRound(newRoundId);
-    }
-  }, [activeRound]);
-
-  // Scroll programático a un slide específico
-  const scrollToRound = useCallback((roundId) => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const index = slideRoundIds.indexOf(roundId);
-    if (index === -1) return;
-
-    isScrolling.current = true;
-    const slideWidth = container.offsetWidth;
-    container.scrollTo({ left: index * slideWidth, behavior: 'smooth' });
-
-    // Reset isScrolling después de la animación
-    setTimeout(() => {
-      isScrolling.current = false;
-    }, 300);
-  }, []);
 
   const handleNextRound = () => {
     // Save progress
