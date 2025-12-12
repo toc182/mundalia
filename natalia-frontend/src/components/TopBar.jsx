@@ -4,24 +4,12 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Menu, User, X, Plus, List, Trophy, Users, LogOut, UserCircle } from 'lucide-react';
 
-// Logo component con texto estilizado e icono de balón
+// Logo component - solo texto estilizado
 const MundaliaLogo = () => (
-  <div className="flex items-center gap-1.5">
-    {/* Icono de balón estilizado */}
-    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-primary">
-      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
-      <path d="M12 2C12 2 8 6 8 12C8 18 12 22 12 22" stroke="currentColor" strokeWidth="1.5"/>
-      <path d="M12 2C12 2 16 6 16 12C16 18 12 22 12 22" stroke="currentColor" strokeWidth="1.5"/>
-      <path d="M2 12H22" stroke="currentColor" strokeWidth="1.5"/>
-      <path d="M4 7H20" stroke="currentColor" strokeWidth="1"/>
-      <path d="M4 17H20" stroke="currentColor" strokeWidth="1"/>
-    </svg>
-    {/* Texto Mundalia */}
-    <span className="text-xl font-bold tracking-tight">
-      <span className="text-primary">Mund</span>
-      <span className="text-green-600">alia</span>
-    </span>
-  </div>
+  <span className="text-xl font-bold tracking-tight">
+    <span className="text-primary">Mund</span>
+    <span className="text-sky-500">alia</span>
+  </span>
 );
 
 export default function TopBar() {
