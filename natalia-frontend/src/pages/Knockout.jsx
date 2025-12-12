@@ -578,7 +578,7 @@ export default function Knockout() {
 
               if (!team) {
                 return (
-                  <div className={`h-[28px] px-2 py-1 text-[12px] text-muted-foreground bg-muted/30 border-x border-t ${!isTop ? 'border-b rounded-b' : 'rounded-t'} border-dashed border-gray-300 flex items-center`}>
+                  <div className={`h-[32px] px-3 py-1.5 text-sm text-muted-foreground bg-muted/30 border-x border-t ${!isTop ? 'border-b rounded-b' : 'rounded-t'} border-dashed border-gray-300 flex items-center`}>
                     Por definir
                   </div>
                 );
@@ -588,15 +588,15 @@ export default function Knockout() {
                 <button
                   onClick={() => canSelect && selectWinner(match.matchId, team.id)}
                   disabled={!canSelect}
-                  className={`flex items-center gap-1.5 h-[28px] px-2 py-1 text-left w-full transition-colors
+                  className={`flex items-center gap-2 h-[32px] px-3 py-1.5 text-left w-full transition-colors
                     ${isTop ? 'rounded-t border-x border-t' : 'rounded-b border'}
                     ${isSelected ? 'bg-green-100 border-green-500 font-semibold' : isEliminated ? 'bg-gray-50 border-gray-300' : 'bg-white border-gray-300'}
                     ${!isSelected && !isEliminated && canSelect ? 'hover:bg-blue-50 active:bg-blue-100' : ''}
                   `}
                 >
-                  <img src={team.flag_url} alt="" className={`w-5 h-3 object-cover rounded shrink-0 ${isEliminated ? 'opacity-50' : ''}`} />
-                  <span className={`text-[12px] truncate ${isEliminated ? 'text-gray-400' : ''}`}>{team.name}</span>
-                  {team.thirdPlaceFrom && <span className="text-[9px] text-muted-foreground ml-auto">3{team.thirdPlaceFrom}</span>}
+                  <img src={team.flag_url} alt="" className={`w-6 h-4 object-cover rounded shrink-0 ${isEliminated ? 'opacity-50' : ''}`} />
+                  <span className={`text-sm truncate ${isEliminated ? 'text-gray-400' : ''}`}>{team.name}</span>
+                  {team.thirdPlaceFrom && <span className="text-xs text-muted-foreground ml-auto">3{team.thirdPlaceFrom}</span>}
                 </button>
               );
             };
@@ -612,21 +612,21 @@ export default function Knockout() {
           // Componente de par de partidos con siguiente ronda
           const MatchPair = ({ match1, match2, nextMatch }) => {
             return (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-2">
                 {/* Columna izquierda: 2 partidos de ronda actual */}
-                <div className="flex flex-col gap-1 w-[140px] shrink-0">
+                <div className="flex flex-col gap-1 flex-1 min-w-0">
                   <MobileMatchBox match={match1} />
                   <MobileMatchBox match={match2} />
                 </div>
 
                 {/* Conectores */}
-                <div className="flex flex-col items-center justify-center w-4 shrink-0">
-                  <div className="w-2 h-[28px] border-t border-r border-gray-300 rounded-tr"></div>
-                  <div className="w-2 h-[28px] border-b border-r border-gray-300 rounded-br"></div>
+                <div className="flex flex-col items-center justify-center w-5 shrink-0">
+                  <div className="w-3 h-[32px] border-t border-r border-gray-300 rounded-tr"></div>
+                  <div className="w-3 h-[32px] border-b border-r border-gray-300 rounded-br"></div>
                 </div>
 
                 {/* Columna derecha: partido siguiente */}
-                <div className="w-[140px] shrink-0">
+                <div className="flex-1 min-w-0">
                   <MobileMatchBox match={nextMatch} />
                 </div>
               </div>
@@ -666,10 +666,10 @@ export default function Knockout() {
               {/* Round of 32 */}
               {activeRound === 'r32' && (
                 <div className="space-y-4">
-                  <div className="flex gap-4 text-[10px] text-muted-foreground font-medium">
-                    <div className="w-[140px] text-center">Dieciseisavos</div>
-                    <div className="w-4"></div>
-                    <div className="w-[140px] text-center">Octavos</div>
+                  <div className="flex gap-2 text-xs text-muted-foreground font-medium">
+                    <div className="flex-1 text-center">Dieciseisavos</div>
+                    <div className="w-5"></div>
+                    <div className="flex-1 text-center">Octavos</div>
                   </div>
                   {r32Pairs.map((pair, i) => (
                     <MatchPair
@@ -685,10 +685,10 @@ export default function Knockout() {
               {/* Quarter Finals → Semi Finals */}
               {activeRound === 'qf' && (
                 <div className="space-y-4">
-                  <div className="flex gap-4 text-[10px] text-muted-foreground font-medium">
-                    <div className="w-[140px] text-center">Cuartos</div>
-                    <div className="w-4"></div>
-                    <div className="w-[140px] text-center">Semifinales</div>
+                  <div className="flex gap-2 text-xs text-muted-foreground font-medium">
+                    <div className="flex-1 text-center">Cuartos</div>
+                    <div className="w-5"></div>
+                    <div className="flex-1 text-center">Semifinales</div>
                   </div>
                   {qfPairs.map((pair, i) => (
                     <MatchPair
@@ -705,10 +705,10 @@ export default function Knockout() {
               {activeRound === 'final' && (
                 <div className="space-y-4">
                   {/* Semifinales → Final */}
-                  <div className="flex gap-4 text-[10px] text-muted-foreground font-medium">
-                    <div className="w-[140px] text-center">Semifinales</div>
-                    <div className="w-4"></div>
-                    <div className="w-[140px] text-center">Final</div>
+                  <div className="flex gap-2 text-xs text-muted-foreground font-medium">
+                    <div className="flex-1 text-center">Semifinales</div>
+                    <div className="w-5"></div>
+                    <div className="flex-1 text-center">Final</div>
                   </div>
                   <MatchPair
                     match1={sfMatches.find(m => m.matchId === 'M101')}
@@ -729,9 +729,7 @@ export default function Knockout() {
 
                   <div className="pt-4 border-t">
                     <div className="text-xs font-semibold text-muted-foreground mb-2">3er Puesto</div>
-                    <div className="w-[140px]">
-                      <MobileMatchBox match={thirdPlace} />
-                    </div>
+                    <MobileMatchBox match={thirdPlace} />
                   </div>
                 </div>
               )}
