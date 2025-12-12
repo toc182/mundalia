@@ -15,7 +15,7 @@ import {
   finalMatch
 } from '@/data/knockoutBracket';
 import { getThirdPlaceAssignments } from '@/data/thirdPlaceCombinations';
-import { predictionsAPI } from '@/services/api';
+import { predictionsAPI, predictionSetsAPI } from '@/services/api';
 
 // Mapeo de playoff ID a team ID en mockTeams
 const playoffToTeamId = {
@@ -40,12 +40,19 @@ export default function Knockout() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [activeRound, setActiveRound] = useState('r32');
+  const [predictionSetName, setPredictionSetName] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
       // Si hay setId, solo cargar del servidor (sin fallback a localStorage)
       if (setId) {
         try {
+          // Cargar nombre del prediction set
+          const setResponse = await predictionSetsAPI.getById(setId);
+          if (setResponse.data?.name) {
+            setPredictionSetName(setResponse.data.name);
+          }
+
           // Cargar predicciones de grupos del servidor
           const groupsResponse = await predictionsAPI.getMy(setId);
           if (groupsResponse.data?.groupPredictions?.length > 0) {
@@ -388,9 +395,10 @@ export default function Knockout() {
 
   // Tabs para móvil (cada tab muestra 2 rondas)
   const mobileRounds = [
-    { id: 'r32', label: 'R32 → R16', count: r32Complete + r16Complete, total: 24, next: 'qf' },
-    { id: 'qf', label: 'QF → SF', count: qfComplete, total: 4, next: 'final' },
-    { id: 'final', label: 'Final', count: sfComplete + thirdPlaceComplete + finalComplete, total: 4, next: null },
+    { id: 'r32', label: 'R32 → R16', count: r32Complete + r16Complete, total: 24, next: 'r16' },
+    { id: 'r16', label: 'R16 → QF', count: r16Complete + qfComplete, total: 12, next: 'qf' },
+    { id: 'qf', label: 'QF → SF', count: qfComplete + sfComplete, total: 6, next: 'final' },
+    { id: 'final', label: 'SF → Final', count: sfComplete + thirdPlaceComplete + finalComplete, total: 4, next: null },
   ];
 
   // Mantener rounds original para desktop badge contador
@@ -481,13 +489,10 @@ export default function Knockout() {
     <div className="container mx-auto px-4 py-6">
       {/* Header con titulo */}
       <div className="mb-4">
+        {predictionSetName && (
+          <div className="text-sm text-muted-foreground mb-1">{predictionSetName}</div>
+        )}
         <h1 className="text-2xl font-bold">Eliminatorias</h1>
-        <div className="flex items-center gap-2 mt-1">
-          <span className="text-sm text-muted-foreground">32 partidos de eliminacion directa</span>
-          <Badge variant={isComplete ? 'default' : 'secondary'}>
-            {totalComplete}/{totalMatches}
-          </Badge>
-        </div>
       </div>
 
       {/* Botones de navegacion en linea separada */}
@@ -689,6 +694,25 @@ export default function Knockout() {
                     <div className="flex-1 text-center">Octavos</div>
                   </div>
                   {r32Pairs.map((pair, i) => (
+                    <MatchPair
+                      key={i}
+                      match1={getMatch(pair.m1)}
+                      match2={getMatch(pair.m2)}
+                      nextMatch={getMatch(pair.next)}
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Round of 16 → Quarter Finals */}
+              {activeRound === 'r16' && (
+                <div className="space-y-4">
+                  <div className="flex gap-2 text-xs text-muted-foreground font-medium">
+                    <div className="flex-1 text-center">Octavos</div>
+                    <div className="w-5"></div>
+                    <div className="flex-1 text-center">Cuartos</div>
+                  </div>
+                  {r16Pairs.map((pair, i) => (
                     <MatchPair
                       key={i}
                       match1={getMatch(pair.m1)}
