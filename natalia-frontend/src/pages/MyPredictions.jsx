@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { predictionSetsAPI } from '@/services/api';
-import { Plus, Copy, Trash2, Eye, Edit2, Trophy } from 'lucide-react';
+import { Plus, Trash2, Eye, Edit2, Trophy } from 'lucide-react';
 
 export default function MyPredictions() {
   const navigate = useNavigate();
@@ -25,7 +25,6 @@ export default function MyPredictions() {
   // Dialog states
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [showRenameDialog, setShowRenameDialog] = useState(false);
   const [selectedSet, setSelectedSet] = useState(null);
   const [newName, setNewName] = useState('');
   const [saving, setSaving] = useState(false);
@@ -64,18 +63,6 @@ export default function MyPredictions() {
     }
   };
 
-  const handleDuplicate = async (set) => {
-    setSaving(true);
-    try {
-      await predictionSetsAPI.duplicate(set.id, `${set.name} (copia)`);
-      loadPredictionSets();
-    } catch (err) {
-      setError('Error al duplicar prediccion');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleDelete = async () => {
     if (!selectedSet) return;
     setSaving(true);
@@ -91,38 +78,16 @@ export default function MyPredictions() {
     }
   };
 
-  const handleRename = async () => {
-    if (!selectedSet || !newName.trim()) return;
-    setSaving(true);
-    try {
-      await predictionSetsAPI.update(selectedSet.id, newName.trim());
-      setShowRenameDialog(false);
-      setSelectedSet(null);
-      setNewName('');
-      loadPredictionSets();
-    } catch (err) {
-      setError('Error al renombrar prediccion');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const openDeleteDialog = (set) => {
     setSelectedSet(set);
     setShowDeleteDialog(true);
   };
 
-  const openRenameDialog = (set) => {
-    setSelectedSet(set);
-    setNewName(set.name);
-    setShowRenameDialog(true);
-  };
-
   const getCompletionStatus = (set) => {
-    const groupComplete = set.group_count >= 48; // 12 grupos * 4 equipos
-    const playoffComplete = set.playoff_count === 6;
+    const groupComplete = parseInt(set.group_count) >= 48; // 12 grupos * 4 equipos
+    const playoffComplete = parseInt(set.playoff_count) >= 6;
     const thirdComplete = set.third_places?.length === 8;
-    const knockoutComplete = set.knockout_count >= 32;
+    const knockoutComplete = parseInt(set.knockout_count) >= 32;
 
     if (groupComplete && playoffComplete && thirdComplete && knockoutComplete) {
       return { label: 'Completa', variant: 'default' };
@@ -197,19 +162,19 @@ export default function MyPredictions() {
                   {/* Progress indicators */}
                   <div className="grid grid-cols-2 gap-2 text-xs mb-4">
                     <div className="flex items-center gap-1">
-                      <div className={`w-2 h-2 rounded-full ${set.playoff_count === 6 ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      <div className={`w-2 h-2 rounded-full ${parseInt(set.playoff_count) >= 6 ? 'bg-green-500' : 'bg-gray-300'}`} />
                       <span>Repechajes: {set.playoff_count}/6</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <div className={`w-2 h-2 rounded-full ${set.group_count >= 48 ? 'bg-green-500' : 'bg-gray-300'}`} />
-                      <span>Grupos: {Math.floor(set.group_count / 4)}/12</span>
+                      <div className={`w-2 h-2 rounded-full ${parseInt(set.group_count) >= 48 ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      <span>Grupos: {Math.floor(parseInt(set.group_count) / 4)}/12</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <div className={`w-2 h-2 rounded-full ${set.third_places?.length === 8 ? 'bg-green-500' : 'bg-gray-300'}`} />
                       <span>Terceros: {set.third_places?.length || 0}/8</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <div className={`w-2 h-2 rounded-full ${set.knockout_count >= 32 ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      <div className={`w-2 h-2 rounded-full ${parseInt(set.knockout_count) >= 32 ? 'bg-green-500' : 'bg-gray-300'}`} />
                       <span>Bracket: {set.knockout_count}/32</span>
                     </div>
                   </div>
@@ -235,21 +200,6 @@ export default function MyPredictions() {
                         <Edit2 className="w-4 h-4 mr-1" />
                         Editar
                       </Link>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDuplicate(set)}
-                      disabled={saving}
-                    >
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openRenameDialog(set)}
-                    >
-                      <Edit2 className="w-4 h-4" />
                     </Button>
                     <Button
                       variant="outline"
@@ -313,31 +263,6 @@ export default function MyPredictions() {
         </DialogContent>
       </Dialog>
 
-      {/* Rename Dialog */}
-      <Dialog open={showRenameDialog} onOpenChange={setShowRenameDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Renombrar Prediccion</DialogTitle>
-            <DialogDescription>
-              Ingresa un nuevo nombre para esta prediccion
-            </DialogDescription>
-          </DialogHeader>
-          <Input
-            placeholder="Nuevo nombre"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleRename()}
-          />
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowRenameDialog(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleRename} disabled={!newName.trim() || saving}>
-              {saving ? 'Guardando...' : 'Guardar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
