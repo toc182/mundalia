@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Menu, User, X, Plus, List, Trophy, Users, LogOut, UserCircle } from 'lucide-react';
+import { Menu, User, X, Plus, List, Trophy, Users, LogOut, UserCircle, Home } from 'lucide-react';
 
 // Logo component - solo texto estilizado
 const MundaliaLogo = () => (
@@ -102,6 +102,13 @@ export default function TopBar() {
           />
           <nav className="fixed top-14 left-0 w-64 h-[calc(100vh-3.5rem)] bg-background border-r z-50 overflow-y-auto">
             <div className="p-4 space-y-1">
+              <button
+                onClick={() => handleNavigation('/')}
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted rounded-lg text-left"
+              >
+                <Home className="h-5 w-5" />
+                Inicio
+              </button>
               <button
                 onClick={() => handleNavigation('/?newPrediction=true')}
                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted rounded-lg text-left"
