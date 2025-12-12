@@ -352,67 +352,70 @@ export default function PredictionDetail() {
             <CardTitle className="text-lg">Eliminatorias</CardTitle>
           </CardHeader>
           <CardContent>
-            {/* Round by round teams - from early rounds to finals */}
-            <div className="space-y-4">
+            {/* Round by round matches - showing both teams and winner */}
+            <div className="space-y-6">
               {/* Dieciseisavos (Round of 32) */}
-              {r32Count > 0 && (
-                <RoundTeams
-                  label="Dieciseisavos"
-                  teams={roundOf32Structure.map(m => knockoutPredictions[m.matchId]).filter(Boolean).map(id => getTeamById(id)).filter(Boolean)}
-                  bgColor="bg-gray-50"
-                  borderColor="border-gray-200"
-                />
-              )}
+              <RoundMatches
+                label="Dieciseisavos de Final"
+                matches={roundOf32Structure}
+                getTeamById={getTeamById}
+                knockoutPredictions={knockoutPredictions}
+                predictions={predictions}
+                bestThirdPlaces={bestThirdPlaces}
+              />
 
               {/* Octavos de Final */}
-              {r16Count > 0 && (
-                <RoundTeams
-                  label="Octavos de Final"
-                  teams={roundOf16Structure.map(m => knockoutPredictions[m.matchId]).filter(Boolean).map(id => getTeamById(id)).filter(Boolean)}
-                  bgColor="bg-green-50"
-                  borderColor="border-green-200"
-                />
-              )}
+              <RoundMatches
+                label="Octavos de Final"
+                matches={roundOf16Structure}
+                getTeamById={getTeamById}
+                knockoutPredictions={knockoutPredictions}
+                predictions={predictions}
+                bestThirdPlaces={bestThirdPlaces}
+              />
 
               {/* Cuartos de Final */}
-              {qfCount > 0 && (
-                <RoundTeams
-                  label="Cuartos de Final"
-                  teams={quarterFinalsStructure.map(m => knockoutPredictions[m.matchId]).filter(Boolean).map(id => getTeamById(id)).filter(Boolean)}
-                  bgColor="bg-blue-50"
-                  borderColor="border-blue-200"
-                />
-              )}
+              <RoundMatches
+                label="Cuartos de Final"
+                matches={quarterFinalsStructure}
+                getTeamById={getTeamById}
+                knockoutPredictions={knockoutPredictions}
+                predictions={predictions}
+                bestThirdPlaces={bestThirdPlaces}
+              />
 
-              {/* Semifinal - solo los ganadores */}
-              {sfCount > 0 && (
-                <RoundTeams
-                  label="Semifinal"
-                  teams={semiFinalsStructure.map(sf => knockoutPredictions[sf.matchId]).filter(Boolean).map(id => getTeamById(id)).filter(Boolean)}
-                  bgColor="bg-purple-50"
-                  borderColor="border-purple-200"
-                />
-              )}
+              {/* Semifinal */}
+              <RoundMatches
+                label="Semifinales"
+                matches={semiFinalsStructure}
+                getTeamById={getTeamById}
+                knockoutPredictions={knockoutPredictions}
+                predictions={predictions}
+                bestThirdPlaces={bestThirdPlaces}
+                allMatches={semiFinalsStructure}
+              />
 
-              {/* Ganador Tercer Puesto */}
-              {thirdPlaceWinner && (
-                <RoundTeams
-                  label="Ganador Tercer Puesto"
-                  teams={[thirdPlaceWinner]}
-                  bgColor="bg-amber-50"
-                  borderColor="border-amber-200"
-                />
-              )}
+              {/* Tercer Puesto */}
+              <RoundMatches
+                label="Tercer Puesto"
+                matches={[thirdPlaceMatch]}
+                getTeamById={getTeamById}
+                knockoutPredictions={knockoutPredictions}
+                predictions={predictions}
+                bestThirdPlaces={bestThirdPlaces}
+                allMatches={semiFinalsStructure}
+              />
 
-              {/* Campeon */}
-              {champion && (
-                <RoundTeams
-                  label="Campeon"
-                  teams={[champion]}
-                  bgColor="bg-yellow-50"
-                  borderColor="border-yellow-300"
-                />
-              )}
+              {/* Final */}
+              <RoundMatches
+                label="Final"
+                matches={[finalMatch]}
+                getTeamById={getTeamById}
+                knockoutPredictions={knockoutPredictions}
+                predictions={predictions}
+                bestThirdPlaces={bestThirdPlaces}
+                allMatches={semiFinalsStructure}
+              />
             </div>
 
             {/* Podium at bottom */}
@@ -493,21 +496,127 @@ export default function PredictionDetail() {
   );
 }
 
-function RoundTeams({ label, teams, bgColor, borderColor }) {
-  if (!teams || teams.length === 0) return null;
+// Componente para mostrar un partido con los dos equipos y el ganador resaltado
+function MatchBox({ match, getTeamById, knockoutPredictions, predictions, bestThirdPlaces, allMatches }) {
+  const winnerId = knockoutPredictions[match.matchId];
+
+  // Encontrar el perdedor de un partido de semifinal
+  const findLoserOfMatch = (matchId) => {
+    const sfWinner = knockoutPredictions[matchId];
+    if (!sfWinner) return null;
+
+    // Buscar la estructura del partido en todas las rondas
+    const sfMatch = allMatches?.find(m => m.matchId === matchId);
+    if (!sfMatch) return null;
+
+    // Obtener los dos equipos que jugaron esa semifinal
+    const teamAId = knockoutPredictions[sfMatch.teamA?.from];
+    const teamBId = knockoutPredictions[sfMatch.teamB?.from];
+
+    // El perdedor es el que no es el ganador
+    const loserId = teamAId === sfWinner ? teamBId : teamAId;
+    return loserId ? getTeamById(loserId) : null;
+  };
+
+  // Resolver equipos del partido basado en la estructura de knockoutBracket.js
+  const resolveTeamSource = (source) => {
+    if (!source) return null;
+
+    // R32 - equipos directos de grupos
+    if (source.type === 'winner' && source.group) {
+      // 1ro del grupo
+      const groupPreds = predictions[source.group];
+      if (!groupPreds || !groupPreds[0]) return null;
+      return getTeamById(groupPreds[0]);
+    }
+
+    if (source.type === 'runner_up' && source.group) {
+      // 2do del grupo
+      const groupPreds = predictions[source.group];
+      if (!groupPreds || !groupPreds[1]) return null;
+      return getTeamById(groupPreds[1]);
+    }
+
+    if (source.type === 'third_place' && source.pools) {
+      // Mejor tercero de un pool de grupos
+      const matchedGroup = bestThirdPlaces.find(g => source.pools.includes(g));
+      if (!matchedGroup) return null;
+      const groupPreds = predictions[matchedGroup];
+      if (!groupPreds || !groupPreds[2]) return null;
+      const team = getTeamById(groupPreds[2]);
+      if (team) {
+        return { ...team, thirdPlaceFrom: matchedGroup };
+      }
+      return null;
+    }
+
+    // R16 y posteriores - ganador de partido previo
+    if (source.from) {
+      // Si tiene position='loser', es para el partido de 3er puesto
+      if (source.position === 'loser') {
+        return findLoserOfMatch(source.from);
+      }
+      // Ganador del partido previo (default o position='winner')
+      const prevWinner = knockoutPredictions[source.from];
+      if (!prevWinner) return null;
+      return getTeamById(prevWinner);
+    }
+
+    return null;
+  };
+
+  const teamA = resolveTeamSource(match.teamA);
+  const teamB = resolveTeamSource(match.teamB);
+  const winner = winnerId ? getTeamById(winnerId) : null;
+
+  const TeamSlot = ({ team, isWinner }) => {
+    if (!team) {
+      return (
+        <div className="flex items-center gap-2 px-2 py-1 text-xs text-muted-foreground bg-muted/30 border-b last:border-b-0">
+          <span className="w-5 h-3 bg-gray-200 rounded"></span>
+          <span>Por definir</span>
+        </div>
+      );
+    }
+
+    return (
+      <div className={`flex items-center gap-2 px-2 py-1 text-xs border-b last:border-b-0 ${isWinner ? 'bg-green-100 font-semibold' : 'bg-white'}`}>
+        <img src={team.flag_url} alt={team.name} className="w-5 h-3 object-cover rounded" />
+        <span className="truncate">{team.name}</span>
+        {team.thirdPlaceFrom && <span className="text-[10px] text-muted-foreground">3{team.thirdPlaceFrom}</span>}
+        {isWinner && <span className="ml-auto text-green-600">✓</span>}
+      </div>
+    );
+  };
+
+  return (
+    <div className="border rounded overflow-hidden w-[160px] shrink-0">
+      <TeamSlot team={teamA} isWinner={winner && teamA && winner.id === teamA.id} />
+      <TeamSlot team={teamB} isWinner={winner && teamB && winner.id === teamB.id} />
+    </div>
+  );
+}
+
+// Componente para mostrar una ronda completa con partidos
+function RoundMatches({ label, matches, getTeamById, knockoutPredictions, predictions, bestThirdPlaces, allMatches }) {
+  if (!matches || matches.length === 0) return null;
+
+  const completedCount = matches.filter(m => knockoutPredictions[m.matchId]).length;
+
   return (
     <div>
-      <p className="text-sm font-medium mb-2">{label} ({teams.length})</p>
+      <p className="text-sm font-medium mb-2">{label} ({completedCount}/{matches.length})</p>
       <div className="flex flex-wrap gap-2">
-        {teams.map((team, idx) => (
-          <div key={`${team.id}-${idx}`} className={`flex items-center gap-2 px-2 py-1 ${bgColor} border ${borderColor} rounded text-sm`}>
-            <img
-              src={team.flag_url}
-              alt={team.name}
-              className="w-5 h-3 object-cover rounded"
-            />
-            <span>{team.name}</span>
-          </div>
+        {matches.map((match) => (
+          <MatchBox
+            key={match.matchId}
+            match={match}
+            getTeamById={getTeamById}
+            knockoutPredictions={knockoutPredictions}
+            predictions={predictions}
+            bestThirdPlaces={bestThirdPlaces}
+            allMatches={allMatches}
+          />
         ))}
       </div>
     </div>
