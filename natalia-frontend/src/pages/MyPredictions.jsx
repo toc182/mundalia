@@ -27,6 +27,7 @@ export default function MyPredictions() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedSet, setSelectedSet] = useState(null);
   const [newName, setNewName] = useState('');
+  const [newMode, setNewMode] = useState('positions'); // 'positions' | 'scores'
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -51,9 +52,10 @@ export default function MyPredictions() {
     if (!newName.trim()) return;
     setSaving(true);
     try {
-      const response = await predictionSetsAPI.create(newName.trim());
+      const response = await predictionSetsAPI.create(newName.trim(), newMode);
       setShowCreateDialog(false);
       setNewName('');
+      setNewMode('positions');
       // Navigate to start making predictions with the new set
       navigate(`/repechajes?setId=${response.data.id}`);
     } catch (err) {
@@ -232,6 +234,46 @@ export default function MyPredictions() {
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
           />
+
+          {/* Mode selector */}
+          <div className="space-y-3 pt-2">
+            <label className="text-sm font-medium">Modo de prediccion</label>
+            <div className="space-y-2">
+              <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors">
+                <input
+                  type="radio"
+                  name="mode"
+                  value="positions"
+                  checked={newMode === 'positions'}
+                  onChange={() => setNewMode('positions')}
+                  className="mt-1"
+                />
+                <div>
+                  <div className="font-medium">Posiciones</div>
+                  <div className="text-sm text-muted-foreground">
+                    Arrastra equipos para ordenarlos en cada grupo
+                  </div>
+                </div>
+              </label>
+              <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors">
+                <input
+                  type="radio"
+                  name="mode"
+                  value="scores"
+                  checked={newMode === 'scores'}
+                  onChange={() => setNewMode('scores')}
+                  className="mt-1"
+                />
+                <div>
+                  <div className="font-medium">Marcadores Exactos</div>
+                  <div className="text-sm text-muted-foreground">
+                    Ingresa el resultado de cada partido (posiciones calculadas automaticamente)
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
               Cancelar

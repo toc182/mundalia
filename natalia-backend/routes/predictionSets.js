@@ -85,16 +85,20 @@ router.get('/:id', auth, async (req, res) => {
 
 // Create new prediction set
 router.post('/', auth, async (req, res) => {
-  const { name } = req.body;
+  const { name, mode = 'positions' } = req.body;
 
   if (!name || name.trim().length === 0) {
     return res.status(400).json({ error: 'Name is required' });
   }
 
+  if (!['positions', 'scores'].includes(mode)) {
+    return res.status(400).json({ error: 'Invalid mode. Must be "positions" or "scores"' });
+  }
+
   try {
     const result = await db.query(
-      'INSERT INTO prediction_sets (user_id, name) VALUES ($1, $2) RETURNING *',
-      [req.user.id, name.trim()]
+      'INSERT INTO prediction_sets (user_id, name, mode) VALUES ($1, $2, $3) RETURNING *',
+      [req.user.id, name.trim(), mode]
     );
 
     res.json(result.rows[0]);
@@ -167,11 +171,12 @@ router.post('/:id/duplicate', auth, async (req, res) => {
       return res.status(404).json({ error: 'Source prediction set not found' });
     }
 
-    // Create new set
+    // Create new set (preserve mode from source)
     const newName = name || `${sourceSet.rows[0].name} (copia)`;
+    const sourceMode = sourceSet.rows[0].mode || 'positions';
     const newSet = await db.query(
-      'INSERT INTO prediction_sets (user_id, name) VALUES ($1, $2) RETURNING *',
-      [req.user.id, newName]
+      'INSERT INTO prediction_sets (user_id, name, mode) VALUES ($1, $2, $3) RETURNING *',
+      [req.user.id, newName, sourceMode]
     );
     const newSetId = newSet.rows[0].id;
 

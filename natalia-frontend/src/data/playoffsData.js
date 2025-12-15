@@ -1,8 +1,10 @@
 // Playoffs / Repechajes para Mundial 2026
 // Se juegan en marzo 2026
+// Datos oficiales del sorteo FIFA/UEFA - Diciembre 2025
 
 export const playoffs = [
   // UEFA Playoffs (4 paths)
+  // Fuente: https://www.foxsports.com/stories/soccer/2026-world-cup-playoffs-schedule-bracket-teams
   {
     id: 'UEFA_A',
     name: 'Playoff Europa A',
@@ -16,8 +18,8 @@ export const playoffs = [
       { id: 104, name: 'Bosnia', code: 'BIH', flag_url: 'https://flagcdn.com/w80/ba.png' },
     ],
     bracket: {
-      semi1: { teamA: 101, teamB: 104 }, // Italia vs Bosnia
-      semi2: { teamA: 102, teamB: 103 }, // Gales vs Irlanda del Norte
+      semi1: { teamA: 101, teamB: 103 }, // Italia vs Irlanda del Norte
+      semi2: { teamA: 102, teamB: 104 }, // Gales vs Bosnia
     }
   },
   {
@@ -33,8 +35,8 @@ export const playoffs = [
       { id: 108, name: 'Albania', code: 'ALB', flag_url: 'https://flagcdn.com/w80/al.png' },
     ],
     bracket: {
-      semi1: { teamA: 105, teamB: 108 }, // Polonia vs Albania
-      semi2: { teamA: 106, teamB: 107 }, // Suecia vs Ucrania
+      semi1: { teamA: 107, teamB: 106 }, // Ucrania vs Suecia
+      semi2: { teamA: 105, teamB: 108 }, // Polonia vs Albania
     }
   },
   {
@@ -50,8 +52,8 @@ export const playoffs = [
       { id: 112, name: 'Kosovo', code: 'KOS', flag_url: 'https://flagcdn.com/w80/xk.png' },
     ],
     bracket: {
-      semi1: { teamA: 109, teamB: 112 }, // Turquia vs Kosovo
-      semi2: { teamA: 110, teamB: 111 }, // Rumania vs Eslovaquia
+      semi1: { teamA: 109, teamB: 110 }, // Turquia vs Rumania
+      semi2: { teamA: 111, teamB: 112 }, // Eslovaquia vs Kosovo
     }
   },
   {
@@ -67,12 +69,13 @@ export const playoffs = [
       { id: 116, name: 'Irlanda', code: 'IRL', flag_url: 'https://flagcdn.com/w80/ie.png' },
     ],
     bracket: {
-      semi1: { teamA: 113, teamB: 116 }, // Dinamarca vs Irlanda
-      semi2: { teamA: 114, teamB: 115 }, // Rep. Checa vs Macedonia del Norte
+      semi1: { teamA: 113, teamB: 115 }, // Dinamarca vs Macedonia del Norte
+      semi2: { teamA: 114, teamB: 116 }, // Rep. Checa vs Irlanda
     }
   },
 
   // FIFA Intercontinental Playoffs (2 spots)
+  // Sorteo 20 Nov 2025 - Se juegan en Mexico (Guadalajara y Monterrey)
   {
     id: 'FIFA_1',
     name: 'Playoff FIFA 1',
@@ -85,8 +88,8 @@ export const playoffs = [
       { id: 119, name: 'Nueva Caledonia', code: 'NCL', flag_url: 'https://flagcdn.com/w80/nc.png' },
     ],
     bracket: {
-      semi1: { teamA: 118, teamB: 119 }, // RD Congo vs Nueva Caledonia
-      finalTeamA: 117, // Jamaica espera al ganador
+      semi1: { teamA: 119, teamB: 117 }, // Nueva Caledonia vs Jamaica
+      finalTeamA: 118, // RD Congo espera al ganador
     }
   },
   {
@@ -101,8 +104,8 @@ export const playoffs = [
       { id: 122, name: 'Surinam', code: 'SUR', flag_url: 'https://flagcdn.com/w80/sr.png' },
     ],
     bracket: {
-      semi1: { teamA: 121, teamB: 122 }, // Irak vs Surinam
-      finalTeamA: 120, // Bolivia espera al ganador
+      semi1: { teamA: 120, teamB: 122 }, // Bolivia vs Surinam
+      finalTeamA: 121, // Irak espera al ganador
     }
   },
 ];

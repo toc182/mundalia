@@ -79,9 +79,9 @@ export const predictionSetsAPI = {
   getById: (id) =>
     api.get(`/prediction-sets/${id}`),
 
-  // Create new prediction set
-  create: (name) =>
-    api.post('/prediction-sets', { name }),
+  // Create new prediction set (mode: 'positions' | 'scores')
+  create: (name, mode = 'positions') =>
+    api.post('/prediction-sets', { name, mode }),
 
   // Update prediction set name
   update: (id, name) =>
@@ -102,6 +102,9 @@ export const predictionsAPI = {
   // Groups
   getMy: (setId) =>
     api.get('/predictions/my', { params: { setId } }),
+
+  getGroups: (setId) =>
+    api.get('/predictions/groups', { params: { setId } }),
 
   saveGroups: (predictions, setId) =>
     api.post('/predictions/groups', { predictions, setId }),
@@ -133,6 +136,20 @@ export const predictionsAPI = {
   // All predictions at once
   getAll: (setId) =>
     api.get('/predictions/all', { params: { setId } }),
+
+  // Scores (marcadores exactos)
+  getScores: (setId) =>
+    api.get('/predictions/scores', { params: { setId } }),
+
+  saveScores: (scores, setId) =>
+    api.post('/predictions/scores', { scores, setId }),
+
+  // Tiebreaker decisions (desempates manuales)
+  getTiebreaker: (setId) =>
+    api.get('/predictions/tiebreaker', { params: { setId } }),
+
+  saveTiebreaker: (data) =>
+    api.post('/predictions/tiebreaker', data),
 };
 
 // ============ GROUPS (PRIVADOS) ============

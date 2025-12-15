@@ -8,6 +8,7 @@ import Playoffs from '@/pages/Playoffs';
 import Predictions from '@/pages/Predictions';
 import ThirdPlaces from '@/pages/ThirdPlaces';
 import Knockout from '@/pages/Knockout';
+import PredictionsScores from '@/pages/PredictionsScores';
 import Leaderboard from '@/pages/Leaderboard';
 import Groups from '@/pages/Groups';
 import MyPredictions from '@/pages/MyPredictions';
@@ -64,6 +65,7 @@ function AppRoutes() {
       <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
       <Route path="/repechajes" element={<ProtectedRoute><Playoffs /></ProtectedRoute>} />
       <Route path="/grupos" element={<ProtectedRoute><Predictions /></ProtectedRoute>} />
+      <Route path="/grupos-marcadores" element={<ProtectedRoute><PredictionsScores /></ProtectedRoute>} />
       <Route path="/terceros" element={<ProtectedRoute><ThirdPlaces /></ProtectedRoute>} />
       <Route path="/eliminatorias" element={<ProtectedRoute><Knockout /></ProtectedRoute>} />
       <Route path="/mis-predicciones" element={<ProtectedRoute><MyPredictions /></ProtectedRoute>} />

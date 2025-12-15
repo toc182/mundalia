@@ -26,6 +26,7 @@ async function getOrCreateDefaultSet(userId) {
 router.get('/my', auth, async (req, res) => {
   try {
     const setId = req.query.setId || await getOrCreateDefaultSet(req.user.id);
+    console.log('[GET MY] user:', req.user.id, 'setId:', setId);
 
     const [matchPredictions, groupPredictions] = await Promise.all([
       db.query(`
@@ -49,6 +50,7 @@ router.get('/my', auth, async (req, res) => {
       `, [req.user.id, setId])
     ]);
 
+    console.log('[GET MY] groupPredictions count:', groupPredictions.rows.length);
     res.json({
       matchPredictions: matchPredictions.rows,
       groupPredictions: groupPredictions.rows
@@ -59,9 +61,31 @@ router.get('/my', auth, async (req, res) => {
   }
 });
 
+// Get user's group predictions
+router.get('/groups', auth, async (req, res) => {
+  try {
+    const setId = req.query.setId || await getOrCreateDefaultSet(req.user.id);
+
+    const result = await db.query(`
+      SELECT group_letter, team_id, predicted_position
+      FROM group_predictions
+      WHERE user_id = $1 AND prediction_set_id = $2
+      ORDER BY group_letter, predicted_position
+    `, [req.user.id, setId]);
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // Save group predictions (order of finish in a group)
 router.post('/groups', auth, async (req, res) => {
   const { predictions, setId: requestSetId } = req.body; // [{group_letter, team_id, predicted_position}]
+
+  console.log('[GROUPS POST] user:', req.user.id, 'requestSetId:', requestSetId);
+  console.log('[GROUPS POST] predictions count:', predictions?.length);
 
   try {
     // Check deadline
@@ -72,26 +96,32 @@ router.post('/groups', auth, async (req, res) => {
     if (deadline.rows.length > 0) {
       const deadlineDate = new Date(deadline.rows[0].value);
       if (new Date() > deadlineDate) {
+        console.log('[GROUPS POST] Deadline passed');
         return res.status(400).json({ error: 'Deadline for group predictions has passed' });
       }
     }
 
     const setId = requestSetId || await getOrCreateDefaultSet(req.user.id);
+    console.log('[GROUPS POST] resolved setId:', setId);
 
     // Delete existing predictions for this set
-    await db.query('DELETE FROM group_predictions WHERE user_id = $1 AND prediction_set_id = $2', [req.user.id, setId]);
+    const deleteResult = await db.query('DELETE FROM group_predictions WHERE user_id = $1 AND prediction_set_id = $2', [req.user.id, setId]);
+    console.log('[GROUPS POST] deleted rows:', deleteResult.rowCount);
 
     // Insert new predictions
+    let insertCount = 0;
     for (const pred of predictions) {
       await db.query(
         'INSERT INTO group_predictions (user_id, group_letter, team_id, predicted_position, prediction_set_id) VALUES ($1, $2, $3, $4, $5)',
         [req.user.id, pred.group_letter, pred.team_id, pred.predicted_position, setId]
       );
+      insertCount++;
     }
+    console.log('[GROUPS POST] inserted rows:', insertCount);
 
     res.json({ message: 'Group predictions saved successfully', setId });
   } catch (err) {
-    console.error(err);
+    console.error('[GROUPS POST] Error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });
@@ -253,15 +283,29 @@ router.get('/knockout', auth, async (req, res) => {
   try {
     const setId = req.query.setId || await getOrCreateDefaultSet(req.user.id);
 
+    // Check prediction set mode
+    const setCheck = await db.query('SELECT mode FROM prediction_sets WHERE id = $1', [setId]);
+    const mode = setCheck.rows[0]?.mode || 'positions';
+
     const result = await db.query(
-      'SELECT match_key, winner_team_id FROM knockout_predictions WHERE user_id = $1 AND prediction_set_id = $2',
+      'SELECT match_key, winner_team_id, score_a, score_b FROM knockout_predictions WHERE user_id = $1 AND prediction_set_id = $2',
       [req.user.id, setId]
     );
 
-    // Convert to object format { match_key: winner_team_id }
+    // Convert to object format based on mode
     const predictions = {};
     result.rows.forEach(row => {
-      predictions[row.match_key] = row.winner_team_id;
+      if (mode === 'scores') {
+        // Return full object with scores
+        predictions[row.match_key] = {
+          winner: row.winner_team_id,
+          scoreA: row.score_a,
+          scoreB: row.score_b
+        };
+      } else {
+        // Legacy format: just winner ID
+        predictions[row.match_key] = row.winner_team_id;
+      }
     });
 
     res.json(predictions);
@@ -272,8 +316,11 @@ router.get('/knockout', auth, async (req, res) => {
 });
 
 // Save knockout predictions (all at once)
+// Accepts two formats:
+// - Positions mode: { match_key: winner_team_id }
+// - Scores mode: { match_key: { winner, scoreA, scoreB } }
 router.post('/knockout', auth, async (req, res) => {
-  const { predictions, setId: requestSetId } = req.body; // { match_key: winner_team_id }
+  const { predictions, setId: requestSetId } = req.body;
 
   try {
     const setId = requestSetId || await getOrCreateDefaultSet(req.user.id);
@@ -282,16 +329,163 @@ router.post('/knockout', auth, async (req, res) => {
     await db.query('DELETE FROM knockout_predictions WHERE user_id = $1 AND prediction_set_id = $2', [req.user.id, setId]);
 
     // Insert new predictions
-    for (const [matchKey, winnerTeamId] of Object.entries(predictions)) {
-      if (winnerTeamId) {
+    for (const [matchKey, value] of Object.entries(predictions)) {
+      if (value && typeof value === 'object') {
+        // Scores mode: { winner, scoreA, scoreB }
+        const { winner, scoreA, scoreB } = value;
+        if (winner) {
+          await db.query(`
+            INSERT INTO knockout_predictions (user_id, match_key, winner_team_id, score_a, score_b, prediction_set_id)
+            VALUES ($1, $2, $3, $4, $5, $6)
+          `, [req.user.id, matchKey, winner, scoreA ?? null, scoreB ?? null, setId]);
+        }
+      } else if (value) {
+        // Positions mode: just winner_team_id
         await db.query(`
           INSERT INTO knockout_predictions (user_id, match_key, winner_team_id, prediction_set_id)
           VALUES ($1, $2, $3, $4)
-        `, [req.user.id, matchKey, winnerTeamId, setId]);
+        `, [req.user.id, matchKey, value, setId]);
       }
     }
 
     res.json({ message: 'Knockout predictions saved successfully', setId });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ============ SCORE PREDICTIONS (MARCADORES EXACTOS) ============
+
+// Get user's score predictions
+router.get('/scores', auth, async (req, res) => {
+  try {
+    const setId = req.query.setId || await getOrCreateDefaultSet(req.user.id);
+
+    const result = await db.query(
+      `SELECT group_letter, match_number, score_a, score_b
+       FROM score_predictions
+       WHERE prediction_set_id = $1
+       ORDER BY group_letter, match_number`,
+      [setId]
+    );
+
+    // Convert to nested object { A: { 1: {a:2,b:1}, ... }, B: {...} }
+    const scores = {};
+    result.rows.forEach(row => {
+      if (!scores[row.group_letter]) {
+        scores[row.group_letter] = {};
+      }
+      scores[row.group_letter][row.match_number] = {
+        a: row.score_a,
+        b: row.score_b
+      };
+    });
+
+    res.json(scores);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Save score predictions
+router.post('/scores', auth, async (req, res) => {
+  const { scores, setId: requestSetId } = req.body;
+  // scores = { A: { 1: {a:2,b:1}, ... }, B: {...} }
+
+  try {
+    const setId = requestSetId || await getOrCreateDefaultSet(req.user.id);
+
+    // Verify that the set is in 'scores' mode
+    const setCheck = await db.query(
+      'SELECT mode FROM prediction_sets WHERE id = $1',
+      [setId]
+    );
+
+    if (setCheck.rows.length === 0) {
+      return res.status(404).json({ error: 'Prediction set not found' });
+    }
+
+    if (setCheck.rows[0].mode !== 'scores') {
+      return res.status(400).json({ error: 'Este set no está en modo marcadores' });
+    }
+
+    // Delete existing predictions
+    await db.query(
+      'DELETE FROM score_predictions WHERE prediction_set_id = $1',
+      [setId]
+    );
+
+    // Insert new predictions
+    for (const [group, matches] of Object.entries(scores)) {
+      for (const [matchNum, score] of Object.entries(matches)) {
+        if (score.a !== undefined && score.b !== undefined) {
+          await db.query(
+            `INSERT INTO score_predictions
+             (user_id, prediction_set_id, group_letter, match_number, score_a, score_b)
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [req.user.id, setId, group, parseInt(matchNum), score.a, score.b]
+          );
+        }
+      }
+    }
+
+    res.json({ message: 'Score predictions saved successfully', setId });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// ============ TIEBREAKER DECISIONS ============
+
+// Get user's tiebreaker decisions
+router.get('/tiebreaker', auth, async (req, res) => {
+  try {
+    const setId = req.query.setId || await getOrCreateDefaultSet(req.user.id);
+
+    const result = await db.query(
+      `SELECT group_letter, tied_team_ids, resolved_order
+       FROM tiebreaker_decisions
+       WHERE prediction_set_id = $1`,
+      [setId]
+    );
+
+    const decisions = {};
+    result.rows.forEach(row => {
+      decisions[row.group_letter] = {
+        tiedTeamIds: row.tied_team_ids,
+        resolvedOrder: row.resolved_order
+      };
+    });
+
+    res.json(decisions);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Save tiebreaker decision
+router.post('/tiebreaker', auth, async (req, res) => {
+  const { setId: requestSetId, group, tiedTeamIds, resolvedOrder } = req.body;
+
+  try {
+    const setId = requestSetId || await getOrCreateDefaultSet(req.user.id);
+
+    // Upsert decision
+    await db.query(`
+      INSERT INTO tiebreaker_decisions
+      (prediction_set_id, group_letter, tied_team_ids, resolved_order)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (prediction_set_id, group_letter)
+      DO UPDATE SET
+        tied_team_ids = $3,
+        resolved_order = $4
+    `, [setId, group, tiedTeamIds, resolvedOrder]);
+
+    res.json({ message: 'Tiebreaker decision saved' });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });

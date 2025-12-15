@@ -1,6 +1,6 @@
 # CLAUDE.md - Instrucciones para Claude
 
-## Proyecto: Natalia - Quiniela Mundial 2026
+## Proyecto: Mundalia - Quiniela Mundial 2026
 
 ### Stack Tecnologico
 - **Frontend:** React 19 + Vite 7 + Tailwind CSS 4.x + shadcn/ui
@@ -15,27 +15,33 @@
 
 ```
 Natalia/
-├── CLAUDE.md          # Instrucciones tecnicas (este archivo)
-├── SESSION.md         # Estado actual y TODO list
-├── START.md           # Instrucciones de inicio rapido
+├── CLAUDE.md              # Instrucciones tecnicas (este archivo)
+├── SESSION.md             # Estado actual y TODO list
 ├── natalia-frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── ui/           # 10 componentes shadcn/ui
-│   │   │   └── Navbar.jsx
+│   │   │   ├── ui/                # shadcn/ui components
+│   │   │   └── TopBar.jsx         # Logo Mundalia + menus
 │   │   ├── context/
-│   │   │   └── AuthContext.jsx
+│   │   │   └── AuthContext.jsx    # JWT auth + user state
 │   │   ├── data/
-│   │   │   ├── mockData.js      # 48 equipos en 12 grupos
-│   │   │   └── playoffsData.js  # 6 playoffs (4 UEFA + 2 FIFA)
+│   │   │   ├── mockData.js        # 48 equipos en 12 grupos
+│   │   │   ├── playoffsData.js    # 6 playoffs (4 UEFA + 2 FIFA)
+│   │   │   ├── knockoutBracket.js # Estructura eliminatorias
+│   │   │   └── thirdPlaceCombinations.js # 495 combinaciones FIFA
 │   │   ├── pages/
 │   │   │   ├── Home.jsx
 │   │   │   ├── Login.jsx
 │   │   │   ├── Register.jsx
-│   │   │   ├── Predictions.jsx  # Predicciones de grupos
-│   │   │   ├── Playoffs.jsx     # Predicciones de repechajes
-│   │   │   ├── Leaderboard.jsx
-│   │   │   └── Groups.jsx       # Grupos privados
+│   │   │   ├── Playoffs.jsx       # Paso 1: Repechajes
+│   │   │   ├── Predictions.jsx    # Paso 2: Grupos
+│   │   │   ├── ThirdPlaces.jsx    # Paso 3: Terceros lugares
+│   │   │   ├── Knockout.jsx       # Paso 4: Eliminatorias
+│   │   │   ├── MyPredictions.jsx  # Lista de predicciones
+│   │   │   ├── PredictionDetail.jsx # Ver prediccion completa
+│   │   │   └── Account.jsx        # Pagina de cuenta
+│   │   ├── services/
+│   │   │   └── api.js             # Axios config + endpoints
 │   │   ├── App.jsx
 │   │   ├── main.jsx
 │   │   └── index.css
@@ -43,34 +49,33 @@ Natalia/
 │   └── vite.config.js
 └── natalia-backend/
     ├── config/
-    │   └── db.js
+    │   └── db.js                  # PostgreSQL pool (dev/prod conditional)
     ├── middleware/
-    │   └── auth.js
+    │   └── auth.js                # JWT verification
     ├── routes/
-    │   ├── auth.js
-    │   ├── users.js
-    │   ├── teams.js
-    │   ├── matches.js
-    │   ├── predictions.js
-    │   ├── groups.js
-    │   └── leaderboard.js
-    ├── database/
-    │   ├── schema.sql
-    │   └── seed-teams.sql
-    ├── .env.example
+    │   ├── auth.js                # login, register
+    │   ├── users.js               # me, update profile
+    │   ├── predictions.js         # groups, playoffs, thirds, knockout
+    │   └── predictionSets.js      # CRUD prediction sets
+    ├── .env
     ├── package.json
     └── server.js
+
 ```
 
 ---
 
 ## Puertos (FIJOS - NUNCA CAMBIAR)
 - **Frontend:** 5174
-- **Backend:** 5000
+- **Backend:** 5001
 
 ### URLs de Desarrollo
 - Frontend: http://localhost:5174
-- Backend API: http://localhost:5000/api
+- Backend API: http://localhost:5001/api
+
+### URLs de Produccion
+- Frontend: https://mundalia.vercel.app
+- Backend: https://mundalia-production.up.railway.app/api
 
 ---
 
@@ -113,7 +118,7 @@ alert, badge, button, card, dialog, input, label, select, table, textarea
 3. Usar solo componentes shadcn/ui + clases Tailwind
 4. NO crear archivos CSS adicionales (solo index.css)
 5. Actualizar SESSION.md con cada cambio significativo
-6. Los datos mock estan en src/data/mockData.js y playoffsData.js
+6. Los datos mock estan en src/data/
 
 ---
 
@@ -126,7 +131,7 @@ npm run dev      # Inicia en puerto 5174
 
 # Backend
 cd natalia-backend
-npm run dev      # Inicia en puerto 5000 (nodemon)
+npm run dev      # Inicia en puerto 5001 (nodemon)
 npm start        # Produccion
 ```
 
@@ -135,20 +140,20 @@ npm start        # Produccion
 ## Modelo de Datos
 
 ### Tablas PostgreSQL
-- **users**: id, name, email, password_hash, role (user/admin)
+- **users**: id, name, email, password_hash, created_at
 - **teams**: id, name, code, group_letter, flag_url, is_playoff
-- **matches**: id, team_a_id, team_b_id, stage, match_date, winner_id
-- **group_predictions**: user_id, group_letter, team_positions (JSON)
-- **match_predictions**: user_id, match_id, predicted_winner_id
-- **private_groups**: id, name, code, created_by
-- **user_groups**: user_id, group_id
-- **user_scores**: user_id, total_points, breakdown (JSON)
+- **prediction_sets**: id, user_id, name, is_active, created_at
+- **playoff_predictions**: id, user_id, prediction_set_id, playoff_id, winner_team_id
+- **group_predictions**: id, user_id, prediction_set_id, group_letter, team_id, predicted_position
+- **third_place_predictions**: id, user_id, prediction_set_id, selected_groups, combination_key
+- **knockout_predictions**: id, user_id, prediction_set_id, match_key, winner_team_id
 
 ### Sistema de Puntos
 | Prediccion | Puntos |
 |------------|--------|
 | Posicion exacta en grupo | 3 pts |
 | Equipo que clasifica (top 2) | 1 pt |
+| Ganador Dieciseisavos | 1 pt |
 | Ganador Octavos | 2 pts |
 | Ganador Cuartos | 4 pts |
 | Ganador Semifinal | 6 pts |
@@ -161,42 +166,66 @@ npm start        # Produccion
 
 | Ruta | Pagina | Requiere Auth | Descripcion |
 |------|--------|---------------|-------------|
-| `/` | Home | No | Info del torneo y sistema de puntos |
+| `/` | Home | No | Info del torneo y acciones principales |
 | `/login` | Login | No | Formulario de inicio de sesion |
 | `/register` | Register | No | Formulario de registro |
-| `/predictions` | Predictions | Si | Ordenar equipos por grupo (drag & drop) |
-| `/playoffs` | Playoffs | Si | Predecir ganadores de repechajes |
-| `/leaderboard` | Leaderboard | No | Ranking global de jugadores |
-| `/groups` | Groups | Si | Crear/unirse a grupos privados |
+| `/repechajes` | Playoffs | Si | Paso 1: Predecir ganadores repechajes |
+| `/grupos` | Predictions | Si | Paso 2: Ordenar equipos por grupo |
+| `/terceros` | ThirdPlaces | Si | Paso 3: Seleccionar 8 mejores terceros |
+| `/eliminatorias` | Knockout | Si | Paso 4: Bracket completo R32 a Final |
+| `/mis-predicciones` | MyPredictions | Si | Lista de predicciones del usuario |
+| `/prediccion/:id` | PredictionDetail | Si | Ver prediccion completa |
+| `/cuenta` | Account | Si | Editar perfil de usuario |
 
 ---
 
 ## Rutas del Backend API
 
+### Autenticacion
 | Metodo | Ruta | Descripcion |
 |--------|------|-------------|
 | POST | `/api/auth/register` | Registrar usuario |
 | POST | `/api/auth/login` | Login (retorna JWT) |
 | GET | `/api/users/me` | Usuario actual (auth) |
-| GET | `/api/teams` | Todos los equipos |
-| GET | `/api/teams/group/:letter` | Equipos por grupo |
-| GET | `/api/matches` | Todos los partidos |
-| GET | `/api/predictions/my` | Mis predicciones (auth) |
-| POST | `/api/predictions/groups` | Guardar prediccion grupos (auth) |
-| POST | `/api/predictions/match` | Guardar prediccion partido (auth) |
-| GET | `/api/groups` | Mis grupos privados (auth) |
-| POST | `/api/groups` | Crear grupo (auth) |
-| POST | `/api/groups/join` | Unirse a grupo (auth) |
-| GET | `/api/leaderboard` | Ranking global |
+| PUT | `/api/users/me` | Actualizar perfil (auth) |
+
+### Prediction Sets
+| Metodo | Ruta | Descripcion |
+|--------|------|-------------|
+| GET | `/api/prediction-sets` | Lista sets del usuario (auth) |
+| GET | `/api/prediction-sets/:id` | Detalle de un set (auth) |
+| POST | `/api/prediction-sets` | Crear nuevo set (auth) |
+| PUT | `/api/prediction-sets/:id` | Renombrar set (auth) |
+| DELETE | `/api/prediction-sets/:id` | Eliminar set (auth) |
+
+### Predicciones (todas requieren auth y ?setId=X)
+| Metodo | Ruta | Descripcion |
+|--------|------|-------------|
+| GET | `/api/predictions/playoffs` | Obtener predicciones repechajes |
+| POST | `/api/predictions/playoffs` | Guardar predicciones repechajes |
+| GET | `/api/predictions/groups` | Obtener predicciones grupos |
+| POST | `/api/predictions/groups` | Guardar predicciones grupos |
+| GET | `/api/predictions/third-places` | Obtener prediccion terceros |
+| POST | `/api/predictions/third-places` | Guardar prediccion terceros |
+| GET | `/api/predictions/knockout` | Obtener predicciones eliminatorias |
+| POST | `/api/predictions/knockout` | Guardar predicciones eliminatorias |
 
 ---
 
-## Almacenamiento Local (Modo Mock)
+## Configuracion Base de Datos
 
-Mientras no hay backend conectado, todo se guarda en localStorage:
-- `natalia_user` - Usuario logueado
-- `natalia_predictions` - Predicciones de grupos
-- `natalia_playoffs` - Predicciones de repechajes
+### Desarrollo Local
+```
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=natalia_dev
+DB_USER=postgres
+DB_PASSWORD=Dinocore51720
+```
+
+### Produccion (Railway)
+- `DATABASE_URL` auto-inyectada por Railway
+- El archivo `config/db.js` detecta automaticamente cual usar
 
 ---
 
@@ -211,14 +240,33 @@ Ver `src/data/mockData.js` para lista completa.
 - **FIFA 1-2**: 2 playoffs intercontinentales (3 equipos cada uno)
 Ver `src/data/playoffsData.js` para detalles.
 
+### Terceros Lugares
+- 495 combinaciones validas segun reglas FIFA
+- Ver `src/data/thirdPlaceCombinations.js`
+- Script regenerador: `generate-combinations.js`
+
+### Eliminatorias (Knockout)
+- Estructura completa en `src/data/knockoutBracket.js`
+- R32 (16 partidos) → R16 (8) → QF (4) → SF (2) → 3er puesto + Final
+- El mapeo NO es secuencial (M73+M75→M90, M74+M77→M89, etc.)
+
 ---
 
-## Funcionalidades MVP
+## Funcionalidades
 
+### Primera Etapa (COMPLETADA)
 1. [x] Registro/Login de usuarios
-2. [x] Prediccion de orden en grupos (antes del torneo)
-3. [x] Prediccion de ganadores en playoffs/repechajes
-4. [x] Leaderboard global
-5. [x] Grupos privados con codigo de invitacion
-6. [ ] Panel admin para cargar resultados reales
-7. [ ] Conexion con backend real (PostgreSQL)
+2. [x] Prediccion de repechajes (6 playoffs)
+3. [x] Prediccion de grupos (12 grupos, drag & drop)
+4. [x] Prediccion de terceros lugares (495 combinaciones)
+5. [x] Prediccion de eliminatorias (bracket completo)
+6. [x] Multiples predicciones por usuario
+7. [x] Ver/Editar predicciones
+8. [x] Pagina de cuenta
+9. [x] Deploy a produccion
+
+### Segunda Etapa (PENDIENTE)
+1. [ ] Leaderboard global funcional
+2. [ ] Grupos privados con codigo de invitacion
+3. [ ] Panel admin para cargar resultados reales
+4. [ ] Calculo automatico de puntuaciones

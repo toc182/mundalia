@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ChevronLeft, ChevronRight, Trophy } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Trophy, Save } from 'lucide-react';
 import { mockTeams } from '@/data/mockData';
 import { playoffs } from '@/data/playoffsData';
 import {
@@ -36,11 +36,13 @@ export default function Knockout() {
   const [playoffSelections, setPlayoffSelections] = useState({});
   const [bestThirdPlaces, setBestThirdPlaces] = useState([]);
   const [knockoutPredictions, setKnockoutPredictions] = useState({});
+  const [knockoutScores, setKnockoutScores] = useState({}); // { matchId: { a: score, b: score } }
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [activeRound, setActiveRound] = useState('r32');
   const [predictionSetName, setPredictionSetName] = useState('');
+  const [predictionMode, setPredictionMode] = useState('positions');
   const scrollContainerRef = useRef(null);
   const isScrolling = useRef(false);
 
@@ -49,14 +51,19 @@ export default function Knockout() {
       // Si hay setId, solo cargar del servidor (sin fallback a localStorage)
       if (setId) {
         try {
-          // Cargar nombre del prediction set
+          // Cargar nombre y modo del prediction set
           const setResponse = await predictionSetsAPI.getById(setId);
           if (setResponse.data?.name) {
             setPredictionSetName(setResponse.data.name);
           }
+          if (setResponse.data?.mode) {
+            setPredictionMode(setResponse.data.mode);
+          }
 
           // Cargar predicciones de grupos del servidor
+          console.log('[KNOCKOUT] Loading groups for setId:', setId);
           const groupsResponse = await predictionsAPI.getMy(setId);
+          console.log('[KNOCKOUT] groupsResponse:', groupsResponse.data?.groupPredictions?.length, 'rows');
           if (groupsResponse.data?.groupPredictions?.length > 0) {
             const grouped = {};
             groupsResponse.data.groupPredictions.forEach(gp => {
@@ -65,7 +72,10 @@ export default function Knockout() {
               }
               grouped[gp.group_letter][gp.predicted_position - 1] = gp.team_id;
             });
+            console.log('[KNOCKOUT] Grouped predictions:', Object.keys(grouped).length, 'groups');
             setPredictions(grouped);
+          } else {
+            console.log('[KNOCKOUT] No group predictions found');
           }
 
           // Cargar playoffs del servidor
@@ -84,7 +94,26 @@ export default function Knockout() {
           // Cargar knockout del servidor
           const knockoutResponse = await predictionsAPI.getKnockout(setId);
           if (knockoutResponse.data && Object.keys(knockoutResponse.data).length > 0) {
-            setKnockoutPredictions(knockoutResponse.data);
+            const knockoutData = knockoutResponse.data;
+
+            // Check if data is in scores format (objects) or positions format (just IDs)
+            const firstValue = Object.values(knockoutData)[0];
+            if (typeof firstValue === 'object' && firstValue !== null) {
+              // Scores format: { matchId: { winner, scoreA, scoreB } }
+              const preds = {};
+              const scores = {};
+              Object.entries(knockoutData).forEach(([matchKey, data]) => {
+                preds[matchKey] = data.winner;
+                if (data.scoreA !== null && data.scoreB !== null) {
+                  scores[matchKey] = { a: data.scoreA, b: data.scoreB };
+                }
+              });
+              setKnockoutPredictions(preds);
+              setKnockoutScores(scores);
+            } else {
+              // Positions format: { matchId: winnerId }
+              setKnockoutPredictions(knockoutData);
+            }
           }
           // Si no hay datos, empezar en blanco
         } catch (err) {
@@ -352,49 +381,114 @@ export default function Knockout() {
   const thirdPlace = buildThirdPlaceMatch();
   const final = buildFinalMatch();
 
+  // Helper to clear dependent predictions
+  const clearDependentPredictions = (matchId, predictions) => {
+    const newPredictions = { ...predictions };
+
+    const clearDependents = (mId) => {
+      // R32 -> R16
+      roundOf16Structure.forEach(m => {
+        if (m.teamA.from === mId || m.teamB.from === mId) {
+          delete newPredictions[m.matchId];
+          clearDependents(m.matchId);
+        }
+      });
+      // R16 -> QF
+      quarterFinalsStructure.forEach(m => {
+        if (m.teamA.from === mId || m.teamB.from === mId) {
+          delete newPredictions[m.matchId];
+          clearDependents(m.matchId);
+        }
+      });
+      // QF -> SF
+      semiFinalsStructure.forEach(m => {
+        if (m.teamA.from === mId || m.teamB.from === mId) {
+          delete newPredictions[m.matchId];
+          clearDependents(m.matchId);
+        }
+      });
+      // SF -> Final/3rd
+      if (thirdPlaceMatch.teamA.from === mId || thirdPlaceMatch.teamB.from === mId) {
+        delete newPredictions[thirdPlaceMatch.matchId];
+      }
+      if (finalMatch.teamA.from === mId || finalMatch.teamB.from === mId) {
+        delete newPredictions[finalMatch.matchId];
+      }
+    };
+
+    clearDependents(matchId);
+    return newPredictions;
+  };
+
   const selectWinner = (matchId, teamId) => {
+    // In scores mode, only allow click selection if there's a tie
+    if (predictionMode === 'scores') {
+      const score = knockoutScores[matchId];
+      if (score && score.a !== '' && score.b !== '') {
+        const scoreA = Number(score.a);
+        const scoreB = Number(score.b);
+        // If not a tie, don't allow click - winner is determined by score
+        if (scoreA !== scoreB) {
+          return;
+        }
+      }
+    }
+
     setKnockoutPredictions(prev => {
       const newPredictions = { ...prev, [matchId]: teamId };
 
-      // Clear dependent predictions when changing a result
-      const clearDependents = (mId) => {
-        // R32 -> R16
-        roundOf16Structure.forEach(m => {
-          if (m.teamA.from === mId || m.teamB.from === mId) {
-            delete newPredictions[m.matchId];
-            clearDependents(m.matchId);
-          }
-        });
-        // R16 -> QF
-        quarterFinalsStructure.forEach(m => {
-          if (m.teamA.from === mId || m.teamB.from === mId) {
-            delete newPredictions[m.matchId];
-            clearDependents(m.matchId);
-          }
-        });
-        // QF -> SF
-        semiFinalsStructure.forEach(m => {
-          if (m.teamA.from === mId || m.teamB.from === mId) {
-            delete newPredictions[m.matchId];
-            clearDependents(m.matchId);
-          }
-        });
-        // SF -> Final/3rd
-        if (thirdPlaceMatch.teamA.from === mId || thirdPlaceMatch.teamB.from === mId) {
-          delete newPredictions[thirdPlaceMatch.matchId];
-        }
-        if (finalMatch.teamA.from === mId || finalMatch.teamB.from === mId) {
-          delete newPredictions[finalMatch.matchId];
-        }
-      };
-
       // Only clear if changing an existing prediction
       if (prev[matchId] && prev[matchId] !== teamId) {
-        clearDependents(matchId);
+        return clearDependentPredictions(matchId, newPredictions);
       }
 
       return newPredictions;
     });
+    setSaved(false);
+  };
+
+  // Handle score change for a knockout match
+  const handleScoreChange = (matchId, teamAId, teamBId, newScoreA, newScoreB) => {
+    setKnockoutScores(prev => ({
+      ...prev,
+      [matchId]: { a: newScoreA, b: newScoreB }
+    }));
+
+    // Auto-derive winner if scores are different
+    const scoreA = newScoreA === '' ? null : Number(newScoreA);
+    const scoreB = newScoreB === '' ? null : Number(newScoreB);
+
+    if (scoreA !== null && scoreB !== null) {
+      if (scoreA > scoreB && teamAId) {
+        // Team A wins
+        setKnockoutPredictions(prev => {
+          const newPreds = { ...prev, [matchId]: teamAId };
+          if (prev[matchId] && prev[matchId] !== teamAId) {
+            return clearDependentPredictions(matchId, newPreds);
+          }
+          return newPreds;
+        });
+      } else if (scoreB > scoreA && teamBId) {
+        // Team B wins
+        setKnockoutPredictions(prev => {
+          const newPreds = { ...prev, [matchId]: teamBId };
+          if (prev[matchId] && prev[matchId] !== teamBId) {
+            return clearDependentPredictions(matchId, newPreds);
+          }
+          return newPreds;
+        });
+      } else if (scoreA === scoreB) {
+        // Tie - clear winner, user must click to select
+        setKnockoutPredictions(prev => {
+          if (prev[matchId]) {
+            const { [matchId]: _, ...rest } = prev;
+            return clearDependentPredictions(matchId, rest);
+          }
+          return prev;
+        });
+      }
+    }
+
     setSaved(false);
   };
 
@@ -415,17 +509,34 @@ export default function Knockout() {
   const missingThirdPlaces = bestThirdPlaces.length !== 8;
 
   if (missingPredictions || missingThirdPlaces) {
+    const groupsPage = predictionMode === 'scores' ? '/grupos-marcadores' : '/grupos';
+    const groupsPageWithSet = setId ? `${groupsPage}?setId=${setId}` : groupsPage;
+    const tercerosWith = setId ? `/terceros?setId=${setId}` : '/terceros';
+
+    // In scores mode, both groups and third places come from the same page
+    const redirectTo = predictionMode === 'scores'
+      ? groupsPageWithSet
+      : (missingPredictions ? groupsPageWithSet : tercerosWith);
+
+    const redirectLabel = predictionMode === 'scores'
+      ? 'Grupos (Marcadores)'
+      : (missingPredictions ? 'Grupos' : 'Terceros');
+
+    // Message varies by mode
+    const message = predictionMode === 'scores'
+      ? 'Debes completar los marcadores de todos los grupos primero.'
+      : (missingPredictions
+          ? 'Debes completar las predicciones de grupos primero.'
+          : 'Debes seleccionar los 8 mejores terceros lugares primero.');
+
     return (
       <div className="container mx-auto px-4 py-8">
         <Alert className="mb-6">
-          <AlertDescription>
-            {missingPredictions && 'Debes completar las predicciones de grupos primero. '}
-            {missingThirdPlaces && 'Debes seleccionar los 8 mejores terceros lugares primero.'}
-          </AlertDescription>
+          <AlertDescription>{message}</AlertDescription>
         </Alert>
         <Button asChild>
-          <Link to={missingPredictions ? '/grupos' : '/terceros'}>
-            Ir a {missingPredictions ? 'Grupos' : 'Terceros'}
+          <Link to={redirectTo}>
+            Ir a {redirectLabel}
           </Link>
         </Button>
       </div>
@@ -462,17 +573,82 @@ export default function Knockout() {
     }
   };
 
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+
+    // Guardar en localStorage primero
+    localStorage.setItem('natalia_knockout', JSON.stringify(knockoutPredictions));
+    if (predictionMode === 'scores') {
+      localStorage.setItem('natalia_knockout_scores', JSON.stringify(knockoutScores));
+    }
+
+    try {
+      // Build data to send based on mode
+      let dataToSave;
+      if (predictionMode === 'scores') {
+        dataToSave = {};
+        const allMatchIds = new Set([...Object.keys(knockoutPredictions), ...Object.keys(knockoutScores)]);
+        allMatchIds.forEach(matchId => {
+          const winner = knockoutPredictions[matchId];
+          const score = knockoutScores[matchId];
+          if (winner || score) {
+            dataToSave[matchId] = {
+              winner: winner || null,
+              scoreA: score?.a ?? null,
+              scoreB: score?.b ?? null
+            };
+          }
+        });
+      } else {
+        dataToSave = knockoutPredictions;
+      }
+
+      await predictionsAPI.saveKnockout(dataToSave, setId);
+      setSaved(true);
+      // Clear saved message after 2 seconds
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      setError('Error al guardar en servidor');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleFinish = async () => {
     setSaving(true);
     setError(null);
 
     // Guardar en localStorage primero
     localStorage.setItem('natalia_knockout', JSON.stringify(knockoutPredictions));
+    if (predictionMode === 'scores') {
+      localStorage.setItem('natalia_knockout_scores', JSON.stringify(knockoutScores));
+    }
 
     const nextUrl = setId ? `/prediccion/${setId}` : '/mis-predicciones';
 
     try {
-      await predictionsAPI.saveKnockout(knockoutPredictions, setId);
+      // Build data to send based on mode
+      let dataToSave;
+      if (predictionMode === 'scores') {
+        dataToSave = {};
+        const allMatchIds = new Set([...Object.keys(knockoutPredictions), ...Object.keys(knockoutScores)]);
+        allMatchIds.forEach(matchId => {
+          const winner = knockoutPredictions[matchId];
+          const score = knockoutScores[matchId];
+          if (winner || score) {
+            dataToSave[matchId] = {
+              winner: winner || null,
+              scoreA: score?.a ?? null,
+              scoreB: score?.b ?? null
+            };
+          }
+        });
+      } else {
+        dataToSave = knockoutPredictions;
+      }
+
+      await predictionsAPI.saveKnockout(dataToSave, setId);
       setSaved(true);
       window.scrollTo(0, 0);
       navigate(nextUrl);
@@ -488,42 +664,66 @@ export default function Knockout() {
   };
 
   const handleBack = () => {
-    const backUrl = setId ? `/terceros?setId=${setId}` : '/terceros';
+    // In scores mode, go back to grupos-marcadores (no separate terceros page)
+    // In positions mode, go back to terceros
+    const backPage = predictionMode === 'scores' ? '/grupos-marcadores' : '/terceros';
+    const backUrl = setId ? `${backPage}?setId=${setId}` : backPage;
     window.scrollTo(0, 0);
     navigate(backUrl);
   };
 
-  const BackButton = ({ size = 'default' }) => (
-    <Button variant="outline" onClick={handleBack} size={size}>
-      <ChevronLeft className="mr-1 h-4 w-4" />
-      Atras
-    </Button>
-  );
+  // Map round to previous round for back navigation
+  const previousRound = {
+    'r32': null,      // First round - goes to groups
+    'r16': 'r32',
+    'qf': 'r16',
+    'final': 'qf',
+  };
 
-  const FinishButton = ({ size = 'default' }) => (
-    <Button onClick={handleFinish} disabled={!isComplete || saving} size={size}>
-      {saving ? 'Guardando...' : 'Finalizar'}
-      <Trophy className="ml-1 h-4 w-4" />
-    </Button>
-  );
+  // Unified back button - goes to previous round or groups page
+  const BackButton = ({ size = 'default' }) => {
+    const prevRound = previousRound[activeRound];
 
-  const NextRoundButton = ({ size = 'default' }) => (
-    <Button
-      onClick={() => {
-        if (currentMobileRound?.next) {
-          scrollToRound(currentMobileRound.next);
-        }
-      }}
-      disabled={!isCurrentRoundComplete}
-      size={size}
-    >
-      Siguiente
-      <ChevronRight className="ml-1 h-4 w-4" />
-    </Button>
-  );
+    const handleClick = () => {
+      if (prevRound) {
+        scrollToRound(prevRound);
+      } else {
+        handleBack();
+      }
+    };
 
-  // Determinar que boton mostrar segun la ronda activa
-  const showFinishButton = activeRound === 'final';
+    return (
+      <Button variant="outline" onClick={handleClick} size={size}>
+        <ChevronLeft className="mr-1 h-4 w-4" />
+        Atrás
+      </Button>
+    );
+  };
+
+  // Unified navigation button - always enabled except Finalizar requires completion
+  const NavigationButton = ({ size = 'default' }) => {
+    const isLastRound = activeRound === 'final';
+    const isDisabled = saving || (isLastRound && !isComplete);
+
+    const handleClick = () => {
+      if (isLastRound) {
+        handleFinish();
+      } else if (currentMobileRound?.next) {
+        scrollToRound(currentMobileRound.next);
+      }
+    };
+
+    return (
+      <Button onClick={handleClick} disabled={isDisabled} size={size}>
+        {saving ? 'Guardando...' : isLastRound ? 'Finalizar' : 'Siguiente'}
+        {isLastRound ? (
+          <Trophy className="ml-1 h-4 w-4" />
+        ) : (
+          <ChevronRight className="ml-1 h-4 w-4" />
+        )}
+      </Button>
+    );
+  };
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -537,9 +737,27 @@ export default function Knockout() {
       </div>
 
       {/* Botones de navegacion en linea separada */}
-      <div className="flex justify-between mb-6">
+      <div className="flex justify-between items-center mb-6">
         <BackButton />
-        {showFinishButton ? <FinishButton /> : <NextRoundButton />}
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setKnockoutPredictions({})}
+          >
+            Reset
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSave}
+            disabled={saving || Object.keys(knockoutPredictions).length === 0}
+          >
+            <Save className="w-4 h-4 mr-1" />
+            Guardar
+          </Button>
+        </div>
+        <NavigationButton />
       </div>
 
       {saved && (
@@ -567,18 +785,31 @@ export default function Knockout() {
           thirdPlace={thirdPlace}
           onSelectWinner={selectWinner}
           getTeamById={getTeamById}
+          predictionMode={predictionMode}
+          knockoutScores={knockoutScores}
+          onScoreChange={handleScoreChange}
         />
 
         {/* Bottom navigation desktop */}
         <div className="flex justify-between items-center mt-8 pt-6 border-t">
           <BackButton size="lg" />
-          <Button
-            variant="outline"
-            onClick={() => setKnockoutPredictions({})}
-          >
-            Reset
-          </Button>
-          <FinishButton size="lg" />
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setKnockoutPredictions({})}
+            >
+              Reset
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleSave}
+              disabled={saving || Object.keys(knockoutPredictions).length === 0}
+            >
+              <Save className="w-4 h-4 mr-2" />
+              Guardar
+            </Button>
+          </div>
+          <NavigationButton size="lg" />
         </div>
       </div>
 
@@ -604,40 +835,90 @@ export default function Knockout() {
           const MobileMatchBox = ({ match }) => {
             if (!match) return null;
             const canSelect = match.teamA && match.teamB;
+            const showScoreInputs = predictionMode === 'scores';
+            const score = knockoutScores[match.matchId] || {};
+            const isTied = showScoreInputs && score.a !== undefined && score.b !== undefined &&
+                          score.a !== '' && score.b !== '' && Number(score.a) === Number(score.b);
+            const hasScores = score.a !== undefined && score.a !== '' && score.b !== undefined && score.b !== '';
 
-            const TeamSlot = ({ team, isTop }) => {
+            const TeamSlot = ({ team, isTop, side }) => {
               const isSelected = match.selectedWinner === team?.id;
               const isEliminated = match.selectedWinner && match.selectedWinner !== team?.id;
+              const teamScore = side === 'a' ? score.a : score.b;
+
+              // In scores mode with a tie, allow click to select winner
+              const canClick = showScoreInputs
+                ? (canSelect && isTied)
+                : canSelect;
 
               if (!team) {
                 return (
-                  <div className={`h-[32px] px-3 py-1.5 text-sm text-muted-foreground bg-muted/30 border-x border-t ${!isTop ? 'border-b rounded-b' : 'rounded-t'} border-dashed border-gray-300 flex items-center`}>
+                  <div className={`h-[36px] px-3 py-1.5 text-sm text-muted-foreground bg-muted/30 border-x border-t ${!isTop ? 'border-b rounded-b' : 'rounded-t'} border-dashed border-gray-300 flex items-center`}>
                     Por definir
+                    {showScoreInputs && <span className="ml-auto w-10 text-center">-</span>}
                   </div>
                 );
               }
 
               return (
-                <button
-                  onClick={() => canSelect && selectWinner(match.matchId, team.id)}
-                  disabled={!canSelect}
-                  className={`flex items-center gap-2 h-[32px] px-3 py-1.5 text-left w-full transition-colors
-                    ${isTop ? 'rounded-t border-x border-t' : 'rounded-b border'}
-                    ${isSelected ? 'bg-green-100 border-green-500 font-semibold' : isEliminated ? 'bg-gray-50 border-gray-300' : 'bg-white border-gray-300'}
-                    ${!isSelected && !isEliminated && canSelect ? 'hover:bg-blue-50 active:bg-blue-100' : ''}
-                  `}
+                <div className={`flex items-center h-[36px] ${isTop ? 'rounded-t border-x border-t' : 'rounded-b border'}
+                  ${isSelected ? 'bg-green-100 border-green-500' : isEliminated ? 'bg-gray-50 border-gray-300' : 'bg-white border-gray-300'}`}
                 >
-                  <img src={team.flag_url} alt="" className={`w-6 h-4 object-cover rounded shrink-0 ${isEliminated ? 'opacity-50' : ''}`} />
-                  <span className={`text-sm truncate ${isEliminated ? 'text-gray-400' : ''}`}>{team.name}</span>
-                  {team.thirdPlaceFrom && <span className="text-xs text-muted-foreground ml-auto">3{team.thirdPlaceFrom}</span>}
-                </button>
+                  {/* Team info - clickable for ties in scores mode, or always in positions mode */}
+                  <button
+                    onClick={() => canClick && selectWinner(match.matchId, team.id)}
+                    disabled={!canClick}
+                    tabIndex={showScoreInputs ? -1 : 0}
+                    className={`flex items-center gap-2 flex-1 px-3 py-1.5 text-left transition-colors min-w-0
+                      ${isSelected ? 'font-semibold' : ''}
+                      ${!isSelected && !isEliminated && canClick ? 'hover:bg-blue-50 active:bg-blue-100' : ''}
+                    `}
+                  >
+                    <img src={team.flag_url} alt="" className={`w-6 h-4 object-cover rounded shrink-0 ${isEliminated ? 'opacity-50' : ''}`} />
+                    <span className={`text-sm truncate ${isEliminated ? 'text-gray-400' : ''}`}>{team.name}</span>
+                    {team.thirdPlaceFrom && <span className="text-xs text-muted-foreground ml-auto">3{team.thirdPlaceFrom}</span>}
+                  </button>
+
+                  {/* Score input - only in scores mode */}
+                  {showScoreInputs && (
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={2}
+                      value={teamScore ?? ''}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '');
+                        const parsed = val === '' ? '' : Math.min(99, parseInt(val, 10));
+                        handleScoreChange(
+                          match.matchId,
+                          match.teamA?.id,
+                          match.teamB?.id,
+                          side === 'a' ? parsed : score.a,
+                          side === 'b' ? parsed : score.b
+                        );
+                      }}
+                      disabled={!canSelect}
+                      className="w-10 h-8 text-center border-l border-gray-300 text-lg font-bold
+                        focus:outline-none focus:ring-2 focus:ring-primary focus:z-10
+                        disabled:bg-muted disabled:cursor-not-allowed"
+                      placeholder="-"
+                    />
+                  )}
+                </div>
               );
             };
 
             return (
               <div className="border border-gray-300 rounded overflow-hidden">
-                <TeamSlot team={match.teamA} isTop={true} />
-                <TeamSlot team={match.teamB} isTop={false} />
+                <TeamSlot team={match.teamA} isTop={true} side="a" />
+                <TeamSlot team={match.teamB} isTop={false} side="b" />
+                {/* Show penalty indicator for ties */}
+                {showScoreInputs && isTied && !match.selectedWinner && (
+                  <div className="text-xs text-center py-1 bg-yellow-50 text-yellow-700 border-t border-yellow-200">
+                    Empate - click para elegir ganador
+                  </div>
+                )}
               </div>
             );
           };
@@ -800,14 +1081,24 @@ export default function Knockout() {
         {/* Bottom navigation mobile */}
         <div className="flex justify-between items-center mt-8 pt-6 border-t">
           <BackButton size="lg" />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setKnockoutPredictions({})}
-          >
-            Reset
-          </Button>
-          {showFinishButton ? <FinishButton size="lg" /> : <NextRoundButton size="lg" />}
+          <div className="flex gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setKnockoutPredictions({})}
+            >
+              Reset
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSave}
+              disabled={saving || Object.keys(knockoutPredictions).length === 0}
+            >
+              <Save className="w-4 h-4" />
+            </Button>
+          </div>
+          <NavigationButton size="lg" />
         </div>
       </div>
     </div>
@@ -1017,7 +1308,8 @@ function BracketSlot({ team, matchId, isSelected, isEliminated, onSelect, canSel
 }
 
 // Bracket completo horizontal para desktop
-function FullBracket({ r32Matches, r16Matches, qfMatches, sfMatches, final, thirdPlace, onSelectWinner, getTeamById }) {
+function FullBracket({ r32Matches, r16Matches, qfMatches, sfMatches, final, thirdPlace, onSelectWinner, getTeamById, predictionMode, knockoutScores, onScoreChange }) {
+  const showScoreInputs = predictionMode === 'scores';
 
   // Orden visual correcto para el bracket (según estructura FIFA)
   // R32 ordenados para que alimenten correctamente a R16
@@ -1055,8 +1347,8 @@ function FullBracket({ r32Matches, r16Matches, qfMatches, sfMatches, final, thir
   const sfOrdered = sfVisualOrder.map(id => getMatchById(sfMatches, id)).filter(Boolean);
 
   // Constantes de dimensiones (en pixeles)
-  const MATCH_HEIGHT = 52; // altura de un partido (2 equipos de ~24px + 4px de border/gap)
-  const MATCH_WIDTH = 140;
+  const MATCH_HEIGHT = showScoreInputs ? 60 : 52; // altura de un partido (2 equipos de ~24px + 4px de border/gap + tie indicator)
+  const MATCH_WIDTH = showScoreInputs ? 180 : 140; // wider to accommodate score inputs
   const CONNECTOR_WIDTH = 24;
   const TITLE_HEIGHT = 24;
 
@@ -1070,39 +1362,90 @@ function FullBracket({ r32Matches, r16Matches, qfMatches, sfMatches, final, thir
   const BracketMatch = ({ match }) => {
     if (!match) return null;
     const canSelect = match.teamA && match.teamB;
+    const score = knockoutScores[match.matchId] || {};
+    const isTied = showScoreInputs && score.a !== undefined && score.b !== undefined &&
+                  score.a !== '' && score.b !== '' && Number(score.a) === Number(score.b);
 
-    const TeamSlot = ({ team, isTop }) => {
+    const TeamSlot = ({ team, isTop, side }) => {
       const isSelected = match.selectedWinner === team?.id;
       const isEliminated = match.selectedWinner && match.selectedWinner !== team?.id;
+      const teamScore = side === 'a' ? score.a : score.b;
+
+      // In scores mode with a tie, allow click to select winner
+      const canClick = showScoreInputs
+        ? (canSelect && isTied)
+        : canSelect;
 
       if (!team) {
         return (
-          <div className={`h-[24px] px-2 py-0.5 text-[11px] text-muted-foreground bg-muted/30 border-x border-t ${!isTop ? 'border-b rounded-b' : 'rounded-t'} border-dashed border-gray-300`}>
-            Por definir
+          <div className={`flex items-center h-[24px] px-2 py-0.5 text-[11px] text-muted-foreground bg-muted/30 border-x border-t ${!isTop ? 'border-b rounded-b' : 'rounded-t'} border-dashed border-gray-300`}>
+            <span className="flex-1">Por definir</span>
+            {showScoreInputs && <span className="w-8 text-center">-</span>}
           </div>
         );
       }
 
       return (
-        <button
-          onClick={() => canSelect && onSelectWinner(match.matchId, team.id)}
-          disabled={!canSelect}
-          className={`flex items-center gap-1.5 h-[24px] px-2 py-0.5 text-left w-full transition-colors
-            ${isTop ? 'rounded-t border-x border-t' : 'rounded-b border'}
-            ${isSelected ? 'bg-green-100 border-green-500 font-semibold' : isEliminated ? 'bg-gray-50 border-gray-300' : 'bg-white border-gray-300'}
-            ${!isSelected && !isEliminated && canSelect ? 'hover:bg-blue-50' : ''}
-          `}
+        <div className={`flex items-center h-[24px] ${isTop ? 'rounded-t border-x border-t' : 'rounded-b border'}
+          ${isSelected ? 'bg-green-100 border-green-500' : isEliminated ? 'bg-gray-50 border-gray-300' : 'bg-white border-gray-300'}`}
         >
-          <img src={team.flag_url} alt="" className={`w-5 h-3 object-cover rounded shrink-0 ${isEliminated ? 'opacity-50' : ''}`} />
-          <span className={`text-[11px] truncate ${isEliminated ? 'text-gray-400' : ''}`}>{team.name}</span>
-        </button>
+          {/* Team info - clickable */}
+          <button
+            onClick={() => canClick && onSelectWinner(match.matchId, team.id)}
+            disabled={!canClick}
+            tabIndex={showScoreInputs ? -1 : 0}
+            className={`flex items-center gap-1.5 flex-1 px-2 py-0.5 text-left transition-colors min-w-0
+              ${isSelected ? 'font-semibold' : ''}
+              ${!isSelected && !isEliminated && canClick ? 'hover:bg-blue-50' : ''}
+            `}
+          >
+            <img src={team.flag_url} alt="" className={`w-5 h-3 object-cover rounded shrink-0 ${isEliminated ? 'opacity-50' : ''}`} />
+            <span className={`text-[11px] truncate ${isEliminated ? 'text-gray-400' : ''}`}>{team.name}</span>
+          </button>
+
+          {/* Score input - only in scores mode */}
+          {showScoreInputs && (
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={2}
+              value={teamScore ?? ''}
+              onChange={(e) => {
+                const val = e.target.value.replace(/[^0-9]/g, '');
+                const parsed = val === '' ? '' : Math.min(99, parseInt(val, 10));
+                onScoreChange(
+                  match.matchId,
+                  match.teamA?.id,
+                  match.teamB?.id,
+                  side === 'a' ? parsed : score.a,
+                  side === 'b' ? parsed : score.b
+                );
+              }}
+              disabled={!canSelect}
+              className="w-8 h-6 text-center border-l border-gray-300 text-sm font-bold
+                focus:outline-none focus:ring-2 focus:ring-primary focus:z-10
+                disabled:bg-muted disabled:cursor-not-allowed"
+              placeholder="-"
+            />
+          )}
+        </div>
       );
     };
 
+    const baseHeight = 48; // 2 teams of 24px each
+    const tieIndicatorHeight = showScoreInputs && isTied && !match.selectedWinner ? 12 : 0;
+
     return (
-      <div style={{ width: MATCH_WIDTH, height: MATCH_HEIGHT }} className="shrink-0">
-        <TeamSlot team={match.teamA} isTop={true} />
-        <TeamSlot team={match.teamB} isTop={false} />
+      <div style={{ width: MATCH_WIDTH }} className="shrink-0">
+        <TeamSlot team={match.teamA} isTop={true} side="a" />
+        <TeamSlot team={match.teamB} isTop={false} side="b" />
+        {/* Show penalty indicator for ties */}
+        {showScoreInputs && isTied && !match.selectedWinner && (
+          <div className="text-[9px] text-center py-0.5 bg-yellow-50 text-yellow-700 border border-t-0 border-yellow-200 rounded-b">
+            Click para elegir ganador
+          </div>
+        )}
       </div>
     );
   };
