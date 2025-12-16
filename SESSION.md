@@ -341,9 +341,84 @@ cd natalia-backend && npm run dev
 
 ---
 
-## PENDIENTE: Problemas UX Knockout Scores
+## PENDIENTE: Problemas UX
 
-### Tab Navigation en Inputs de Score
+### BUG RESUELTO: Modo Marcadores Exactos no funciona en Produccion
+**Problema:** Al crear nueva prediccion y elegir "Marcadores Exactos", no lleva a la pagina correcta.
+
+**Causa:** La columna `mode` no existia en la tabla `prediction_sets` de produccion. Git solo sube codigo, no cambios de BD.
+
+**Solucion:** Ejecutar en Railway:
+```sql
+ALTER TABLE prediction_sets ADD COLUMN IF NOT EXISTS mode VARCHAR(20) DEFAULT 'positions';
+```
+
+**Prevencion futura:** Creado archivo `natalia-backend/migrations.sql` para trackear todos los cambios de BD. Ver CLAUDE.md para instrucciones.
+
+---
+
+## MIGRACIONES PENDIENTES EN PRODUCCION
+
+**Ejecutar en Railway (PostgreSQL → Data/Query):**
+
+```sql
+-- Migracion 002: Columna mode
+ALTER TABLE prediction_sets ADD COLUMN IF NOT EXISTS mode VARCHAR(20) DEFAULT 'positions';
+
+-- Migracion 003: Tablas para modo Marcadores
+CREATE TABLE IF NOT EXISTS score_predictions (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  prediction_set_id INTEGER REFERENCES prediction_sets(id) ON DELETE CASCADE,
+  group_letter VARCHAR(1) NOT NULL,
+  match_index INTEGER NOT NULL,
+  score_a INTEGER,
+  score_b INTEGER,
+  UNIQUE(prediction_set_id, group_letter, match_index)
+);
+
+CREATE TABLE IF NOT EXISTS tiebreaker_decisions (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  prediction_set_id INTEGER REFERENCES prediction_sets(id) ON DELETE CASCADE,
+  group_letter VARCHAR(1) NOT NULL,
+  team_order TEXT NOT NULL,
+  UNIQUE(prediction_set_id, group_letter)
+);
+
+-- Migracion 004: Scores en knockout
+ALTER TABLE knockout_predictions
+ADD COLUMN IF NOT EXISTS score_a INTEGER DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS score_b INTEGER DEFAULT NULL;
+```
+
+**Estado:** PENDIENTE - Ejecutar antes de probar modo Marcadores en produccion
+
+---
+
+### Inconsistencia al Regresar a Fases Anteriores (Modo Posiciones)
+**Problema:** En el modo "Posiciones" (escoger ganadores sin marcadores), si el usuario:
+1. Completa todas las fases (Repechajes → Grupos → Terceros → Eliminatorias)
+2. Regresa a una fase anterior (ej: Grupos)
+3. Hace cambios que afectan fases futuras (ej: cambia quien queda 1ro/2do)
+4. Los picks de eliminatorias quedan inconsistentes - el equipo seleccionado como ganador ya no existe en ese partido
+
+**Ejemplo:**
+- Usuario puso Argentina 1ro en Grupo A, avanza a R32, lo elige ganador de M73
+- Usuario regresa a Grupos, pone Argentina 2do (ahora va a otro partido)
+- M73 sigue mostrando Argentina como ganador pero Argentina ya no esta en ese partido
+
+**Soluciones posibles:**
+1. **Detectar cambios y resetear:** Al guardar cambios en una fase, detectar si afectan fases futuras y resetear esas predicciones (como ya hacemos en modo Marcadores para el bracket)
+2. **Bloquear edicion:** Una vez completada una prediccion, no permitir editar fases anteriores
+3. **Warning modal:** Mostrar advertencia "Estos cambios afectaran tus picks de eliminatorias. Continuar?"
+4. **Validacion al finalizar:** Al intentar finalizar, validar que todos los picks son consistentes
+
+**Archivos afectados:** Playoffs.jsx, Predictions.jsx, ThirdPlaces.jsx, Knockout.jsx
+
+---
+
+### Tab Navigation en Inputs de Score (Modo Marcadores)
 **Problema:** Al presionar Tab en los inputs de score de eliminatorias, el foco vuelve al inicio de la pagina en vez de ir al siguiente input.
 
 **Intentos fallidos:**

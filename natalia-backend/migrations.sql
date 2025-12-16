@@ -1,0 +1,126 @@
+-- ============================================
+-- MUNDALIA - Migraciones de Base de Datos
+-- ============================================
+-- Este archivo contiene todos los cambios de esquema de BD.
+-- IMPORTANTE: Ejecutar nuevas migraciones en produccion (Railway)
+-- despues de cada deploy que incluya cambios de BD.
+-- ============================================
+
+-- ============================================
+-- MIGRACION 001: Esquema inicial
+-- Fecha: 2025-12-01
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS users (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(100) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS teams (
+  id INTEGER PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  code VARCHAR(10) NOT NULL,
+  group_letter VARCHAR(1),
+  flag_url VARCHAR(255),
+  is_playoff BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE IF NOT EXISTS prediction_sets (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  name VARCHAR(100) NOT NULL,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS group_predictions (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  prediction_set_id INTEGER REFERENCES prediction_sets(id) ON DELETE CASCADE,
+  group_letter VARCHAR(1) NOT NULL,
+  team_id INTEGER NOT NULL,
+  predicted_position INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS playoff_predictions (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  prediction_set_id INTEGER REFERENCES prediction_sets(id) ON DELETE CASCADE,
+  playoff_id VARCHAR(20) NOT NULL,
+  semifinal_winner_1 INTEGER,
+  semifinal_winner_2 INTEGER,
+  final_winner INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS third_place_predictions (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  prediction_set_id INTEGER REFERENCES prediction_sets(id) ON DELETE CASCADE,
+  selected_groups VARCHAR(20) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS knockout_predictions (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  prediction_set_id INTEGER REFERENCES prediction_sets(id) ON DELETE CASCADE,
+  match_key VARCHAR(10) NOT NULL,
+  winner_team_id INTEGER NOT NULL
+);
+
+-- Indices
+CREATE INDEX IF NOT EXISTS idx_prediction_sets_user ON prediction_sets(user_id);
+CREATE INDEX IF NOT EXISTS idx_group_predictions_set ON group_predictions(prediction_set_id);
+CREATE INDEX IF NOT EXISTS idx_playoff_predictions_set ON playoff_predictions(prediction_set_id);
+CREATE INDEX IF NOT EXISTS idx_knockout_predictions_set ON knockout_predictions(prediction_set_id);
+
+-- ============================================
+-- MIGRACION 002: Modo de prediccion (positions/scores)
+-- Fecha: 2025-12-15
+-- ============================================
+
+ALTER TABLE prediction_sets
+ADD COLUMN IF NOT EXISTS mode VARCHAR(20) DEFAULT 'positions';
+
+-- ============================================
+-- MIGRACION 003: Tablas para modo Marcadores Exactos
+-- Fecha: 2025-12-15
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS score_predictions (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  prediction_set_id INTEGER REFERENCES prediction_sets(id) ON DELETE CASCADE,
+  group_letter VARCHAR(1) NOT NULL,
+  match_index INTEGER NOT NULL,
+  score_a INTEGER,
+  score_b INTEGER,
+  UNIQUE(prediction_set_id, group_letter, match_index)
+);
+
+CREATE TABLE IF NOT EXISTS tiebreaker_decisions (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  prediction_set_id INTEGER REFERENCES prediction_sets(id) ON DELETE CASCADE,
+  group_letter VARCHAR(1) NOT NULL,
+  team_order TEXT NOT NULL,
+  UNIQUE(prediction_set_id, group_letter)
+);
+
+-- ============================================
+-- MIGRACION 004: Scores en knockout (para modo Marcadores)
+-- Fecha: 2025-12-16
+-- ============================================
+
+ALTER TABLE knockout_predictions
+ADD COLUMN IF NOT EXISTS score_a INTEGER DEFAULT NULL,
+ADD COLUMN IF NOT EXISTS score_b INTEGER DEFAULT NULL;
+
+-- ============================================
+-- NUEVA MIGRACION: Agregar aqui abajo
+-- Fecha: YYYY-MM-DD
+-- ============================================
+

@@ -119,6 +119,34 @@ alert, badge, button, card, dialog, input, label, select, table, textarea
 4. NO crear archivos CSS adicionales (solo index.css)
 5. Actualizar SESSION.md con cada cambio significativo
 6. Los datos mock estan en src/data/
+7. **MIGRACIONES:** Si haces cambios de BD, agregarlos a `migrations.sql`
+
+---
+
+## Migraciones de Base de Datos (IMPORTANTE)
+
+**Problema:** Git solo sube codigo, NO cambios de base de datos. Si agregas columnas o tablas en desarrollo, debes aplicarlas manualmente en produccion.
+
+**Archivo:** `natalia-backend/migrations.sql`
+
+**Proceso al hacer cambios de BD:**
+
+1. Ejecutar el SQL en tu BD local
+2. Agregar el SQL al final de `migrations.sql` con fecha y descripcion
+3. Hacer commit y push
+4. **IMPORTANTE:** Ejecutar el nuevo SQL en Railway:
+   - Railway Dashboard → PostgreSQL → Data/Query
+   - Pegar y ejecutar solo las nuevas migraciones
+
+**Ejemplo de migracion:**
+```sql
+-- ============================================
+-- MIGRACION XXX: Descripcion del cambio
+-- Fecha: YYYY-MM-DD
+-- ============================================
+
+ALTER TABLE tabla ADD COLUMN IF NOT EXISTS columna TIPO DEFAULT valor;
+```
 
 ---
 
