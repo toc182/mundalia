@@ -1,6 +1,6 @@
 # SESSION.md - Estado Actual del Proyecto
 
-## Ultima Actualizacion: 2025-12-15
+## Ultima Actualizacion: 2025-12-16
 
 ---
 
@@ -304,18 +304,14 @@ cd natalia-backend && npm run dev
 
 ---
 
-## Commits Recientes (2025-12-12)
+## Commits Recientes (2025-12-16)
 
 | Commit | Descripcion |
 |--------|-------------|
+| `1fd2e5b` | Fix knockout score input focus loss - extract components |
+| `1019553` | Fix score input focus loss - use onBlur instead of onChange |
 | `30b0410` | Add 'Inicio' option to hamburger menu |
 | `cb5eea3` | Add Mundalia branding + blue color theme |
-| `013141a` | Rebrand to Mundalia with styled logo |
-| `e9994f4` | Fix React hooks order error in Knockout.jsx |
-| `e1b95f9` | Add swipe gestures to Knockout mobile (CSS scroll-snap) |
-| `153093d` | Remove 'Ver/Editar Bracket Completo' button |
-| `dbf282b` | PredictionDetail: show knockout matches as 2-team boxes |
-| `1dd5dc3` | MyPredictions: remove copy/rename, fix playoff indicator |
 
 ---
 
@@ -392,20 +388,46 @@ Para agregar nuevas migraciones en el futuro:
 
 ---
 
-### Tab Navigation en Inputs de Score (Modo Marcadores)
-**Problema:** Al presionar Tab en los inputs de score de eliminatorias, el foco vuelve al inicio de la pagina en vez de ir al siguiente input.
+### RESUELTO: Input Focus Loss en Knockout (2025-12-16)
 
-**Intentos fallidos:**
-- Agregar `tabIndex={-1}` a los botones de equipo para que Tab los salte
-- No funciono - Tab sigue volviendo a inicio
+**Problema original:** Al escribir un digito en los inputs de score de eliminatorias, el input perdia el foco inmediatamente, impidiendo escribir numeros de dos digitos (ej: "11").
 
-**Posibles soluciones a investigar:**
-1. Los inputs estan dentro de un IIFE `{(() => { ... })()}` - podria afectar el tab order
-2. El scroll-snap container podria estar interfiriendo
-3. Podria necesitar `tabIndex` explicito en cada input con numeros secuenciales
-4. Considerar implementar auto-advance (saltar al siguiente input despues de escribir 1 digito)
+**Causa raiz:** Los componentes `MobileMatchBox` y `BracketMatch` estaban definidos dentro del render:
+- `MobileMatchBox` dentro de un IIFE `{(() => { ... })()}`
+- `BracketMatch` dentro de `FullBracket`
 
-**UX adicional pendiente:**
-- No queda claro que el espacio es para escribir el marcador
-- Considerar placeholder "0" en vez de "-"
-- Considerar fondo diferente para inputs vacios
+Cada cambio de estado recreaba estos componentes como nuevas funciones, causando que React los tratara como componentes diferentes y desmontara/remontara los inputs.
+
+**Solucion implementada:** Refactorizacion completa de Knockout.jsx
+- Extraidos componentes a nivel de modulo (fuera del render):
+  - `MobileMatchBox` - Caja de partido movil
+  - `MobileMatchPair` - Par de partidos con conector SVG
+  - `MobileKnockoutSlides` - Contenedor de slides scroll-snap
+  - `DesktopBracketMatch` - Partido del bracket desktop
+- Uso de `defaultValue` + `onBlur` en vez de `value` + `onChange`
+- Key estable con valor del score incluido
+
+**Commit:** `1fd2e5b` - Fix knockout score input focus loss - extract components
+
+**Estado:** Desplegado en produccion
+
+---
+
+## RESUMEN: Tareas Pendientes
+
+### Prioridad Alta (UX)
+| Tarea | Descripcion | Archivos |
+|-------|-------------|----------|
+| Inconsistencia modo Posiciones | Al regresar a fases anteriores y hacer cambios, los picks de eliminatorias quedan invalidos | Playoffs.jsx, Predictions.jsx, ThirdPlaces.jsx, Knockout.jsx |
+
+### Prioridad Media (Features)
+| Feature | Descripcion |
+|---------|-------------|
+| Leaderboard | Ranking global funcional con puntuaciones reales |
+| Grupos privados | Crear grupos, compartir codigo de invitacion, ranking interno |
+| Panel admin | Cargar resultados reales de partidos jugados |
+
+### Prioridad Baja (Nice to have)
+| Mejora | Descripcion |
+|--------|-------------|
+| Tab navigation mejorada | Tab entre inputs de score (actualmente funciona pero podria ser mas fluido) |
