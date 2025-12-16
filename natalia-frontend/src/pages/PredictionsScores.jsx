@@ -332,6 +332,23 @@ export default function PredictionsScores() {
     });
   }, []);
 
+  // Fill random scores for testing
+  const handleFillRandom = useCallback(() => {
+    const newScores = {};
+    ALL_GROUPS.forEach(group => {
+      newScores[group] = {};
+      // 6 matches per group (round robin: 4 teams = 6 matches)
+      for (let i = 1; i <= 6; i++) {
+        newScores[group][i] = {
+          a: Math.floor(Math.random() * 4), // 0-3 goals
+          b: Math.floor(Math.random() * 4),
+        };
+      }
+    });
+    setScores(newScores);
+    setTiebreakerDecisions({}); // Clear any previous tiebreaker decisions
+  }, []);
+
   // Proceed to knockout (called after confirmation if needed)
   const proceedToKnockout = async (clearBracket = false) => {
     setSaving(true);
@@ -478,6 +495,15 @@ export default function PredictionsScores() {
           </Button>
 
           <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleFillRandom}
+              disabled={saving}
+              title="Rellenar con scores aleatorios (para pruebas)"
+            >
+              🎲 Random
+            </Button>
             <Button
               variant="outline"
               onClick={handleSave}
