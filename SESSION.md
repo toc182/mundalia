@@ -357,42 +357,16 @@ ALTER TABLE prediction_sets ADD COLUMN IF NOT EXISTS mode VARCHAR(20) DEFAULT 'p
 
 ---
 
-## MIGRACIONES PENDIENTES EN PRODUCCION
+## MIGRACIONES - SISTEMA AUTOMATICO
 
-**Ejecutar en Railway (PostgreSQL → Data/Query):**
+**Ya no hay que ejecutar SQL manualmente.** El backend ejecuta todas las migraciones automaticamente al iniciar.
 
-```sql
--- Migracion 002: Columna mode
-ALTER TABLE prediction_sets ADD COLUMN IF NOT EXISTS mode VARCHAR(20) DEFAULT 'positions';
+Ver `natalia-backend/server.js` → funcion `runMigrations()`
 
--- Migracion 003: Tablas para modo Marcadores
-CREATE TABLE IF NOT EXISTS score_predictions (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  prediction_set_id INTEGER REFERENCES prediction_sets(id) ON DELETE CASCADE,
-  group_letter VARCHAR(1) NOT NULL,
-  match_index INTEGER NOT NULL,
-  score_a INTEGER,
-  score_b INTEGER,
-  UNIQUE(prediction_set_id, group_letter, match_index)
-);
-
-CREATE TABLE IF NOT EXISTS tiebreaker_decisions (
-  id SERIAL PRIMARY KEY,
-  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-  prediction_set_id INTEGER REFERENCES prediction_sets(id) ON DELETE CASCADE,
-  group_letter VARCHAR(1) NOT NULL,
-  team_order TEXT NOT NULL,
-  UNIQUE(prediction_set_id, group_letter)
-);
-
--- Migracion 004: Scores en knockout
-ALTER TABLE knockout_predictions
-ADD COLUMN IF NOT EXISTS score_a INTEGER DEFAULT NULL,
-ADD COLUMN IF NOT EXISTS score_b INTEGER DEFAULT NULL;
-```
-
-**Estado:** PENDIENTE - Ejecutar antes de probar modo Marcadores en produccion
+Para agregar nuevas migraciones en el futuro:
+1. Agregar el SQL a `migrations.sql` (documentacion)
+2. Agregar el query a `runMigrations()` en `server.js`
+3. Push a git → Railway redespliega → migraciones se ejecutan solas
 
 ---
 
