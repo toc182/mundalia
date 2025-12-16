@@ -830,254 +830,21 @@ export default function Knockout() {
         </div>
 
         {/* Scroll-snap container con slides */}
-        {(() => {
-          // Componente de caja de partido para móvil
-          const MobileMatchBox = ({ match }) => {
-            if (!match) return null;
-            const canSelect = match.teamA && match.teamB;
-            const showScoreInputs = predictionMode === 'scores';
-            const score = knockoutScores[match.matchId] || {};
-            const isTied = showScoreInputs && score.a !== undefined && score.b !== undefined &&
-                          score.a !== '' && score.b !== '' && Number(score.a) === Number(score.b);
-
-            const TeamSlot = ({ team, isTop, side }) => {
-              const isSelected = match.selectedWinner === team?.id;
-              const isEliminated = match.selectedWinner && match.selectedWinner !== team?.id;
-              const teamScore = side === 'a' ? score.a : score.b;
-
-              // In scores mode with a tie, allow click to select winner
-              const canClick = showScoreInputs
-                ? (canSelect && isTied)
-                : canSelect;
-
-              if (!team) {
-                return (
-                  <div className={`h-[36px] px-3 py-1.5 text-sm text-muted-foreground bg-muted/30 border-x border-t ${!isTop ? 'border-b rounded-b' : 'rounded-t'} border-dashed border-gray-300 flex items-center`}>
-                    Por definir
-                    {showScoreInputs && <span className="ml-auto w-10 text-center">-</span>}
-                  </div>
-                );
-              }
-
-              return (
-                <div className={`flex items-center h-[36px] ${isTop ? 'rounded-t border-x border-t' : 'rounded-b border'}
-                  ${isSelected ? 'bg-green-100 border-green-500' : isEliminated ? 'bg-gray-50 border-gray-300' : 'bg-white border-gray-300'}`}
-                >
-                  {/* Team info - clickable for ties in scores mode, or always in positions mode */}
-                  <button
-                    onClick={() => canClick && selectWinner(match.matchId, team.id)}
-                    disabled={!canClick}
-                    tabIndex={showScoreInputs ? -1 : 0}
-                    className={`flex items-center gap-2 flex-1 px-3 py-1.5 text-left transition-colors min-w-0
-                      ${isSelected ? 'font-semibold' : ''}
-                      ${!isSelected && !isEliminated && canClick ? 'hover:bg-blue-50 active:bg-blue-100' : ''}
-                    `}
-                  >
-                    <img src={team.flag_url} alt="" className={`w-6 h-4 object-cover rounded shrink-0 ${isEliminated ? 'opacity-50' : ''}`} />
-                    <span className={`text-sm truncate ${isEliminated ? 'text-gray-400' : ''}`}>{team.name}</span>
-                    {team.thirdPlaceFrom && <span className="text-xs text-muted-foreground ml-auto">3{team.thirdPlaceFrom}</span>}
-                  </button>
-
-                  {/* Score input - only in scores mode */}
-                  {showScoreInputs && (
-                    <input
-                      key={`${match.matchId}-${side}`}
-                      type="text"
-                      inputMode="numeric"
-                      pattern="[0-9]*"
-                      maxLength={2}
-                      defaultValue={teamScore ?? ''}
-                      onBlur={(e) => {
-                        const val = e.target.value.replace(/[^0-9]/g, '');
-                        const num = val === '' ? '' : Math.min(99, parseInt(val, 10));
-                        handleScoreChange(
-                          match.matchId,
-                          match.teamA?.id,
-                          match.teamB?.id,
-                          side === 'a' ? num : score.a,
-                          side === 'b' ? num : score.b
-                        );
-                      }}
-                      disabled={!canSelect}
-                      className="w-10 h-7 mx-1 text-center border border-gray-300 rounded text-lg font-bold bg-white
-                        focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary
-                        disabled:bg-muted disabled:cursor-not-allowed
-                        placeholder:text-gray-400 focus:placeholder:text-transparent"
-                      placeholder="-"
-                    />
-                  )}
-                </div>
-              );
-            };
-
-            return (
-              <div className="border border-gray-300 rounded overflow-hidden">
-                <TeamSlot team={match.teamA} isTop={true} side="a" />
-                <TeamSlot team={match.teamB} isTop={false} side="b" />
-                {/* Show penalty indicator for ties */}
-                {showScoreInputs && isTied && !match.selectedWinner && (
-                  <div className="text-xs text-center py-1 bg-yellow-50 text-yellow-700 border-t border-yellow-200">
-                    Empate - click para elegir ganador
-                  </div>
-                )}
-              </div>
-            );
-          };
-
-          // Componente de par de partidos con siguiente ronda
-          const MatchPair = ({ match1, match2, nextMatch }) => {
-            const MATCH_H = 64;
-            const GAP = 4;
-            const TOTAL_H = MATCH_H * 2 + GAP;
-            const SVG_W = 20;
-            const top1Center = MATCH_H / 2;
-            const top2Center = MATCH_H + GAP + MATCH_H / 2;
-            const midY = (top1Center + top2Center) / 2;
-
-            return (
-              <div className="flex items-center">
-                <div className="flex flex-col gap-1 flex-1 min-w-0">
-                  <MobileMatchBox match={match1} />
-                  <MobileMatchBox match={match2} />
-                </div>
-                <svg width={SVG_W} height={TOTAL_H} className="shrink-0">
-                  <line x1="0" y1={top1Center} x2={SVG_W/2} y2={top1Center} stroke="#d1d5db" strokeWidth="1" />
-                  <line x1="0" y1={top2Center} x2={SVG_W/2} y2={top2Center} stroke="#d1d5db" strokeWidth="1" />
-                  <line x1={SVG_W/2} y1={top1Center} x2={SVG_W/2} y2={top2Center} stroke="#d1d5db" strokeWidth="1" />
-                  <line x1={SVG_W/2} y1={midY} x2={SVG_W} y2={midY} stroke="#d1d5db" strokeWidth="1" />
-                </svg>
-                <div className="flex-1 min-w-0">
-                  <MobileMatchBox match={nextMatch} />
-                </div>
-              </div>
-            );
-          };
-
-          const r32Pairs = [
-            { m1: 'M74', m2: 'M77', next: 'M89' },
-            { m1: 'M73', m2: 'M75', next: 'M90' },
-            { m1: 'M83', m2: 'M84', next: 'M93' },
-            { m1: 'M81', m2: 'M82', next: 'M94' },
-            { m1: 'M76', m2: 'M78', next: 'M91' },
-            { m1: 'M79', m2: 'M80', next: 'M92' },
-            { m1: 'M86', m2: 'M88', next: 'M95' },
-            { m1: 'M85', m2: 'M87', next: 'M96' },
-          ];
-
-          const r16Pairs = [
-            { m1: 'M89', m2: 'M90', next: 'M97' },
-            { m1: 'M93', m2: 'M94', next: 'M98' },
-            { m1: 'M91', m2: 'M92', next: 'M99' },
-            { m1: 'M95', m2: 'M96', next: 'M100' },
-          ];
-
-          const qfPairs = [
-            { m1: 'M97', m2: 'M98', next: 'M101' },
-            { m1: 'M99', m2: 'M100', next: 'M102' },
-          ];
-
-          const getMatch = (id) => {
-            return [...r32Matches, ...r16Matches, ...qfMatches, ...sfMatches].find(m => m.matchId === id);
-          };
-
-          return (
-            <div
-              ref={scrollContainerRef}
-              onScroll={handleScroll}
-              className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
-            >
-              {/* Slide 1: R32 → R16 */}
-              <div className="w-full flex-shrink-0 snap-start snap-always px-1">
-                <div className="space-y-4">
-                  <div className="flex gap-2 text-xs text-muted-foreground font-medium">
-                    <div className="flex-1 text-center">Dieciseisavos</div>
-                    <div className="w-5"></div>
-                    <div className="flex-1 text-center">Octavos</div>
-                  </div>
-                  {r32Pairs.map((pair, i) => (
-                    <MatchPair
-                      key={i}
-                      match1={getMatch(pair.m1)}
-                      match2={getMatch(pair.m2)}
-                      nextMatch={getMatch(pair.next)}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Slide 2: R16 → QF */}
-              <div className="w-full flex-shrink-0 snap-start snap-always px-1">
-                <div className="space-y-4">
-                  <div className="flex gap-2 text-xs text-muted-foreground font-medium">
-                    <div className="flex-1 text-center">Octavos</div>
-                    <div className="w-5"></div>
-                    <div className="flex-1 text-center">Cuartos</div>
-                  </div>
-                  {r16Pairs.map((pair, i) => (
-                    <MatchPair
-                      key={i}
-                      match1={getMatch(pair.m1)}
-                      match2={getMatch(pair.m2)}
-                      nextMatch={getMatch(pair.next)}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Slide 3: QF → SF */}
-              <div className="w-full flex-shrink-0 snap-start snap-always px-1">
-                <div className="space-y-4">
-                  <div className="flex gap-2 text-xs text-muted-foreground font-medium">
-                    <div className="flex-1 text-center">Cuartos</div>
-                    <div className="w-5"></div>
-                    <div className="flex-1 text-center">Semifinales</div>
-                  </div>
-                  {qfPairs.map((pair, i) => (
-                    <MatchPair
-                      key={i}
-                      match1={getMatch(pair.m1)}
-                      match2={getMatch(pair.m2)}
-                      nextMatch={getMatch(pair.next)}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              {/* Slide 4: SF → Final + 3er Puesto */}
-              <div className="w-full flex-shrink-0 snap-start snap-always px-1">
-                <div className="space-y-4">
-                  <div className="flex gap-2 text-xs text-muted-foreground font-medium">
-                    <div className="flex-1 text-center">Semifinales</div>
-                    <div className="w-5"></div>
-                    <div className="flex-1 text-center">Final</div>
-                  </div>
-                  <MatchPair
-                    match1={sfMatches.find(m => m.matchId === 'M101')}
-                    match2={sfMatches.find(m => m.matchId === 'M102')}
-                    nextMatch={final}
-                  />
-
-                  {final.selectedWinner && (
-                    <div className="p-2 bg-yellow-50 border-2 border-yellow-400 rounded-lg w-fit">
-                      <div className="text-[10px] text-yellow-700 mb-1">Campeón</div>
-                      <div className="flex items-center gap-2">
-                        <img src={getTeamById(final.selectedWinner)?.flag_url} alt="" className="w-8 h-5 object-cover rounded shadow" />
-                        <span className="text-sm font-bold">{getTeamById(final.selectedWinner)?.name}</span>
-                        <span className="text-lg">🏆</span>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="pt-4 border-t">
-                    <div className="text-xs font-semibold text-muted-foreground mb-2">3er Puesto</div>
-                    <MobileMatchBox match={thirdPlace} />
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
+        <MobileKnockoutSlides
+          r32Matches={r32Matches}
+          r16Matches={r16Matches}
+          qfMatches={qfMatches}
+          sfMatches={sfMatches}
+          final={final}
+          thirdPlace={thirdPlace}
+          predictionMode={predictionMode}
+          knockoutScores={knockoutScores}
+          onScoreChange={handleScoreChange}
+          onSelectWinner={selectWinner}
+          scrollContainerRef={scrollContainerRef}
+          handleScroll={handleScroll}
+          getTeamById={getTeamById}
+        />
 
         {/* Bottom navigation mobile */}
         <div className="flex justify-between items-center mt-8 pt-6 border-t">
@@ -1100,6 +867,296 @@ export default function Knockout() {
             </Button>
           </div>
           <NavigationButton size="lg" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Componente MobileMatchBox para móvil - FUERA del render para evitar recreación
+function MobileMatchBox({ match, predictionMode, knockoutScores, onScoreChange, onSelectWinner }) {
+  if (!match) return null;
+  const canSelect = match.teamA && match.teamB;
+  const showScoreInputs = predictionMode === 'scores';
+  const score = knockoutScores[match.matchId] || {};
+  const isTied = showScoreInputs && score.a !== undefined && score.b !== undefined &&
+                score.a !== '' && score.b !== '' && Number(score.a) === Number(score.b);
+
+  const renderTeamSlot = (team, isTop, side) => {
+    const isSelected = match.selectedWinner === team?.id;
+    const isEliminated = match.selectedWinner && match.selectedWinner !== team?.id;
+    const teamScore = side === 'a' ? score.a : score.b;
+
+    // In scores mode with a tie, allow click to select winner
+    const canClick = showScoreInputs
+      ? (canSelect && isTied)
+      : canSelect;
+
+    if (!team) {
+      return (
+        <div className={`h-[36px] px-3 py-1.5 text-sm text-muted-foreground bg-muted/30 border-x border-t ${!isTop ? 'border-b rounded-b' : 'rounded-t'} border-dashed border-gray-300 flex items-center`}>
+          Por definir
+          {showScoreInputs && <span className="ml-auto w-10 text-center">-</span>}
+        </div>
+      );
+    }
+
+    return (
+      <div className={`flex items-center h-[36px] ${isTop ? 'rounded-t border-x border-t' : 'rounded-b border'}
+        ${isSelected ? 'bg-green-100 border-green-500' : isEliminated ? 'bg-gray-50 border-gray-300' : 'bg-white border-gray-300'}`}
+      >
+        {/* Team info - clickable for ties in scores mode, or always in positions mode */}
+        <button
+          onClick={() => canClick && onSelectWinner(match.matchId, team.id)}
+          disabled={!canClick}
+          tabIndex={showScoreInputs ? -1 : 0}
+          className={`flex items-center gap-2 flex-1 px-3 py-1.5 text-left transition-colors min-w-0
+            ${isSelected ? 'font-semibold' : ''}
+            ${!isSelected && !isEliminated && canClick ? 'hover:bg-blue-50 active:bg-blue-100' : ''}
+          `}
+        >
+          <img src={team.flag_url} alt="" className={`w-6 h-4 object-cover rounded shrink-0 ${isEliminated ? 'opacity-50' : ''}`} />
+          <span className={`text-sm truncate ${isEliminated ? 'text-gray-400' : ''}`}>{team.name}</span>
+          {team.thirdPlaceFrom && <span className="text-xs text-muted-foreground ml-auto">3{team.thirdPlaceFrom}</span>}
+        </button>
+
+        {/* Score input - only in scores mode */}
+        {showScoreInputs && (
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={2}
+            defaultValue={teamScore ?? ''}
+            key={`mobile-${match.matchId}-${side}-${teamScore ?? 'empty'}`}
+            onBlur={(e) => {
+              const val = e.target.value.replace(/[^0-9]/g, '');
+              const num = val === '' ? '' : Math.min(99, parseInt(val, 10));
+              onScoreChange(
+                match.matchId,
+                match.teamA?.id,
+                match.teamB?.id,
+                side === 'a' ? num : score.a,
+                side === 'b' ? num : score.b
+              );
+            }}
+            disabled={!canSelect}
+            className="w-10 h-7 mx-1 text-center border border-gray-300 rounded text-lg font-bold bg-white
+              focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary
+              disabled:bg-muted disabled:cursor-not-allowed
+              placeholder:text-gray-400 focus:placeholder:text-transparent"
+            placeholder="-"
+          />
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="border border-gray-300 rounded overflow-hidden">
+      {renderTeamSlot(match.teamA, true, 'a')}
+      {renderTeamSlot(match.teamB, false, 'b')}
+      {/* Show penalty indicator for ties */}
+      {showScoreInputs && isTied && !match.selectedWinner && (
+        <div className="text-xs text-center py-1 bg-yellow-50 text-yellow-700 border-t border-yellow-200">
+          Empate - click para elegir ganador
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Componente MatchPair para móvil - FUERA del render
+function MobileMatchPair({ match1, match2, nextMatch, predictionMode, knockoutScores, onScoreChange, onSelectWinner }) {
+  const MATCH_H = 64;
+  const GAP = 4;
+  const TOTAL_H = MATCH_H * 2 + GAP;
+  const SVG_W = 20;
+  const top1Center = MATCH_H / 2;
+  const top2Center = MATCH_H + GAP + MATCH_H / 2;
+  const midY = (top1Center + top2Center) / 2;
+
+  return (
+    <div className="flex items-center">
+      <div className="flex flex-col gap-1 flex-1 min-w-0">
+        <MobileMatchBox
+          match={match1}
+          predictionMode={predictionMode}
+          knockoutScores={knockoutScores}
+          onScoreChange={onScoreChange}
+          onSelectWinner={onSelectWinner}
+        />
+        <MobileMatchBox
+          match={match2}
+          predictionMode={predictionMode}
+          knockoutScores={knockoutScores}
+          onScoreChange={onScoreChange}
+          onSelectWinner={onSelectWinner}
+        />
+      </div>
+      <svg width={SVG_W} height={TOTAL_H} className="shrink-0">
+        <line x1="0" y1={top1Center} x2={SVG_W/2} y2={top1Center} stroke="#d1d5db" strokeWidth="1" />
+        <line x1="0" y1={top2Center} x2={SVG_W/2} y2={top2Center} stroke="#d1d5db" strokeWidth="1" />
+        <line x1={SVG_W/2} y1={top1Center} x2={SVG_W/2} y2={top2Center} stroke="#d1d5db" strokeWidth="1" />
+        <line x1={SVG_W/2} y1={midY} x2={SVG_W} y2={midY} stroke="#d1d5db" strokeWidth="1" />
+      </svg>
+      <div className="flex-1 min-w-0">
+        <MobileMatchBox
+          match={nextMatch}
+          predictionMode={predictionMode}
+          knockoutScores={knockoutScores}
+          onScoreChange={onScoreChange}
+          onSelectWinner={onSelectWinner}
+        />
+      </div>
+    </div>
+  );
+}
+
+// Componente contenedor de slides móvil - FUERA del render
+function MobileKnockoutSlides({ r32Matches, r16Matches, qfMatches, sfMatches, final, thirdPlace, predictionMode, knockoutScores, onScoreChange, onSelectWinner, scrollContainerRef, handleScroll, getTeamById }) {
+  const r32Pairs = [
+    { m1: 'M74', m2: 'M77', next: 'M89' },
+    { m1: 'M73', m2: 'M75', next: 'M90' },
+    { m1: 'M83', m2: 'M84', next: 'M93' },
+    { m1: 'M81', m2: 'M82', next: 'M94' },
+    { m1: 'M76', m2: 'M78', next: 'M91' },
+    { m1: 'M79', m2: 'M80', next: 'M92' },
+    { m1: 'M86', m2: 'M88', next: 'M95' },
+    { m1: 'M85', m2: 'M87', next: 'M96' },
+  ];
+
+  const r16Pairs = [
+    { m1: 'M89', m2: 'M90', next: 'M97' },
+    { m1: 'M93', m2: 'M94', next: 'M98' },
+    { m1: 'M91', m2: 'M92', next: 'M99' },
+    { m1: 'M95', m2: 'M96', next: 'M100' },
+  ];
+
+  const qfPairs = [
+    { m1: 'M97', m2: 'M98', next: 'M101' },
+    { m1: 'M99', m2: 'M100', next: 'M102' },
+  ];
+
+  const getMatch = (id) => {
+    return [...r32Matches, ...r16Matches, ...qfMatches, ...sfMatches].find(m => m.matchId === id);
+  };
+
+  return (
+    <div
+      ref={scrollContainerRef}
+      onScroll={handleScroll}
+      className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide"
+      style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', WebkitOverflowScrolling: 'touch' }}
+    >
+      {/* Slide 1: R32 → R16 */}
+      <div className="w-full flex-shrink-0 snap-start snap-always px-1">
+        <div className="space-y-4">
+          <div className="flex gap-2 text-xs text-muted-foreground font-medium">
+            <div className="flex-1 text-center">Dieciseisavos</div>
+            <div className="w-5"></div>
+            <div className="flex-1 text-center">Octavos</div>
+          </div>
+          {r32Pairs.map((pair, i) => (
+            <MobileMatchPair
+              key={i}
+              match1={getMatch(pair.m1)}
+              match2={getMatch(pair.m2)}
+              nextMatch={getMatch(pair.next)}
+              predictionMode={predictionMode}
+              knockoutScores={knockoutScores}
+              onScoreChange={onScoreChange}
+              onSelectWinner={onSelectWinner}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Slide 2: R16 → QF */}
+      <div className="w-full flex-shrink-0 snap-start snap-always px-1">
+        <div className="space-y-4">
+          <div className="flex gap-2 text-xs text-muted-foreground font-medium">
+            <div className="flex-1 text-center">Octavos</div>
+            <div className="w-5"></div>
+            <div className="flex-1 text-center">Cuartos</div>
+          </div>
+          {r16Pairs.map((pair, i) => (
+            <MobileMatchPair
+              key={i}
+              match1={getMatch(pair.m1)}
+              match2={getMatch(pair.m2)}
+              nextMatch={getMatch(pair.next)}
+              predictionMode={predictionMode}
+              knockoutScores={knockoutScores}
+              onScoreChange={onScoreChange}
+              onSelectWinner={onSelectWinner}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Slide 3: QF → SF */}
+      <div className="w-full flex-shrink-0 snap-start snap-always px-1">
+        <div className="space-y-4">
+          <div className="flex gap-2 text-xs text-muted-foreground font-medium">
+            <div className="flex-1 text-center">Cuartos</div>
+            <div className="w-5"></div>
+            <div className="flex-1 text-center">Semifinales</div>
+          </div>
+          {qfPairs.map((pair, i) => (
+            <MobileMatchPair
+              key={i}
+              match1={getMatch(pair.m1)}
+              match2={getMatch(pair.m2)}
+              nextMatch={getMatch(pair.next)}
+              predictionMode={predictionMode}
+              knockoutScores={knockoutScores}
+              onScoreChange={onScoreChange}
+              onSelectWinner={onSelectWinner}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Slide 4: SF → Final + 3er Puesto */}
+      <div className="w-full flex-shrink-0 snap-start snap-always px-1">
+        <div className="space-y-4">
+          <div className="flex gap-2 text-xs text-muted-foreground font-medium">
+            <div className="flex-1 text-center">Semifinales</div>
+            <div className="w-5"></div>
+            <div className="flex-1 text-center">Final</div>
+          </div>
+          <MobileMatchPair
+            match1={sfMatches.find(m => m.matchId === 'M101')}
+            match2={sfMatches.find(m => m.matchId === 'M102')}
+            nextMatch={final}
+            predictionMode={predictionMode}
+            knockoutScores={knockoutScores}
+            onScoreChange={onScoreChange}
+            onSelectWinner={onSelectWinner}
+          />
+
+          {final.selectedWinner && (
+            <div className="p-2 bg-yellow-50 border-2 border-yellow-400 rounded-lg w-fit">
+              <div className="text-[10px] text-yellow-700 mb-1">Campeón</div>
+              <div className="flex items-center gap-2">
+                <img src={getTeamById(final.selectedWinner)?.flag_url} alt="" className="w-8 h-5 object-cover rounded shadow" />
+                <span className="text-sm font-bold">{getTeamById(final.selectedWinner)?.name}</span>
+                <span className="text-lg">🏆</span>
+              </div>
+            </div>
+          )}
+
+          <div className="pt-4 border-t">
+            <div className="text-xs font-semibold text-muted-foreground mb-2">3er Puesto</div>
+            <MobileMatchBox
+              match={thirdPlace}
+              predictionMode={predictionMode}
+              knockoutScores={knockoutScores}
+              onScoreChange={onScoreChange}
+              onSelectWinner={onSelectWinner}
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -1281,6 +1338,98 @@ function SingleMatch({ match, onSelectWinner, highlight = null }) {
   );
 }
 
+// Componente BracketMatch para desktop - FUERA del render para evitar recreación
+function DesktopBracketMatch({ match, predictionMode, knockoutScores, onScoreChange, onSelectWinner, matchWidth }) {
+  if (!match) return null;
+  const showScoreInputs = predictionMode === 'scores';
+  const canSelect = match.teamA && match.teamB;
+  const score = knockoutScores[match.matchId] || {};
+  const isTied = showScoreInputs && score.a !== undefined && score.b !== undefined &&
+                score.a !== '' && score.b !== '' && Number(score.a) === Number(score.b);
+
+  const renderTeamSlot = (team, isTop, side) => {
+    const isSelected = match.selectedWinner === team?.id;
+    const isEliminated = match.selectedWinner && match.selectedWinner !== team?.id;
+    const teamScore = side === 'a' ? score.a : score.b;
+
+    // In scores mode with a tie, allow click to select winner
+    const canClick = showScoreInputs
+      ? (canSelect && isTied)
+      : canSelect;
+
+    if (!team) {
+      return (
+        <div className={`flex items-center h-[24px] px-2 py-0.5 text-[11px] text-muted-foreground bg-muted/30 border-x border-t ${!isTop ? 'border-b rounded-b' : 'rounded-t'} border-dashed border-gray-300`}>
+          <span className="flex-1">Por definir</span>
+          {showScoreInputs && <span className="w-8 text-center">-</span>}
+        </div>
+      );
+    }
+
+    return (
+      <div className={`flex items-center h-[24px] ${isTop ? 'rounded-t border-x border-t' : 'rounded-b border'}
+        ${isSelected ? 'bg-green-100 border-green-500' : isEliminated ? 'bg-gray-50 border-gray-300' : 'bg-white border-gray-300'}`}
+      >
+        {/* Team info - clickable */}
+        <button
+          onClick={() => canClick && onSelectWinner(match.matchId, team.id)}
+          disabled={!canClick}
+          tabIndex={showScoreInputs ? -1 : 0}
+          className={`flex items-center gap-1.5 flex-1 px-2 py-0.5 text-left transition-colors min-w-0
+            ${isSelected ? 'font-semibold' : ''}
+            ${!isSelected && !isEliminated && canClick ? 'hover:bg-blue-50' : ''}
+          `}
+        >
+          <img src={team.flag_url} alt="" className={`w-5 h-3 object-cover rounded shrink-0 ${isEliminated ? 'opacity-50' : ''}`} />
+          <span className={`text-[11px] truncate ${isEliminated ? 'text-gray-400' : ''}`}>{team.name}</span>
+        </button>
+
+        {/* Score input - only in scores mode */}
+        {showScoreInputs && (
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            maxLength={2}
+            defaultValue={teamScore ?? ''}
+            key={`desktop-${match.matchId}-${side}-${teamScore ?? 'empty'}`}
+            onBlur={(e) => {
+              const val = e.target.value.replace(/[^0-9]/g, '');
+              const num = val === '' ? '' : Math.min(99, parseInt(val, 10));
+              onScoreChange(
+                match.matchId,
+                match.teamA?.id,
+                match.teamB?.id,
+                side === 'a' ? num : score.a,
+                side === 'b' ? num : score.b
+              );
+            }}
+            disabled={!canSelect}
+            className="w-7 h-5 mx-0.5 text-center border border-gray-300 rounded text-xs font-bold bg-white
+              focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary
+              disabled:bg-muted disabled:cursor-not-allowed
+              placeholder:text-gray-400 focus:placeholder:text-transparent"
+            placeholder="-"
+          />
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ width: matchWidth }} className="shrink-0">
+      {renderTeamSlot(match.teamA, true, 'a')}
+      {renderTeamSlot(match.teamB, false, 'b')}
+      {/* Show penalty indicator for ties */}
+      {showScoreInputs && isTied && !match.selectedWinner && (
+        <div className="text-[9px] text-center py-0.5 bg-yellow-50 text-yellow-700 border border-t-0 border-yellow-200 rounded-b">
+          Click para elegir ganador
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Componente para un slot de equipo en el bracket (clickeable)
 function BracketSlot({ team, matchId, isSelected, isEliminated, onSelect, canSelect, small = false }) {
   if (!team) {
@@ -1359,100 +1508,6 @@ function FullBracket({ r32Matches, r16Matches, qfMatches, sfMatches, final, thir
   const QF_GAP = R16_GAP + MATCH_HEIGHT + R16_GAP;
   const SF_GAP = QF_GAP + MATCH_HEIGHT + QF_GAP;
 
-  // Un partido en el bracket (2 equipos apilados)
-  const BracketMatch = ({ match }) => {
-    if (!match) return null;
-    const canSelect = match.teamA && match.teamB;
-    const score = knockoutScores[match.matchId] || {};
-    const isTied = showScoreInputs && score.a !== undefined && score.b !== undefined &&
-                  score.a !== '' && score.b !== '' && Number(score.a) === Number(score.b);
-
-    const TeamSlot = ({ team, isTop, side }) => {
-      const isSelected = match.selectedWinner === team?.id;
-      const isEliminated = match.selectedWinner && match.selectedWinner !== team?.id;
-      const teamScore = side === 'a' ? score.a : score.b;
-
-      // In scores mode with a tie, allow click to select winner
-      const canClick = showScoreInputs
-        ? (canSelect && isTied)
-        : canSelect;
-
-      if (!team) {
-        return (
-          <div className={`flex items-center h-[24px] px-2 py-0.5 text-[11px] text-muted-foreground bg-muted/30 border-x border-t ${!isTop ? 'border-b rounded-b' : 'rounded-t'} border-dashed border-gray-300`}>
-            <span className="flex-1">Por definir</span>
-            {showScoreInputs && <span className="w-8 text-center">-</span>}
-          </div>
-        );
-      }
-
-      return (
-        <div className={`flex items-center h-[24px] ${isTop ? 'rounded-t border-x border-t' : 'rounded-b border'}
-          ${isSelected ? 'bg-green-100 border-green-500' : isEliminated ? 'bg-gray-50 border-gray-300' : 'bg-white border-gray-300'}`}
-        >
-          {/* Team info - clickable */}
-          <button
-            onClick={() => canClick && onSelectWinner(match.matchId, team.id)}
-            disabled={!canClick}
-            tabIndex={showScoreInputs ? -1 : 0}
-            className={`flex items-center gap-1.5 flex-1 px-2 py-0.5 text-left transition-colors min-w-0
-              ${isSelected ? 'font-semibold' : ''}
-              ${!isSelected && !isEliminated && canClick ? 'hover:bg-blue-50' : ''}
-            `}
-          >
-            <img src={team.flag_url} alt="" className={`w-5 h-3 object-cover rounded shrink-0 ${isEliminated ? 'opacity-50' : ''}`} />
-            <span className={`text-[11px] truncate ${isEliminated ? 'text-gray-400' : ''}`}>{team.name}</span>
-          </button>
-
-          {/* Score input - only in scores mode */}
-          {showScoreInputs && (
-            <input
-              key={`${match.matchId}-${side}`}
-              type="text"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              maxLength={2}
-              defaultValue={teamScore ?? ''}
-              onBlur={(e) => {
-                const val = e.target.value.replace(/[^0-9]/g, '');
-                const num = val === '' ? '' : Math.min(99, parseInt(val, 10));
-                onScoreChange(
-                  match.matchId,
-                  match.teamA?.id,
-                  match.teamB?.id,
-                  side === 'a' ? num : score.a,
-                  side === 'b' ? num : score.b
-                );
-              }}
-              disabled={!canSelect}
-              className="w-7 h-5 mx-0.5 text-center border border-gray-300 rounded text-xs font-bold bg-white
-                focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary
-                disabled:bg-muted disabled:cursor-not-allowed
-                placeholder:text-gray-400 focus:placeholder:text-transparent"
-              placeholder="-"
-            />
-          )}
-        </div>
-      );
-    };
-
-    const baseHeight = 48; // 2 teams of 24px each
-    const tieIndicatorHeight = showScoreInputs && isTied && !match.selectedWinner ? 12 : 0;
-
-    return (
-      <div style={{ width: MATCH_WIDTH }} className="shrink-0">
-        <TeamSlot team={match.teamA} isTop={true} side="a" />
-        <TeamSlot team={match.teamB} isTop={false} side="b" />
-        {/* Show penalty indicator for ties */}
-        {showScoreInputs && isTied && !match.selectedWinner && (
-          <div className="text-[9px] text-center py-0.5 bg-yellow-50 text-yellow-700 border border-t-0 border-yellow-200 rounded-b">
-            Click para elegir ganador
-          </div>
-        )}
-      </div>
-    );
-  };
-
   // Calcular la posición Y del centro de un partido dado su índice y gap
   const getMatchCenterY = (index, gap) => {
     return TITLE_HEIGHT + (MATCH_HEIGHT / 2) + index * (MATCH_HEIGHT + gap);
@@ -1486,7 +1541,7 @@ function FullBracket({ r32Matches, r16Matches, qfMatches, sfMatches, final, thir
         {r32Ordered.map((match, i) => (
           <div key={match.matchId} className="absolute"
                style={{ left: 0, top: TITLE_HEIGHT + i * (MATCH_HEIGHT + R32_GAP) }}>
-            <BracketMatch match={match} />
+            <DesktopBracketMatch match={match} predictionMode={predictionMode} knockoutScores={knockoutScores} onScoreChange={onScoreChange} onSelectWinner={onSelectWinner} matchWidth={MATCH_WIDTH} />
           </div>
         ))}
 
@@ -1520,7 +1575,7 @@ function FullBracket({ r32Matches, r16Matches, qfMatches, sfMatches, final, thir
           return (
             <div key={match.matchId} className="absolute"
                  style={{ left: MATCH_WIDTH + CONNECTOR_WIDTH, top: centerY }}>
-              <BracketMatch match={match} />
+              <DesktopBracketMatch match={match} predictionMode={predictionMode} knockoutScores={knockoutScores} onScoreChange={onScoreChange} onSelectWinner={onSelectWinner} matchWidth={MATCH_WIDTH} />
             </div>
           );
         })}
@@ -1558,7 +1613,7 @@ function FullBracket({ r32Matches, r16Matches, qfMatches, sfMatches, final, thir
           return (
             <div key={match.matchId} className="absolute"
                  style={{ left: (MATCH_WIDTH + CONNECTOR_WIDTH) * 2, top: centerY }}>
-              <BracketMatch match={match} />
+              <DesktopBracketMatch match={match} predictionMode={predictionMode} knockoutScores={knockoutScores} onScoreChange={onScoreChange} onSelectWinner={onSelectWinner} matchWidth={MATCH_WIDTH} />
             </div>
           );
         })}
@@ -1596,7 +1651,7 @@ function FullBracket({ r32Matches, r16Matches, qfMatches, sfMatches, final, thir
           return (
             <div key={match.matchId} className="absolute"
                  style={{ left: (MATCH_WIDTH + CONNECTOR_WIDTH) * 3, top: centerY }}>
-              <BracketMatch match={match} />
+              <DesktopBracketMatch match={match} predictionMode={predictionMode} knockoutScores={knockoutScores} onScoreChange={onScoreChange} onSelectWinner={onSelectWinner} matchWidth={MATCH_WIDTH} />
             </div>
           );
         })}
@@ -1629,7 +1684,7 @@ function FullBracket({ r32Matches, r16Matches, qfMatches, sfMatches, final, thir
 
           return (
             <div className="absolute" style={{ left: (MATCH_WIDTH + CONNECTOR_WIDTH) * 4, top: finalCenterY }}>
-              <BracketMatch match={final} />
+              <DesktopBracketMatch match={final} predictionMode={predictionMode} knockoutScores={knockoutScores} onScoreChange={onScoreChange} onSelectWinner={onSelectWinner} matchWidth={MATCH_WIDTH} />
               {final.selectedWinner && (
                 <div className="mt-2 p-2 bg-yellow-50 border border-yellow-400 rounded text-center" style={{ width: MATCH_WIDTH }}>
                   <div className="text-[10px] text-yellow-700 mb-1">Campeón</div>
@@ -1655,7 +1710,7 @@ function FullBracket({ r32Matches, r16Matches, qfMatches, sfMatches, final, thir
           return (
             <div className="absolute" style={{ left: (MATCH_WIDTH + CONNECTOR_WIDTH) * 4, top: thirdPlaceTop }}>
               <div className="text-xs font-semibold text-center text-muted-foreground mb-2" style={{ width: MATCH_WIDTH }}>3er Puesto</div>
-              <BracketMatch match={thirdPlace} />
+              <DesktopBracketMatch match={thirdPlace} predictionMode={predictionMode} knockoutScores={knockoutScores} onScoreChange={onScoreChange} onSelectWinner={onSelectWinner} matchWidth={MATCH_WIDTH} />
             </div>
           );
         })()}
