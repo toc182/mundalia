@@ -30,7 +30,8 @@
       "Bash(findstr:*)",
       "Bash(PGPASSWORD=flRbVFywRIeAPZhzaaeDYGoIIubVOXyb psql:*)",
       "Bash(PGPASSWORD=Dinocore51720 psql:*)",
-      "Bash(PGPASSWORD=flRbVFywRIeAPZhzaaeDYGoIIubVOXyb pg_dump:*)"
+      "Bash(PGPASSWORD=flRbVFywRIeAPZhzaaeDYGoIIubVOXyb pg_dump:*)",
+      "Bash(git revert:*)"
     ],
     "deny": [],
     "ask": []

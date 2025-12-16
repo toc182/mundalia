@@ -899,10 +899,10 @@ export default function Knockout() {
                         );
                       }}
                       disabled={!canSelect}
-                      className="w-10 h-8 text-center border-l border-gray-300 text-lg font-bold
-                        focus:outline-none focus:ring-2 focus:ring-primary focus:z-10
-                        disabled:bg-muted disabled:cursor-not-allowed"
-                      placeholder="-"
+                      className="w-10 h-7 mx-1 text-center border-2 border-gray-400 rounded text-lg font-bold bg-white
+                        focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary
+                        disabled:bg-muted disabled:cursor-not-allowed disabled:border-gray-300"
+                      placeholder="0"
                     />
                   )}
                 </div>
@@ -1423,10 +1423,10 @@ function FullBracket({ r32Matches, r16Matches, qfMatches, sfMatches, final, thir
                 );
               }}
               disabled={!canSelect}
-              className="w-8 h-6 text-center border-l border-gray-300 text-sm font-bold
-                focus:outline-none focus:ring-2 focus:ring-primary focus:z-10
-                disabled:bg-muted disabled:cursor-not-allowed"
-              placeholder="-"
+              className="w-7 h-5 mx-0.5 text-center border-2 border-gray-400 rounded text-xs font-bold bg-white
+                focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary
+                disabled:bg-muted disabled:cursor-not-allowed disabled:border-gray-300"
+              placeholder="0"
             />
           )}
         </div>
