@@ -899,11 +899,10 @@ export default function Knockout() {
                         );
                       }}
                       disabled={!canSelect}
-                      className={`w-10 h-8 text-center border-l border-gray-300 text-lg font-bold
+                      className="w-10 h-8 text-center border-l border-gray-300 text-lg font-bold
                         focus:outline-none focus:ring-2 focus:ring-primary focus:z-10
-                        disabled:bg-muted disabled:cursor-not-allowed
-                        ${teamScore === '' || teamScore === undefined ? 'bg-gray-100' : 'bg-white'}`}
-                      placeholder="0"
+                        disabled:bg-muted disabled:cursor-not-allowed"
+                      placeholder="-"
                     />
                   )}
                 </div>
@@ -1424,11 +1423,10 @@ function FullBracket({ r32Matches, r16Matches, qfMatches, sfMatches, final, thir
                 );
               }}
               disabled={!canSelect}
-              className={`w-8 h-6 text-center border-l border-gray-300 text-sm font-bold
+              className="w-8 h-6 text-center border-l border-gray-300 text-sm font-bold
                 focus:outline-none focus:ring-2 focus:ring-primary focus:z-10
-                disabled:bg-muted disabled:cursor-not-allowed
-                ${teamScore === '' || teamScore === undefined ? 'bg-gray-100' : 'bg-white'}`}
-              placeholder="0"
+                disabled:bg-muted disabled:cursor-not-allowed"
+              placeholder="-"
             />
           )}
         </div>
