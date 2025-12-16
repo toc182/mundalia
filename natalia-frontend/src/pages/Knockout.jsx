@@ -832,16 +832,15 @@ export default function Knockout() {
         {/* Scroll-snap container con slides */}
         {(() => {
           // Componente de caja de partido para móvil
-          const MobileMatchBox = ({ match }) => {
+          const MobileMatchBox = ({ match, inputRefA, inputRefB }) => {
             if (!match) return null;
             const canSelect = match.teamA && match.teamB;
             const showScoreInputs = predictionMode === 'scores';
             const score = knockoutScores[match.matchId] || {};
             const isTied = showScoreInputs && score.a !== undefined && score.b !== undefined &&
                           score.a !== '' && score.b !== '' && Number(score.a) === Number(score.b);
-            const hasScores = score.a !== undefined && score.a !== '' && score.b !== undefined && score.b !== '';
 
-            const TeamSlot = ({ team, isTop, side }) => {
+            const TeamSlot = ({ team, isTop, side, inputRef }) => {
               const isSelected = match.selectedWinner === team?.id;
               const isEliminated = match.selectedWinner && match.selectedWinner !== team?.id;
               const teamScore = side === 'a' ? score.a : score.b;
@@ -850,6 +849,15 @@ export default function Knockout() {
               const canClick = showScoreInputs
                 ? (canSelect && isTied)
                 : canSelect;
+
+              // Click on team area focuses the score input (in scores mode)
+              const handleTeamClick = () => {
+                if (showScoreInputs && canSelect && inputRef?.current) {
+                  inputRef.current.focus();
+                } else if (canClick) {
+                  selectWinner(match.matchId, team.id);
+                }
+              };
 
               if (!team) {
                 return (
@@ -864,14 +872,13 @@ export default function Knockout() {
                 <div className={`flex items-center h-[36px] ${isTop ? 'rounded-t border-x border-t' : 'rounded-b border'}
                   ${isSelected ? 'bg-green-100 border-green-500' : isEliminated ? 'bg-gray-50 border-gray-300' : 'bg-white border-gray-300'}`}
                 >
-                  {/* Team info - clickable for ties in scores mode, or always in positions mode */}
+                  {/* Team info - click focuses input in scores mode, or selects winner in positions mode */}
                   <button
-                    onClick={() => canClick && selectWinner(match.matchId, team.id)}
-                    disabled={!canClick}
+                    onClick={handleTeamClick}
                     tabIndex={showScoreInputs ? -1 : 0}
                     className={`flex items-center gap-2 flex-1 px-3 py-1.5 text-left transition-colors min-w-0
                       ${isSelected ? 'font-semibold' : ''}
-                      ${!isSelected && !isEliminated && canClick ? 'hover:bg-blue-50 active:bg-blue-100' : ''}
+                      ${!isSelected && !isEliminated && (canClick || showScoreInputs) ? 'hover:bg-blue-50 active:bg-blue-100' : ''}
                     `}
                   >
                     <img src={team.flag_url} alt="" className={`w-6 h-4 object-cover rounded shrink-0 ${isEliminated ? 'opacity-50' : ''}`} />
@@ -882,6 +889,7 @@ export default function Knockout() {
                   {/* Score input - only in scores mode */}
                   {showScoreInputs && (
                     <input
+                      ref={inputRef}
                       type="text"
                       inputMode="numeric"
                       pattern="[0-9]*"
@@ -889,20 +897,23 @@ export default function Knockout() {
                       value={teamScore ?? ''}
                       onChange={(e) => {
                         const val = e.target.value.replace(/[^0-9]/g, '');
-                        const parsed = val === '' ? '' : Math.min(99, parseInt(val, 10));
-                        handleScoreChange(
-                          match.matchId,
-                          match.teamA?.id,
-                          match.teamB?.id,
-                          side === 'a' ? parsed : score.a,
-                          side === 'b' ? parsed : score.b
-                        );
+                        // Keep as string to preserve input, only convert for validation
+                        if (val === '' || (parseInt(val, 10) <= 99)) {
+                          handleScoreChange(
+                            match.matchId,
+                            match.teamA?.id,
+                            match.teamB?.id,
+                            side === 'a' ? val : score.a,
+                            side === 'b' ? val : score.b
+                          );
+                        }
                       }}
                       disabled={!canSelect}
-                      className="w-10 h-7 mx-1 text-center border-2 border-gray-400 rounded text-lg font-bold bg-white
+                      className="w-10 h-7 mx-1 text-center border border-gray-300 rounded text-lg font-bold bg-white
                         focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary
-                        disabled:bg-muted disabled:cursor-not-allowed disabled:border-gray-300"
-                      placeholder="0"
+                        disabled:bg-muted disabled:cursor-not-allowed
+                        placeholder:text-gray-400 focus:placeholder:text-transparent"
+                      placeholder="-"
                     />
                   )}
                 </div>
@@ -911,8 +922,8 @@ export default function Knockout() {
 
             return (
               <div className="border border-gray-300 rounded overflow-hidden">
-                <TeamSlot team={match.teamA} isTop={true} side="a" />
-                <TeamSlot team={match.teamB} isTop={false} side="b" />
+                <TeamSlot team={match.teamA} isTop={true} side="a" inputRef={inputRefA} />
+                <TeamSlot team={match.teamB} isTop={false} side="b" inputRef={inputRefB} />
                 {/* Show penalty indicator for ties */}
                 {showScoreInputs && isTied && !match.selectedWinner && (
                   <div className="text-xs text-center py-1 bg-yellow-50 text-yellow-700 border-t border-yellow-200">
@@ -1366,7 +1377,11 @@ function FullBracket({ r32Matches, r16Matches, qfMatches, sfMatches, final, thir
     const isTied = showScoreInputs && score.a !== undefined && score.b !== undefined &&
                   score.a !== '' && score.b !== '' && Number(score.a) === Number(score.b);
 
-    const TeamSlot = ({ team, isTop, side }) => {
+    // Refs for focusing inputs when clicking team
+    const inputRefA = useRef(null);
+    const inputRefB = useRef(null);
+
+    const TeamSlot = ({ team, isTop, side, inputRef }) => {
       const isSelected = match.selectedWinner === team?.id;
       const isEliminated = match.selectedWinner && match.selectedWinner !== team?.id;
       const teamScore = side === 'a' ? score.a : score.b;
@@ -1375,6 +1390,15 @@ function FullBracket({ r32Matches, r16Matches, qfMatches, sfMatches, final, thir
       const canClick = showScoreInputs
         ? (canSelect && isTied)
         : canSelect;
+
+      // Click on team focuses the score input (in scores mode)
+      const handleTeamClick = () => {
+        if (showScoreInputs && canSelect && inputRef?.current) {
+          inputRef.current.focus();
+        } else if (canClick) {
+          onSelectWinner(match.matchId, team.id);
+        }
+      };
 
       if (!team) {
         return (
@@ -1389,14 +1413,13 @@ function FullBracket({ r32Matches, r16Matches, qfMatches, sfMatches, final, thir
         <div className={`flex items-center h-[24px] ${isTop ? 'rounded-t border-x border-t' : 'rounded-b border'}
           ${isSelected ? 'bg-green-100 border-green-500' : isEliminated ? 'bg-gray-50 border-gray-300' : 'bg-white border-gray-300'}`}
         >
-          {/* Team info - clickable */}
+          {/* Team info - click focuses input in scores mode */}
           <button
-            onClick={() => canClick && onSelectWinner(match.matchId, team.id)}
-            disabled={!canClick}
+            onClick={handleTeamClick}
             tabIndex={showScoreInputs ? -1 : 0}
             className={`flex items-center gap-1.5 flex-1 px-2 py-0.5 text-left transition-colors min-w-0
               ${isSelected ? 'font-semibold' : ''}
-              ${!isSelected && !isEliminated && canClick ? 'hover:bg-blue-50' : ''}
+              ${!isSelected && !isEliminated && (canClick || showScoreInputs) ? 'hover:bg-blue-50' : ''}
             `}
           >
             <img src={team.flag_url} alt="" className={`w-5 h-3 object-cover rounded shrink-0 ${isEliminated ? 'opacity-50' : ''}`} />
@@ -1406,6 +1429,7 @@ function FullBracket({ r32Matches, r16Matches, qfMatches, sfMatches, final, thir
           {/* Score input - only in scores mode */}
           {showScoreInputs && (
             <input
+              ref={inputRef}
               type="text"
               inputMode="numeric"
               pattern="[0-9]*"
@@ -1413,20 +1437,23 @@ function FullBracket({ r32Matches, r16Matches, qfMatches, sfMatches, final, thir
               value={teamScore ?? ''}
               onChange={(e) => {
                 const val = e.target.value.replace(/[^0-9]/g, '');
-                const parsed = val === '' ? '' : Math.min(99, parseInt(val, 10));
-                onScoreChange(
-                  match.matchId,
-                  match.teamA?.id,
-                  match.teamB?.id,
-                  side === 'a' ? parsed : score.a,
-                  side === 'b' ? parsed : score.b
-                );
+                // Keep as string to preserve input
+                if (val === '' || (parseInt(val, 10) <= 99)) {
+                  onScoreChange(
+                    match.matchId,
+                    match.teamA?.id,
+                    match.teamB?.id,
+                    side === 'a' ? val : score.a,
+                    side === 'b' ? val : score.b
+                  );
+                }
               }}
               disabled={!canSelect}
-              className="w-7 h-5 mx-0.5 text-center border-2 border-gray-400 rounded text-xs font-bold bg-white
+              className="w-7 h-5 mx-0.5 text-center border border-gray-300 rounded text-xs font-bold bg-white
                 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary
-                disabled:bg-muted disabled:cursor-not-allowed disabled:border-gray-300"
-              placeholder="0"
+                disabled:bg-muted disabled:cursor-not-allowed
+                placeholder:text-gray-400 focus:placeholder:text-transparent"
+              placeholder="-"
             />
           )}
         </div>
@@ -1438,8 +1465,8 @@ function FullBracket({ r32Matches, r16Matches, qfMatches, sfMatches, final, thir
 
     return (
       <div style={{ width: MATCH_WIDTH }} className="shrink-0">
-        <TeamSlot team={match.teamA} isTop={true} side="a" />
-        <TeamSlot team={match.teamB} isTop={false} side="b" />
+        <TeamSlot team={match.teamA} isTop={true} side="a" inputRef={inputRefA} />
+        <TeamSlot team={match.teamB} isTop={false} side="b" inputRef={inputRefB} />
         {/* Show penalty indicator for ties */}
         {showScoreInputs && isTied && !match.selectedWinner && (
           <div className="text-[9px] text-center py-0.5 bg-yellow-50 text-yellow-700 border border-t-0 border-yellow-200 rounded-b">
