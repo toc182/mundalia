@@ -1,10 +1,16 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
 const db = require('./config/db');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Security middleware - Helmet adds various HTTP headers for security
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }, // Allow images from external sources
+}));
 
 // Auto-run database migrations on startup
 const runMigrations = async () => {
@@ -164,10 +170,18 @@ const allowedOrigins = [
   'http://localhost:5174',
   'https://mundalia.vercel.app'
 ];
+const isProduction = process.env.NODE_ENV === 'production';
+
 app.use(cors({
   origin: function(origin, callback) {
-    // Permitir requests sin origin (como curl o Postman)
-    if (!origin) return callback(null, true);
+    // En produccion, rechazar requests sin origin (excepto health checks)
+    if (!origin) {
+      if (isProduction) {
+        return callback(new Error('CORS: Missing origin'), false);
+      }
+      // En desarrollo, permitir requests sin origin (Postman, curl)
+      return callback(null, true);
+    }
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
@@ -175,7 +189,9 @@ app.use(cors({
   },
   credentials: true
 }));
-app.use(express.json());
+
+// Body parser con limite de tamaño (prevenir DoS con payloads grandes)
+app.use(express.json({ limit: '10kb' }));
 
 // Routes
 app.use('/api/auth', require('./routes/auth'));
@@ -193,9 +209,15 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Error handler
+// Error handler - no exponer detalles en produccion
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  // Log completo solo en desarrollo
+  if (!isProduction) {
+    console.error(err.stack);
+  } else {
+    // En produccion, log minimo sin stack trace
+    console.error(`[ERROR] ${err.message}`);
+  }
   res.status(500).json({ error: 'Something went wrong!' });
 });
 

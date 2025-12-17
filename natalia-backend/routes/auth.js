@@ -4,16 +4,49 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const { OAuth2Client } = require('google-auth-library');
+const rateLimit = require('express-rate-limit');
 const db = require('../config/db');
 
 // Google OAuth client
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+// Rate limiters para prevenir brute force y spam
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 5, // 5 intentos por ventana
+  message: { error: 'Demasiados intentos de login. Intenta de nuevo en 15 minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const registerLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hora
+  max: 3, // 3 registros por hora por IP
+  message: { error: 'Demasiados registros. Intenta de nuevo en 1 hora.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const googleAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 10, // 10 intentos
+  message: { error: 'Demasiados intentos. Intenta de nuevo en 15 minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Validación de password fuerte
+const passwordValidator = body('password')
+  .isLength({ min: 8 }).withMessage('La contraseña debe tener al menos 8 caracteres')
+  .matches(/[A-Z]/).withMessage('La contraseña debe tener al menos una mayúscula')
+  .matches(/[a-z]/).withMessage('La contraseña debe tener al menos una minúscula')
+  .matches(/[0-9]/).withMessage('La contraseña debe tener al menos un número');
+
 // Register
-router.post('/register', [
-  body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 6 }),
-  body('name').trim().notEmpty()
+router.post('/register', registerLimiter, [
+  body('email').isEmail().withMessage('Email inválido').normalizeEmail(),
+  passwordValidator,
+  body('name').trim().notEmpty().withMessage('El nombre es requerido')
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -60,7 +93,7 @@ router.post('/register', [
 });
 
 // Login
-router.post('/login', [
+router.post('/login', loginLimiter, [
   body('email').isEmail().normalizeEmail(),
   body('password').notEmpty()
 ], async (req, res) => {
@@ -108,7 +141,7 @@ router.post('/login', [
 });
 
 // Google OAuth Login/Register
-router.post('/google', async (req, res) => {
+router.post('/google', googleAuthLimiter, async (req, res) => {
   const { credential } = req.body;
 
   if (!credential) {

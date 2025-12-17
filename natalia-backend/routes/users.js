@@ -1,7 +1,17 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const db = require('../config/db');
 const { auth } = require('../middleware/auth');
+
+// Rate limiter para check-username (prevenir enumeración)
+const checkUsernameLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minuto
+  max: 10, // 10 checks por minuto
+  message: { error: 'Demasiadas consultas. Intenta de nuevo en 1 minuto.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Get current user
 router.get('/me', auth, async (req, res) => {
@@ -23,7 +33,7 @@ router.get('/me', auth, async (req, res) => {
 });
 
 // Check if username is available
-router.get('/check-username/:username', async (req, res) => {
+router.get('/check-username/:username', checkUsernameLimiter, async (req, res) => {
   try {
     const { username } = req.params;
 
