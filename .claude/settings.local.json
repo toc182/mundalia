@@ -34,7 +34,8 @@
       "Bash(git revert:*)",
       "Bash(npx eslint:*)",
       "Bash(cat:*)",
-      "Bash(node seed-dev.js:*)"
+      "Bash(node seed-dev.js:*)",
+      "Bash(timeout 8 node:*)"
     ],
     "deny": [],
     "ask": []
