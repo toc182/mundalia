@@ -31,7 +31,10 @@
       "Bash(PGPASSWORD=flRbVFywRIeAPZhzaaeDYGoIIubVOXyb psql:*)",
       "Bash(PGPASSWORD=Dinocore51720 psql:*)",
       "Bash(PGPASSWORD=flRbVFywRIeAPZhzaaeDYGoIIubVOXyb pg_dump:*)",
-      "Bash(git revert:*)"
+      "Bash(git revert:*)",
+      "Bash(npx eslint:*)",
+      "Bash(cat:*)",
+      "Bash(node seed-dev.js:*)"
     ],
     "deny": [],
     "ask": []

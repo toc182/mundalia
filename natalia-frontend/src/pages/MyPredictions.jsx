@@ -249,9 +249,9 @@ export default function MyPredictions() {
                   className="mt-1"
                 />
                 <div>
-                  <div className="font-medium">Posiciones</div>
+                  <div className="font-medium">Escoger Ganadores</div>
                   <div className="text-sm text-muted-foreground">
-                    Arrastra equipos para ordenarlos en cada grupo
+                    Arrastra equipos para ordenar su posición final de grupo. Escoge ganadores de la fase de eliminación directa.
                   </div>
                 </div>
               </label>

@@ -1,9 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { ChevronRight } from 'lucide-react';
 import { playoffs } from '@/data/playoffsData';
 import { predictionsAPI, predictionSetsAPI } from '@/services/api';
@@ -18,6 +26,28 @@ export default function Playoffs() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [predictionMode, setPredictionMode] = useState('positions'); // 'positions' | 'scores'
+
+  // Snapshot for change detection
+  const originalSelectionsRef = useRef(null);
+  const [showResetWarning, setShowResetWarning] = useState(false);
+  const [subsequentData, setSubsequentData] = useState({ hasGroups: false, hasThirds: false, hasKnockout: false });
+
+  // Compare current selections with original to detect real changes
+  const hasRealChanges = () => {
+    if (!originalSelectionsRef.current) return false;
+    const original = originalSelectionsRef.current;
+    const current = selections;
+
+    // Compare each playoff's final winner (that's what matters for downstream)
+    for (const playoffId of Object.keys({ ...original, ...current })) {
+      const origFinal = original[playoffId]?.final;
+      const currFinal = current[playoffId]?.final;
+      if (origFinal !== currFinal) {
+        return true;
+      }
+    }
+    return false;
+  };
 
   useEffect(() => {
     const loadSelections = async () => {
@@ -34,9 +64,12 @@ export default function Playoffs() {
           console.log('[PLAYOFFS] getPlayoffs response:', playoffsRes.data);
           if (playoffsRes.data && Object.keys(playoffsRes.data).length > 0) {
             setSelections(playoffsRes.data);
+            // Save snapshot of original selections
+            originalSelectionsRef.current = JSON.parse(JSON.stringify(playoffsRes.data));
             console.log('[PLAYOFFS] Loaded selections from API');
           } else {
             console.log('[PLAYOFFS] No data from API, starting blank');
+            originalSelectionsRef.current = {};
           }
 
           // Set prediction mode from the prediction set
@@ -47,14 +80,19 @@ export default function Playoffs() {
         } catch (err) {
           // Error de servidor, empezar en blanco
           console.error('[PLAYOFFS] Error loading playoffs:', err);
+          originalSelectionsRef.current = {};
         }
       } else {
         // Sin setId: comportamiento legacy con localStorage
         console.log('[PLAYOFFS] No setId, checking localStorage');
         const savedSelections = localStorage.getItem('natalia_playoffs');
         if (savedSelections) {
-          setSelections(JSON.parse(savedSelections));
+          const parsed = JSON.parse(savedSelections);
+          setSelections(parsed);
+          originalSelectionsRef.current = JSON.parse(JSON.stringify(parsed));
           console.log('[PLAYOFFS] Loaded from localStorage');
+        } else {
+          originalSelectionsRef.current = {};
         }
       }
     };
@@ -98,8 +136,42 @@ export default function Playoffs() {
   };
 
   const handleContinue = async () => {
+    console.log('[PLAYOFFS] handleContinue called');
+    console.log('[PLAYOFFS] setId:', setId);
+    console.log('[PLAYOFFS] predictionMode:', predictionMode);
+    console.log('[PLAYOFFS] selections:', selections);
+
+    // Check if there are real changes
+    const changesDetected = hasRealChanges();
+    console.log('[PLAYOFFS] Changes detected:', changesDetected);
+
+    // If there are changes and we have a setId, check for subsequent data
+    if (changesDetected && setId) {
+      try {
+        const response = await predictionsAPI.hasSubsequentData(setId, 'playoffs');
+        const { hasGroups, hasThirds, hasKnockout } = response.data;
+        console.log('[PLAYOFFS] Subsequent data:', { hasGroups, hasThirds, hasKnockout });
+
+        if (hasGroups || hasThirds || hasKnockout) {
+          // Show warning modal
+          setSubsequentData({ hasGroups, hasThirds, hasKnockout });
+          setShowResetWarning(true);
+          return;
+        }
+      } catch (err) {
+        console.error('[PLAYOFFS] Error checking subsequent data:', err);
+        // Continue anyway if check fails
+      }
+    }
+
+    // No changes or no subsequent data - proceed normally
+    await saveAndNavigate();
+  };
+
+  const saveAndNavigate = async (resetFirst = false) => {
     setSaving(true);
     setError(null);
+    setShowResetWarning(false);
 
     // Guardar en localStorage primero
     localStorage.setItem('natalia_playoffs', JSON.stringify(selections));
@@ -108,14 +180,19 @@ export default function Playoffs() {
     const groupsPage = predictionMode === 'scores' ? '/grupos-marcadores' : '/grupos';
     const nextUrl = setId ? `${groupsPage}?setId=${setId}` : groupsPage;
 
-    console.log('[PLAYOFFS] handleContinue called');
-    console.log('[PLAYOFFS] setId:', setId);
-    console.log('[PLAYOFFS] predictionMode:', predictionMode);
-    console.log('[PLAYOFFS] selections:', selections);
-
     try {
+      // If we need to reset subsequent data first
+      if (resetFirst && setId) {
+        console.log('[PLAYOFFS] Resetting subsequent data...');
+        await predictionsAPI.resetFromPlayoffs(setId);
+      }
+
       const response = await predictionsAPI.savePlayoffs(selections, setId);
       console.log('[PLAYOFFS] savePlayoffs response:', response.data);
+
+      // Update snapshot to current state after successful save
+      originalSelectionsRef.current = JSON.parse(JSON.stringify(selections));
+
       setSaved(true);
       window.scrollTo(0, 0);
       navigate(nextUrl);
@@ -129,6 +206,14 @@ export default function Playoffs() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleConfirmReset = () => {
+    saveAndNavigate(true);
+  };
+
+  const handleCancelReset = () => {
+    setShowResetWarning(false);
   };
 
   const getTeamById = (playoff, teamId) => {
@@ -220,6 +305,32 @@ export default function Playoffs() {
       <div className="flex justify-end mt-8 pt-6 border-t">
         <NextButton size="lg" />
       </div>
+
+      {/* Reset Warning Modal */}
+      <Dialog open={showResetWarning} onOpenChange={setShowResetWarning}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cambios detectados</DialogTitle>
+            <DialogDescription>
+              Has modificado las selecciones de repechajes. Esto afectará las siguientes fases que ya tienes completadas:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                {subsequentData.hasGroups && <li>Predicciones de grupos</li>}
+                {subsequentData.hasThirds && <li>Selección de terceros lugares</li>}
+                {subsequentData.hasKnockout && <li>Predicciones de eliminatorias</li>}
+              </ul>
+              <p className="mt-3 font-medium">Si continúas, estas selecciones serán borradas y tendrás que completarlas de nuevo.</p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={handleCancelReset}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmReset} disabled={saving}>
+              {saving ? 'Guardando...' : 'Continuar y borrar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

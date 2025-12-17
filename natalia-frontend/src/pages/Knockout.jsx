@@ -43,6 +43,7 @@ export default function Knockout() {
   const [activeRound, setActiveRound] = useState('r32');
   const [predictionSetName, setPredictionSetName] = useState('');
   const [predictionMode, setPredictionMode] = useState('positions');
+  const [loading, setLoading] = useState(true); // Loading state para evitar flash de "debes completar"
   const scrollContainerRef = useRef(null);
   const isScrolling = useRef(false);
 
@@ -118,6 +119,8 @@ export default function Knockout() {
           // Si no hay datos, empezar en blanco
         } catch (err) {
           console.error('Error loading data:', err);
+        } finally {
+          setLoading(false);
         }
       } else {
         // Sin setId: comportamiento legacy con localStorage
@@ -140,6 +143,7 @@ export default function Knockout() {
         if (savedKnockout) {
           setKnockoutPredictions(JSON.parse(savedKnockout));
         }
+        setLoading(false);
       }
     };
     loadData();
@@ -503,6 +507,18 @@ export default function Knockout() {
   const totalComplete = r32Complete + r16Complete + qfComplete + sfComplete + thirdPlaceComplete + finalComplete;
   const totalMatches = 16 + 8 + 4 + 2 + 1 + 1; // 32
   const isComplete = totalComplete === totalMatches;
+
+  // Show loading spinner while data is loading
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[50vh]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-muted-foreground">Cargando datos...</p>
+        </div>
+      </div>
+    );
+  }
 
   // Check if predictions are missing
   const missingPredictions = Object.keys(predictions).length === 0;

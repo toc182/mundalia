@@ -10,6 +10,13 @@ import MatchScoreRow from './MatchScoreRow';
 import GroupStandingsTable from './GroupStandingsTable';
 import { GROUP_MATCH_STRUCTURE, getMatchTeams } from '../data/groupMatches';
 
+// Calculate tabIndex base for a group (A=0, B=1, ... L=11)
+// Each group has 6 matches × 2 inputs = 12 inputs
+const getGroupTabOffset = (groupLetter) => {
+  const groupIndex = groupLetter.charCodeAt(0) - 'A'.charCodeAt(0);
+  return groupIndex * 12 + 1; // Start at 1, not 0
+};
+
 export default function GroupScoreInput({
   group,
   teams,
@@ -23,6 +30,8 @@ export default function GroupScoreInput({
   onReset,
   disabled = false,
 }) {
+  // Base tabIndex for this group's inputs
+  const groupTabOffset = getGroupTabOffset(group);
   // Group matches by match day
   const matchesByDay = {
     1: GROUP_MATCH_STRUCTURE.filter(m => m.matchDay === 1),
@@ -80,6 +89,9 @@ export default function GroupScoreInput({
               {matchesByDay[day].map(match => {
                 const { teamA, teamB } = getMatchTeams(teams, match.matchNumber);
                 const score = scores?.[match.matchNumber] || {};
+                // Calculate tabIndex: groupOffset + (matchNumber-1)*2
+                // Each match uses 2 tab indices (scoreA, scoreB)
+                const tabIndexBase = groupTabOffset + (match.matchNumber - 1) * 2;
 
                 return (
                   <MatchScoreRow
@@ -90,6 +102,7 @@ export default function GroupScoreInput({
                     scoreB={score.b}
                     onChange={(a, b) => onScoreChange(match.matchNumber, a, b)}
                     disabled={disabled}
+                    tabIndexBase={tabIndexBase}
                   />
                 );
               })}

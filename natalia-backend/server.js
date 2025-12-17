@@ -56,6 +56,99 @@ const runMigrations = async () => {
     `);
     console.log('[MIGRATIONS] ✓ knockout_predictions.score_a, score_b');
 
+    // Migration 005: Add google_id column to users for Google OAuth
+    await db.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) DEFAULT NULL
+    `);
+    await db.query(`
+      ALTER TABLE users
+      ALTER COLUMN password DROP NOT NULL
+    `).catch(() => {
+      // Ignore error if column is already nullable
+    });
+    console.log('[MIGRATIONS] ✓ users.google_id');
+
+    // Migration 006: Add country and birth_date to users
+    await db.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS country VARCHAR(100) DEFAULT NULL
+    `);
+    await db.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS birth_date DATE DEFAULT NULL
+    `);
+    console.log('[MIGRATIONS] ✓ users.country, birth_date');
+
+    // Migration 007: Add unique username to users
+    await db.query(`
+      ALTER TABLE users
+      ADD COLUMN IF NOT EXISTS username VARCHAR(30) DEFAULT NULL
+    `);
+    // Create unique index (allows multiple NULLs but no duplicate values)
+    await db.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS users_username_unique
+      ON users(username) WHERE username IS NOT NULL
+    `);
+    console.log('[MIGRATIONS] ✓ users.username');
+
+    // Migration 008: Create real_playoff_results table
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS real_playoff_results (
+        id SERIAL PRIMARY KEY,
+        playoff_id VARCHAR(20) NOT NULL UNIQUE,
+        winner_team_id INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('[MIGRATIONS] ✓ real_playoff_results table');
+
+    // Migration 009: Create real_group_standings table
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS real_group_standings (
+        id SERIAL PRIMARY KEY,
+        group_letter VARCHAR(1) NOT NULL,
+        team_id INTEGER NOT NULL,
+        final_position INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(group_letter, team_id),
+        UNIQUE(group_letter, final_position)
+      )
+    `);
+    console.log('[MIGRATIONS] ✓ real_group_standings table');
+
+    // Migration 010: Create real_knockout_results table
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS real_knockout_results (
+        id SERIAL PRIMARY KEY,
+        match_key VARCHAR(20) NOT NULL UNIQUE,
+        winner_team_id INTEGER NOT NULL,
+        score_a INTEGER,
+        score_b INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+    console.log('[MIGRATIONS] ✓ real_knockout_results table');
+
+    // Migration 011: Create real_group_matches table (actual match scores)
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS real_group_matches (
+        id SERIAL PRIMARY KEY,
+        group_letter VARCHAR(1) NOT NULL,
+        match_index INTEGER NOT NULL,
+        team_a_id INTEGER NOT NULL,
+        team_b_id INTEGER NOT NULL,
+        score_a INTEGER,
+        score_b INTEGER,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(group_letter, match_index)
+      )
+    `);
+    console.log('[MIGRATIONS] ✓ real_group_matches table');
+
     console.log('[MIGRATIONS] All migrations completed successfully!');
   } catch (err) {
     console.error('[MIGRATIONS] Error running migrations:', err.message);
@@ -93,6 +186,7 @@ app.use('/api/predictions', require('./routes/predictions'));
 app.use('/api/prediction-sets', require('./routes/predictionSets'));
 app.use('/api/groups', require('./routes/groups'));
 app.use('/api/leaderboard', require('./routes/leaderboard'));
+app.use('/api/admin', require('./routes/admin'));
 
 // Health check
 app.get('/api/health', (req, res) => {

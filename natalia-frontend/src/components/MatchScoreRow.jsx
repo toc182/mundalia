@@ -1,9 +1,20 @@
 /**
  * Row component for entering a single match score
  * Shows: [Flag] Team A Name [__] - [__] Team B Name [Flag]
+ *
+ * tabIndexBase: optional base tabIndex for keyboard navigation
+ * - If provided, scoreA gets tabIndexBase, scoreB gets tabIndexBase + 1
  */
 
-export default function MatchScoreRow({ teamA, teamB, scoreA, scoreB, onChange, disabled = false }) {
+export default function MatchScoreRow({
+  teamA,
+  teamB,
+  scoreA,
+  scoreB,
+  onChange,
+  disabled = false,
+  tabIndexBase = null
+}) {
   const handleScoreChange = (side, value) => {
     // Remove any non-digit characters (prevents decimals, negatives, etc.)
     const cleaned = value.replace(/[^0-9]/g, '');
@@ -44,6 +55,7 @@ export default function MatchScoreRow({ teamA, teamB, scoreA, scoreB, onChange, 
           value={scoreA ?? ''}
           onChange={(e) => handleScoreChange('a', e.target.value)}
           disabled={disabled}
+          tabIndex={tabIndexBase !== null ? tabIndexBase : undefined}
           className="w-10 h-8 text-center border rounded text-lg font-bold
                      focus:outline-none focus:ring-2 focus:ring-primary
                      disabled:bg-muted disabled:cursor-not-allowed"
@@ -58,6 +70,7 @@ export default function MatchScoreRow({ teamA, teamB, scoreA, scoreB, onChange, 
           value={scoreB ?? ''}
           onChange={(e) => handleScoreChange('b', e.target.value)}
           disabled={disabled}
+          tabIndex={tabIndexBase !== null ? tabIndexBase + 1 : undefined}
           className="w-10 h-8 text-center border rounded text-lg font-bold
                      focus:outline-none focus:ring-2 focus:ring-primary
                      disabled:bg-muted disabled:cursor-not-allowed"

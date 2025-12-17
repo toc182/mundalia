@@ -88,21 +88,21 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow opacity-60">
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
             <CardTitle>Ver Ranking</CardTitle>
             <CardDescription>
-              Mira tu posicion en el leaderboard
+              Mira tu posición en el leaderboard
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button asChild variant="outline" className="w-full" size="lg" disabled>
-              <span>Proximamente</span>
+            <Button asChild variant="outline" className="w-full" size="lg">
+              <Link to="/ranking">Ver Ranking</Link>
             </Button>
           </CardContent>
         </Card>
 
-        <Card className="hover:shadow-lg transition-shadow opacity-60">
+        <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
             <CardTitle>Mis Grupos</CardTitle>
             <CardDescription>
@@ -110,8 +110,8 @@ export default function Home() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button asChild variant="outline" className="w-full" size="lg" disabled>
-              <span>Proximamente</span>
+            <Button asChild variant="outline" className="w-full" size="lg">
+              <Link to="/mis-grupos">Ver Grupos</Link>
             </Button>
           </CardContent>
         </Card>
@@ -193,9 +193,9 @@ export default function Home() {
                   className="mt-1"
                 />
                 <div>
-                  <div className="font-medium">Posiciones</div>
+                  <div className="font-medium">Escoger Ganadores</div>
                   <div className="text-sm text-muted-foreground">
-                    Arrastra equipos para ordenarlos en cada grupo
+                    Arrastra equipos para ordenar su posición final de grupo. Escoge ganadores de la fase de eliminación directa.
                   </div>
                 </div>
               </label>

@@ -1,6 +1,6 @@
 # SESSION.md - Estado Actual del Proyecto
 
-## Ultima Actualizacion: 2025-12-16
+## Ultima Actualizacion: 2025-12-17
 
 ---
 
@@ -195,12 +195,160 @@ ADD COLUMN IF NOT EXISTS score_b INTEGER DEFAULT NULL;
 - Ganador auto-seleccionado se resalta en verde
 - Cascada: cambiar score limpia partidos dependientes
 
-### Pendiente (Prioridad Media)
+### COMPLETADO: Leaderboard Global - 2025-12-17
+
+**Ranking funcional** con predicciones reales de usuarios.
+
+**Características:**
+- Dos tabs: "Escoger Ganadores" y "Marcadores Exactos" (separados por modo)
+- Solo muestra predicciones COMPLETAS (con final M104 predicha)
+- Cada prediction_set es una entrada individual (no agrupado por usuario)
+- Muestra: posición, bandera del país (imagen), username, nombre de predicción, puntos
+- Card inferior muestra tus predicciones en el ranking actual
+
+**Backend (`routes/leaderboard.js`):**
+- `GET /leaderboard?mode=positions|scores` - Lista predicciones completas por modo
+- `GET /leaderboard/counts` - Contadores por modo
+
+**Frontend (`pages/Leaderboard.jsx`):**
+- Tabs con contadores
+- Banderas usando flagcdn.com (Windows no soporta emoji flags)
+- Estado vacío con mensaje apropiado
+
+### COMPLETADO: Google OAuth Login - 2025-12-17
+
+**Login con Google** implementado.
+
+**Backend:**
+- Agregada columna `google_id` a users
+- Password ahora nullable (para usuarios que solo usan Google)
+- Endpoint `POST /auth/google` que verifica token con Google y crea/vincula usuario
+
+**Frontend:**
+- `@react-oauth/google` instalado
+- `GoogleOAuthProvider` en main.jsx
+- Botón de Google en Login.jsx y Register.jsx
+- `loginWithGoogle` en AuthContext
+
+**Variables de entorno:**
+- Backend: `GOOGLE_CLIENT_ID` en .env
+- Frontend: `VITE_GOOGLE_CLIENT_ID` en .env
+
+### COMPLETADO: Perfil de Usuario Mejorado - 2025-12-17
+
+**Nuevos campos en Account:**
+- **Username único** (3-20 caracteres, letras/números/_)
+  - Validación en tiempo real de disponibilidad
+  - Indicador visual (✓ verde disponible, ✗ rojo tomado)
+  - Se muestra en leaderboard
+- **País** (dropdown con ~195 países, ordenados alfabéticamente en español)
+  - Bandera se muestra en leaderboard
+- **Fecha de nacimiento** (date picker que abre al click)
+
+**Backend:**
+- Columna `username` con índice único
+- Columnas `country` y `birth_date`
+- Endpoint `GET /users/check-username/:username`
+- Migraciones automáticas en server.js
+
+### COMPLETADO: Renombrado de Modos - 2025-12-17
+
+- "Posiciones" → "Escoger Ganadores"
+- Descripción actualizada: "Arrastra equipos para ordenar su posición final de grupo. Escoge ganadores de la fase de eliminación directa."
+- Actualizado en: Home.jsx, MyPredictions.jsx, Leaderboard.jsx
+
+### COMPLETADO: Grupos Privados - 2025-12-17
+
+**Funcionalidad completa** de grupos privados para competir con amigos y familia.
+
+**Características:**
+- Crear grupo con nombre personalizado
+- Código de 6 caracteres para invitar amigos
+- Unirse a grupo con código
+- Ver ranking interno del grupo (lista de miembros)
+- Copiar código con feedback visual
+
+**Backend (`routes/groups.js`):**
+- `GET /groups` - Obtener grupos del usuario
+- `POST /groups` - Crear nuevo grupo
+- `POST /groups/join` - Unirse con código
+- `GET /groups/:id/leaderboard` - Ranking del grupo
+
+**Frontend (`pages/Groups.jsx`):**
+- Cards para cada grupo con nombre, creador, miembros
+- Botón de copiar código con icono Check verde
+- Modal para ver ranking del grupo
+- Diálogos para crear y unirse a grupos
+
+**Base de datos:**
+- `private_groups` - id, name, code, owner_id, created_at
+- `private_group_members` - group_id, user_id, joined_at
+
+**Habilitado en UI:**
+- Home.jsx - Card "Mis Grupos" activo con link
+- TopBar.jsx - Menu "Grupos" activo sin badge "Pronto"
+
+### COMPLETADO: Script de Seed para Desarrollo - 2025-12-17
+
+**Script:** `natalia-backend/seed-dev.js`
+
+Pobla la base de datos de desarrollo con datos de prueba:
+- 40 usuarios con nombres hispanos, usernames, países y fechas de nacimiento
+- ~76 prediction sets (70% completos)
+- 5 grupos privados con miembros aleatorios
+- Password para todos: `test123`
+- Emails: `nombre.apellido#@test.com`
+
+**Ejecutar:** `node seed-dev.js`
+
+### COMPLETADO: Mejoras UI Leaderboard - 2025-12-17
+
+**Tabla más compacta:**
+- Filas con menos padding (py-1.5 px-2)
+- Badges de posición más pequeños (24x24)
+- Nombre y predicción en una línea
+- Predicción oculta en móvil
+- Colores diferenciados: oro (1°), plata (2°), bronce (3°), slate claro (4+)
+
+**Sección "Tus posiciones":**
+- Cambiado a chips horizontales
+- Diseño más compacto
+
+### COMPLETADO: Panel Admin - 2025-12-17
+
+**Panel completo** para cargar resultados reales del mundial.
+
+**Secciones:**
+
+1. **Dashboard** - Estadísticas generales (usuarios, predicciones, progreso)
+
+2. **Repechajes** - Seleccionar ganador de cada playoff
+   - Click para marcar ganador
+   - Muestra equipos clasificados
+
+3. **Grupos** - Entrada de marcadores de fase de grupos
+   - Todos los grupos expandidos (sin collapse)
+   - Inputs de marcadores por partido
+   - Tabla de posiciones calculada automáticamente con reglas FIFA
+   - Modal de desempate para empates irresolubles
+   - Botón "Guardar Todo" (arriba y abajo)
+   - Progreso: X/72 partidos
+
+4. **Eliminatorias** - Bracket visual completo
+   - Muestra equipos basados en resultados de grupos
+   - Inputs de marcadores por partido
+   - Ganador automático según marcador
+   - Click para elegir ganador en empates (penales)
+   - Bracket con líneas conectoras SVG
+   - Campeón destacado con trofeo
+   - Progreso: X/32 partidos
+
+**Bug fix:** Corregido `score_a || null` → `score_a ?? null` en backend para que marcador 0 no se guarde como null.
+
+### Pendiente (Prioridad Baja)
 | Feature | Descripcion |
 |---------|-------------|
-| Leaderboard | Ranking global funcional con puntuaciones |
-| Grupos privados | Crear grupos, compartir codigo, ranking interno |
-| Panel admin | Cargar resultados reales de partidos |
+| Puntos en grupos privados | Mostrar desglose de puntos en ranking de grupos |
 
 ---
 
@@ -208,16 +356,17 @@ ADD COLUMN IF NOT EXISTS score_b INTEGER DEFAULT NULL;
 
 ### Fases Completadas
 - [x] Fase 1: Infraestructura API
-- [x] Fase 2: Autenticacion
+- [x] Fase 2: Autenticacion (incluye Google OAuth)
 - [x] Fase 3: Predicciones completas
 - [x] Fase 3.5-3.18: Mejoras UX y fixes
 - [x] Fase 3.19: Branding Mundalia + tema azul
+- [x] Fase 4: Leaderboard funcional
 - [x] Fase 6: Deploy produccion
 
 ### Fases Pendientes
-- [ ] Fase 4: Leaderboard funcional
-- [ ] Fase 5: Grupos privados
-- [ ] Fase 7: Panel admin
+- [x] Fase 5: Grupos privados (COMPLETADO 2025-12-17)
+- [x] Fase 7: Panel admin (COMPLETADO 2025-12-17)
+- [x] Fase 8: Cálculo de puntos (YA IMPLEMENTADO - se activa automáticamente con resultados reales)
 
 ---
 
@@ -366,25 +515,34 @@ Para agregar nuevas migraciones en el futuro:
 
 ---
 
-### Inconsistencia al Regresar a Fases Anteriores (Modo Posiciones)
-**Problema:** En el modo "Posiciones" (escoger ganadores sin marcadores), si el usuario:
-1. Completa todas las fases (Repechajes → Grupos → Terceros → Eliminatorias)
-2. Regresa a una fase anterior (ej: Grupos)
-3. Hace cambios que afectan fases futuras (ej: cambia quien queda 1ro/2do)
-4. Los picks de eliminatorias quedan inconsistentes - el equipo seleccionado como ganador ya no existe en ese partido
+### RESUELTO: Inconsistencia al Regresar a Fases Anteriores (2025-12-17)
 
-**Ejemplo:**
-- Usuario puso Argentina 1ro en Grupo A, avanza a R32, lo elige ganador de M73
-- Usuario regresa a Grupos, pone Argentina 2do (ahora va a otro partido)
-- M73 sigue mostrando Argentina como ganador pero Argentina ya no esta en ese partido
+**Problema original:** En el modo "Posiciones", si el usuario regresaba a una fase anterior y hacia cambios, los picks de eliminatorias quedaban inconsistentes.
 
-**Soluciones posibles:**
-1. **Detectar cambios y resetear:** Al guardar cambios en una fase, detectar si afectan fases futuras y resetear esas predicciones (como ya hacemos en modo Marcadores para el bracket)
-2. **Bloquear edicion:** Una vez completada una prediccion, no permitir editar fases anteriores
-3. **Warning modal:** Mostrar advertencia "Estos cambios afectaran tus picks de eliminatorias. Continuar?"
-4. **Validacion al finalizar:** Al intentar finalizar, validar que todos los picks son consistentes
+**Solucion implementada:** Sistema de deteccion de cambios con reset en cascada.
 
-**Archivos afectados:** Playoffs.jsx, Predictions.jsx, ThirdPlaces.jsx, Knockout.jsx
+**Backend - Nuevos endpoints:**
+- `GET /predictions/has-subsequent-data?setId=X&phase=Y` - Verifica si hay datos en fases siguientes
+- `DELETE /predictions/reset-from-playoffs?setId=X` - Borra grupos + terceros + knockout
+- `DELETE /predictions/reset-from-groups?setId=X` - Borra terceros + knockout
+- `DELETE /predictions/reset-from-thirds?setId=X` - Borra solo knockout
+
+**Frontend - Cambios en cada pagina:**
+- `Playoffs.jsx`: Guarda snapshot de selecciones al cargar, compara al guardar
+- `Predictions.jsx`: Guarda snapshot del orden de grupos al cargar, compara al guardar
+- `ThirdPlaces.jsx`: Guarda snapshot de terceros seleccionados al cargar, compara al guardar
+
+**Flujo de usuario:**
+1. Usuario hace cambios en una fase anterior
+2. Al hacer click en "Siguiente", se compara con snapshot original
+3. Si hay cambios reales Y existen datos en fases siguientes → Modal de advertencia
+4. Modal lista las fases que seran borradas
+5. Usuario puede "Cancelar" o "Continuar y borrar"
+6. Si confirma, se borran las fases afectadas y se guardan los cambios
+
+**Deteccion inteligente:**
+- Solo compara lo que afecta downstream (ej: en playoffs solo compara el `final`)
+- Si usuario cambia algo y luego lo vuelve a dejar igual, no detecta cambios
 
 ---
 
@@ -416,18 +574,30 @@ Cada cambio de estado recreaba estos componentes como nuevas funciones, causando
 ## RESUMEN: Tareas Pendientes
 
 ### Prioridad Alta (UX)
-| Tarea | Descripcion | Archivos |
-|-------|-------------|----------|
-| Inconsistencia modo Posiciones | Al regresar a fases anteriores y hacer cambios, los picks de eliminatorias quedan invalidos | Playoffs.jsx, Predictions.jsx, ThirdPlaces.jsx, Knockout.jsx |
+*Ninguna pendiente* - Todas las tareas de alta prioridad han sido completadas.
 
 ### Prioridad Media (Features)
-| Feature | Descripcion |
-|---------|-------------|
-| Leaderboard | Ranking global funcional con puntuaciones reales |
-| Grupos privados | Crear grupos, compartir codigo de invitacion, ranking interno |
-| Panel admin | Cargar resultados reales de partidos jugados |
+*Ninguna pendiente* - El sistema está 100% funcional.
 
 ### Prioridad Baja (Nice to have)
-| Mejora | Descripcion |
-|--------|-------------|
-| Tab navigation mejorada | Tab entre inputs de score (actualmente funciona pero podria ser mas fluido) |
+| Feature | Descripcion |
+|---------|-------------|
+| Puntos en grupos privados | Mostrar desglose de puntos en ranking de grupos |
+
+---
+
+## Tareas Completadas Recientemente
+
+| Fecha | Tarea | Descripcion |
+|-------|-------|-------------|
+| 2025-12-17 | Panel Admin completo | Dashboard, grupos con FIFA tiebreaker, knockout bracket visual |
+| 2025-12-17 | UI Leaderboard compacta | Tabla más densa, colores diferenciados, chips horizontales |
+| 2025-12-17 | Script seed-dev.js | 40 usuarios, 76 predicciones, 5 grupos de prueba |
+| 2025-12-17 | Grupos privados | Crear grupos, compartir código, ranking interno |
+| 2025-12-17 | Leaderboard funcional | Rankings separados por modo, predicciones completas, banderas, usernames |
+| 2025-12-17 | Google OAuth | Login con Google implementado |
+| 2025-12-17 | Perfil mejorado | Username único, país con bandera, fecha de nacimiento |
+| 2025-12-17 | Renombrado modos | "Posiciones" → "Escoger Ganadores" |
+| 2025-12-17 | Tab navigation mejorada | tabIndex calculado en inputs de marcadores |
+| 2025-12-17 | Reset en cascada | Al cambiar fases anteriores, resetea fases afectadas |
+| 2025-12-16 | Fix input focus loss | Refactorizacion de Knockout.jsx |

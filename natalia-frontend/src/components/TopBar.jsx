@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Menu, User, X, Plus, List, Trophy, Users, LogOut, UserCircle, Home } from 'lucide-react';
+import { Menu, User, X, Plus, List, Trophy, Users, LogOut, UserCircle, Home, Shield } from 'lucide-react';
 
 // Logo component - solo texto estilizado
 const MundaliaLogo = () => (
@@ -125,20 +125,29 @@ export default function TopBar() {
               </button>
               <button
                 onClick={() => handleNavigation('/ranking')}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted rounded-lg text-left opacity-50"
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted rounded-lg text-left"
               >
                 <Trophy className="h-5 w-5" />
                 Ranking
-                <span className="text-xs text-muted-foreground ml-auto">Pronto</span>
               </button>
               <button
                 onClick={() => handleNavigation('/mis-grupos')}
-                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted rounded-lg text-left opacity-50"
+                className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted rounded-lg text-left"
               >
                 <Users className="h-5 w-5" />
                 Grupos
-                <span className="text-xs text-muted-foreground ml-auto">Pronto</span>
               </button>
+
+              {/* Admin link - solo visible para admins */}
+              {user.role === 'admin' && (
+                <button
+                  onClick={() => handleNavigation('/admin')}
+                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted rounded-lg text-left text-amber-600 dark:text-amber-400"
+                >
+                  <Shield className="h-5 w-5" />
+                  Admin
+                </button>
+              )}
             </div>
           </nav>
         </>

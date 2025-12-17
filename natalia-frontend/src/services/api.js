@@ -51,11 +51,17 @@ export const authAPI = {
   register: (name, email, password) =>
     api.post('/auth/register', { name, email, password }),
 
+  googleLogin: (credential) =>
+    api.post('/auth/google', { credential }),
+
   getMe: () =>
     api.get('/users/me'),
 
-  updateProfile: (name) =>
-    api.put('/users/me', { name }),
+  updateProfile: (data) =>
+    api.put('/users/me', data),
+
+  checkUsername: (username) =>
+    api.get(`/users/check-username/${username}`),
 };
 
 // ============ TEAMS ============
@@ -150,6 +156,20 @@ export const predictionsAPI = {
 
   saveTiebreaker: (data) =>
     api.post('/predictions/tiebreaker', data),
+
+  // Check if subsequent phases have data (for cascade reset warning)
+  hasSubsequentData: (setId, phase) =>
+    api.get('/predictions/has-subsequent-data', { params: { setId, phase } }),
+
+  // Reset endpoints (cascade delete)
+  resetFromPlayoffs: (setId) =>
+    api.delete('/predictions/reset-from-playoffs', { params: { setId } }),
+
+  resetFromGroups: (setId) =>
+    api.delete('/predictions/reset-from-groups', { params: { setId } }),
+
+  resetFromThirds: (setId) =>
+    api.delete('/predictions/reset-from-thirds', { params: { setId } }),
 };
 
 // ============ GROUPS (PRIVADOS) ============
@@ -171,8 +191,50 @@ export const groupsAPI = {
 // ============ LEADERBOARD ============
 
 export const leaderboardAPI = {
-  getGlobal: () =>
-    api.get('/leaderboard'),
+  getGlobal: (mode = 'positions') =>
+    api.get('/leaderboard', { params: { mode } }),
+
+  getCounts: () =>
+    api.get('/leaderboard/counts'),
+};
+
+// ============ ADMIN ============
+
+export const adminAPI = {
+  // Stats
+  getStats: () =>
+    api.get('/admin/stats'),
+
+  // Playoffs
+  getPlayoffs: () =>
+    api.get('/admin/playoffs'),
+
+  savePlayoff: (playoff_id, winner_team_id) =>
+    api.post('/admin/playoffs', { playoff_id, winner_team_id }),
+
+  deletePlayoff: (playoffId) =>
+    api.delete(`/admin/playoffs/${playoffId}`),
+
+  // Groups (matches with scores)
+  getGroupMatches: () =>
+    api.get('/admin/groups'),
+
+  saveGroupMatches: (group_letter, matches) =>
+    api.post('/admin/groups', { group_letter, matches }),
+
+  // Group standings (read-only, calculated from matches)
+  getGroupStandings: () =>
+    api.get('/admin/groups/standings'),
+
+  // Knockout
+  getKnockout: () =>
+    api.get('/admin/knockout'),
+
+  saveKnockout: (match_key, winner_team_id, score_a, score_b) =>
+    api.post('/admin/knockout', { match_key, winner_team_id, score_a, score_b }),
+
+  deleteKnockout: (matchKey) =>
+    api.delete(`/admin/knockout/${matchKey}`),
 };
 
 export default api;

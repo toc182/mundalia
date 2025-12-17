@@ -14,6 +14,7 @@ import Groups from '@/pages/Groups';
 import MyPredictions from '@/pages/MyPredictions';
 import PredictionDetail from '@/pages/PredictionDetail';
 import Account from '@/pages/Account';
+import Admin from '@/pages/Admin';
 
 // Componente para rutas protegidas
 function ProtectedRoute({ children }) {
@@ -72,6 +73,7 @@ function AppRoutes() {
       <Route path="/prediccion/:id" element={<ProtectedRoute><PredictionDetail /></ProtectedRoute>} />
       <Route path="/mis-grupos" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
       <Route path="/cuenta" element={<ProtectedRoute><Account /></ProtectedRoute>} />
+      <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
     </Routes>
   );
 }

@@ -68,6 +68,28 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const loginWithGoogle = async (credential) => {
+    setError(null);
+    console.log('[AUTH] Google login attempt');
+    try {
+      const response = await authAPI.googleLogin(credential);
+      console.log('[AUTH] Google login response:', response.data);
+      const { token, user } = response.data;
+
+      localStorage.setItem('natalia_token', token);
+      localStorage.setItem('natalia_user', JSON.stringify(user));
+      setUser(user);
+      console.log('[AUTH] Google login success, user set:', user);
+
+      return { success: true };
+    } catch (err) {
+      console.error('[AUTH] Google login error:', err);
+      const message = err.response?.data?.error || 'Error al iniciar sesion con Google';
+      setError(message);
+      return { success: false, error: message };
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('natalia_token');
     localStorage.removeItem('natalia_user');
@@ -85,6 +107,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       user,
       login,
+      loginWithGoogle,
       register,
       logout,
       updateUser,

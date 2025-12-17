@@ -492,6 +492,110 @@ router.post('/tiebreaker', auth, async (req, res) => {
   }
 });
 
+// ============ RESET ENDPOINTS (for cascade changes) ============
+
+// Check if subsequent phases have data (for showing warning modal)
+router.get('/has-subsequent-data', auth, async (req, res) => {
+  try {
+    const setId = req.query.setId;
+    const phase = req.query.phase; // 'playoffs', 'groups', 'thirds'
+
+    if (!setId) {
+      return res.status(400).json({ error: 'setId is required' });
+    }
+
+    let hasGroups = false;
+    let hasThirds = false;
+    let hasKnockout = false;
+
+    if (phase === 'playoffs' || phase === 'groups' || phase === 'thirds') {
+      // Check knockout
+      const knockoutResult = await db.query(
+        'SELECT COUNT(*) as count FROM knockout_predictions WHERE user_id = $1 AND prediction_set_id = $2',
+        [req.user.id, setId]
+      );
+      hasKnockout = parseInt(knockoutResult.rows[0].count) > 0;
+    }
+
+    if (phase === 'playoffs' || phase === 'groups') {
+      // Check third places
+      const thirdsResult = await db.query(
+        'SELECT COUNT(*) as count FROM third_place_predictions WHERE user_id = $1 AND prediction_set_id = $2',
+        [req.user.id, setId]
+      );
+      hasThirds = parseInt(thirdsResult.rows[0].count) > 0;
+    }
+
+    if (phase === 'playoffs') {
+      // Check groups
+      const groupsResult = await db.query(
+        'SELECT COUNT(*) as count FROM group_predictions WHERE user_id = $1 AND prediction_set_id = $2',
+        [req.user.id, setId]
+      );
+      hasGroups = parseInt(groupsResult.rows[0].count) > 0;
+    }
+
+    res.json({ hasGroups, hasThirds, hasKnockout });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Reset from playoffs: delete groups + thirds + knockout
+router.delete('/reset-from-playoffs', auth, async (req, res) => {
+  try {
+    const setId = req.query.setId;
+    if (!setId) {
+      return res.status(400).json({ error: 'setId is required' });
+    }
+
+    await db.query('DELETE FROM knockout_predictions WHERE user_id = $1 AND prediction_set_id = $2', [req.user.id, setId]);
+    await db.query('DELETE FROM third_place_predictions WHERE user_id = $1 AND prediction_set_id = $2', [req.user.id, setId]);
+    await db.query('DELETE FROM group_predictions WHERE user_id = $1 AND prediction_set_id = $2', [req.user.id, setId]);
+
+    res.json({ message: 'Reset from playoffs successful' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Reset from groups: delete thirds + knockout
+router.delete('/reset-from-groups', auth, async (req, res) => {
+  try {
+    const setId = req.query.setId;
+    if (!setId) {
+      return res.status(400).json({ error: 'setId is required' });
+    }
+
+    await db.query('DELETE FROM knockout_predictions WHERE user_id = $1 AND prediction_set_id = $2', [req.user.id, setId]);
+    await db.query('DELETE FROM third_place_predictions WHERE user_id = $1 AND prediction_set_id = $2', [req.user.id, setId]);
+
+    res.json({ message: 'Reset from groups successful' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Reset from thirds: delete knockout only
+router.delete('/reset-from-thirds', auth, async (req, res) => {
+  try {
+    const setId = req.query.setId;
+    if (!setId) {
+      return res.status(400).json({ error: 'setId is required' });
+    }
+
+    await db.query('DELETE FROM knockout_predictions WHERE user_id = $1 AND prediction_set_id = $2', [req.user.id, setId]);
+
+    res.json({ message: 'Reset from thirds successful' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 // ============ ALL PREDICTIONS (for MyPredictions page) ============
 
 // Get all user's predictions in one call

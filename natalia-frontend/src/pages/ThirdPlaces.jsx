@@ -1,9 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { mockTeams, getAllGroups } from '@/data/mockData';
 import { playoffs } from '@/data/playoffsData';
@@ -31,6 +39,20 @@ export default function ThirdPlaces() {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Snapshot for change detection
+  const originalThirdPlacesRef = useRef(null);
+  const [showResetWarning, setShowResetWarning] = useState(false);
+  const [hasKnockoutData, setHasKnockoutData] = useState(false);
+
+  // Compare current selections with original to detect real changes
+  const hasRealChanges = () => {
+    if (!originalThirdPlacesRef.current) return false;
+    const original = [...originalThirdPlacesRef.current].sort().join('');
+    const current = [...bestThirdPlaces].sort().join('');
+    return original !== current;
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -61,10 +83,17 @@ export default function ThirdPlaces() {
           if (thirdResponse.data?.selectedGroups) {
             const groups = thirdResponse.data.selectedGroups.split('');
             setBestThirdPlaces(groups);
+            // Save snapshot of original selections
+            originalThirdPlacesRef.current = [...groups];
+          } else {
+            originalThirdPlacesRef.current = [];
           }
           // Si no hay datos, empezar en blanco
         } catch (err) {
           console.error('Error loading data:', err);
+          originalThirdPlacesRef.current = [];
+        } finally {
+          setLoading(false);
         }
       } else {
         // Sin setId: comportamiento legacy con localStorage
@@ -80,8 +109,13 @@ export default function ThirdPlaces() {
 
         const savedThirdPlaces = localStorage.getItem('natalia_best_third_places');
         if (savedThirdPlaces) {
-          setBestThirdPlaces(JSON.parse(savedThirdPlaces));
+          const parsed = JSON.parse(savedThirdPlaces);
+          setBestThirdPlaces(parsed);
+          originalThirdPlacesRef.current = [...parsed];
+        } else {
+          originalThirdPlacesRef.current = [];
         }
+        setLoading(false);
       }
     };
     loadData();
@@ -146,8 +180,39 @@ export default function ThirdPlaces() {
   const isComplete = bestThirdPlaces.length === 8 && thirdPlaceCombination;
 
   const handleFinish = async () => {
+    console.log('[THIRDS] handleFinish called');
+
+    // Check if there are real changes
+    const changesDetected = hasRealChanges();
+    console.log('[THIRDS] Changes detected:', changesDetected);
+
+    // If there are changes and we have a setId, check for subsequent data
+    if (changesDetected && setId) {
+      try {
+        const response = await predictionsAPI.hasSubsequentData(setId, 'thirds');
+        const { hasKnockout } = response.data;
+        console.log('[THIRDS] Subsequent data:', { hasKnockout });
+
+        if (hasKnockout) {
+          // Show warning modal
+          setHasKnockoutData(true);
+          setShowResetWarning(true);
+          return;
+        }
+      } catch (err) {
+        console.error('[THIRDS] Error checking subsequent data:', err);
+        // Continue anyway if check fails
+      }
+    }
+
+    // No changes or no subsequent data - proceed normally
+    await saveAndNavigate();
+  };
+
+  const saveAndNavigate = async (resetFirst = false) => {
     setSaving(true);
     setError(null);
+    setShowResetWarning(false);
 
     // Guardar en localStorage primero
     localStorage.setItem('natalia_best_third_places', JSON.stringify(bestThirdPlaces));
@@ -155,9 +220,19 @@ export default function ThirdPlaces() {
     const nextUrl = setId ? `/eliminatorias?setId=${setId}` : '/eliminatorias';
 
     try {
+      // If we need to reset subsequent data first
+      if (resetFirst && setId) {
+        console.log('[THIRDS] Resetting knockout data...');
+        await predictionsAPI.resetFromThirds(setId);
+      }
+
       // Convertir array a string: ['A','B','C'] -> 'ABC'
       const selectedGroups = bestThirdPlaces.sort().join('');
       await predictionsAPI.saveThirdPlaces(selectedGroups, setId);
+
+      // Update snapshot to current state after successful save
+      originalThirdPlacesRef.current = [...bestThirdPlaces];
+
       setSaved(true);
       window.scrollTo(0, 0);
       navigate(nextUrl);
@@ -170,6 +245,14 @@ export default function ThirdPlaces() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleConfirmReset = () => {
+    saveAndNavigate(true);
+  };
+
+  const handleCancelReset = () => {
+    setShowResetWarning(false);
   };
 
   const handleBack = () => {
@@ -191,6 +274,18 @@ export default function ThirdPlaces() {
       <ChevronRight className="ml-1 h-4 w-4" />
     </Button>
   );
+
+  // Show loading spinner while data is loading
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[50vh]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-muted-foreground">Cargando datos...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -289,6 +384,27 @@ export default function ThirdPlaces() {
         <BackButton size="lg" />
         <NextButton size="lg" />
       </div>
+
+      {/* Reset Warning Modal */}
+      <Dialog open={showResetWarning} onOpenChange={setShowResetWarning}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cambios detectados</DialogTitle>
+            <DialogDescription>
+              Has modificado la selección de terceros lugares. Esto afectará las predicciones de eliminatorias que ya tienes completadas.
+              <p className="mt-3 font-medium">Si continúas, las predicciones de eliminatorias serán borradas y tendrás que completarlas de nuevo.</p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={handleCancelReset}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmReset} disabled={saving}>
+              {saving ? 'Guardando...' : 'Continuar y borrar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

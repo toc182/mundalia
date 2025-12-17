@@ -84,6 +84,108 @@ router.post('/join', auth, async (req, res) => {
   }
 });
 
+// Points system (same as leaderboard.js)
+const POINTS = {
+  GROUP_EXACT_POSITION: 3,
+  GROUP_QUALIFIER: 1,
+  ROUND_OF_32: 1,
+  ROUND_OF_16: 2,
+  QUARTERFINAL: 4,
+  SEMIFINAL: 6,
+  FINALIST: 8,
+  CHAMPION: 15,
+};
+
+function getMatchPoints(matchKey) {
+  const matchNum = parseInt(matchKey.replace('M', ''));
+  if (matchNum >= 73 && matchNum <= 88) return POINTS.ROUND_OF_32;
+  if (matchNum >= 89 && matchNum <= 96) return POINTS.ROUND_OF_16;
+  if (matchNum >= 97 && matchNum <= 100) return POINTS.QUARTERFINAL;
+  if (matchNum >= 101 && matchNum <= 102) return POINTS.SEMIFINAL;
+  if (matchNum === 103) return POINTS.FINALIST;
+  if (matchNum === 104) return POINTS.CHAMPION;
+  return 0;
+}
+
+// Calculate best score for a user (across all their prediction sets)
+async function calculateUserBestScore(userId) {
+  // Get all complete prediction sets for user
+  const predSets = await db.query(`
+    SELECT ps.id FROM prediction_sets ps
+    WHERE ps.user_id = $1
+      AND EXISTS (
+        SELECT 1 FROM knockout_predictions kp
+        WHERE kp.prediction_set_id = ps.id
+          AND kp.match_key = 'M104'
+          AND kp.winner_team_id IS NOT NULL
+      )
+  `, [userId]);
+
+  if (predSets.rows.length === 0) return 0;
+
+  // Get real results once
+  const [realGroupStandings, realKnockout] = await Promise.all([
+    db.query('SELECT * FROM real_group_standings'),
+    db.query('SELECT * FROM real_knockout_results')
+  ]);
+
+  const realGroupMap = {};
+  realGroupStandings.rows.forEach(row => {
+    if (!realGroupMap[row.group_letter]) realGroupMap[row.group_letter] = {};
+    realGroupMap[row.group_letter][row.team_id] = row.final_position;
+  });
+
+  const realKnockoutMap = {};
+  realKnockout.rows.forEach(row => {
+    realKnockoutMap[row.match_key] = row.winner_team_id;
+  });
+
+  let bestScore = 0;
+
+  for (const ps of predSets.rows) {
+    let score = 0;
+
+    // Score group predictions
+    const groupPreds = await db.query(
+      'SELECT * FROM group_predictions WHERE prediction_set_id = $1',
+      [ps.id]
+    );
+
+    groupPreds.rows.forEach(pred => {
+      const realPositions = realGroupMap[pred.group_letter];
+      if (!realPositions) return;
+
+      const realPosition = realPositions[pred.team_id];
+      if (realPosition === undefined) return;
+
+      if (pred.predicted_position === realPosition) {
+        score += POINTS.GROUP_EXACT_POSITION;
+      } else if (pred.predicted_position <= 2 && realPosition <= 2) {
+        score += POINTS.GROUP_QUALIFIER;
+      }
+    });
+
+    // Score knockout predictions
+    const knockoutPreds = await db.query(
+      'SELECT * FROM knockout_predictions WHERE prediction_set_id = $1',
+      [ps.id]
+    );
+
+    knockoutPreds.rows.forEach(pred => {
+      const realWinner = realKnockoutMap[pred.match_key];
+      if (realWinner === undefined) return;
+
+      if (pred.winner_team_id === realWinner) {
+        score += getMatchPoints(pred.match_key);
+      }
+    });
+
+    if (score > bestScore) bestScore = score;
+  }
+
+  return bestScore;
+}
+
 // Get group leaderboard
 router.get('/:id/leaderboard', auth, async (req, res) => {
   try {
@@ -97,18 +199,28 @@ router.get('/:id/leaderboard', auth, async (req, res) => {
       return res.status(403).json({ error: 'Not a member of this group' });
     }
 
-    const result = await db.query(`
-      SELECT u.id, u.name, COALESCE(s.total_points, 0) as total_points
+    // Get group members
+    const members = await db.query(`
+      SELECT u.id, u.name, u.username
       FROM private_group_members pgm
       JOIN users u ON pgm.user_id = u.id
-      LEFT JOIN user_scores s ON u.id = s.user_id
       WHERE pgm.group_id = $1
-      ORDER BY total_points DESC, u.name
     `, [req.params.id]);
 
-    res.json(result.rows);
+    // Calculate points for each member
+    const leaderboard = await Promise.all(
+      members.rows.map(async (member) => {
+        const total_points = await calculateUserBestScore(member.id);
+        return { ...member, total_points };
+      })
+    );
+
+    // Sort by points descending
+    leaderboard.sort((a, b) => b.total_points - a.total_points);
+
+    res.json(leaderboard);
   } catch (err) {
-    console.error(err);
+    console.error('Group leaderboard error:', err);
     res.status(500).json({ error: 'Server error' });
   }
 });

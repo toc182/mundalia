@@ -3,6 +3,14 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { mockTeams, getAllGroups } from '@/data/mockData';
 import { playoffs } from '@/data/playoffsData';
@@ -28,6 +36,12 @@ export default function Predictions() {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Snapshot for change detection
+  const originalPredictionsRef = useRef(null);
+  const [showResetWarning, setShowResetWarning] = useState(false);
+  const [subsequentData, setSubsequentData] = useState({ hasThirds: false, hasKnockout: false });
 
   // Helper para inicializar todos los grupos con orden por defecto
   const getDefaultPredictions = () => {
@@ -38,6 +52,28 @@ export default function Predictions() {
         .map(t => t.id);
     });
     return initial;
+  };
+
+  // Compare current predictions with original to detect real changes
+  const hasRealChanges = () => {
+    if (!originalPredictionsRef.current) return false;
+    const original = originalPredictionsRef.current;
+    const current = predictions;
+
+    // Compare each group's team order
+    for (const group of getAllGroups()) {
+      const origOrder = original[group] || [];
+      const currOrder = current[group] || [];
+
+      if (origOrder.length !== currOrder.length) return true;
+
+      for (let i = 0; i < origOrder.length; i++) {
+        if (origOrder[i] !== currOrder[i]) {
+          return true;
+        }
+      }
+    }
+    return false;
   };
 
   useEffect(() => {
@@ -58,14 +94,20 @@ export default function Predictions() {
               grouped[gp.group_letter][gp.predicted_position - 1] = gp.team_id;
             });
             setPredictions(grouped);
+            // Save snapshot of original predictions
+            originalPredictionsRef.current = JSON.parse(JSON.stringify(grouped));
           } else {
             // Si no hay datos guardados, inicializar con orden por defecto
-            setPredictions(getDefaultPredictions());
+            const defaults = getDefaultPredictions();
+            setPredictions(defaults);
+            originalPredictionsRef.current = JSON.parse(JSON.stringify(defaults));
           }
         } catch (err) {
           console.error('Error loading predictions:', err);
           // En caso de error, inicializar con orden por defecto
-          setPredictions(getDefaultPredictions());
+          const defaults = getDefaultPredictions();
+          setPredictions(defaults);
+          originalPredictionsRef.current = JSON.parse(JSON.stringify(defaults));
         }
 
         // También cargar playoffs del servidor para este set
@@ -77,13 +119,18 @@ export default function Predictions() {
         } catch (err) {
           console.error('Error loading playoffs:', err);
         }
+        setLoading(false);
       } else {
         // Sin setId: comportamiento legacy con localStorage
         const savedPredictions = localStorage.getItem('natalia_predictions');
         if (savedPredictions) {
-          setPredictions(JSON.parse(savedPredictions));
+          const parsed = JSON.parse(savedPredictions);
+          setPredictions(parsed);
+          originalPredictionsRef.current = JSON.parse(JSON.stringify(parsed));
         } else {
-          setPredictions(getDefaultPredictions());
+          const defaults = getDefaultPredictions();
+          setPredictions(defaults);
+          originalPredictionsRef.current = JSON.parse(JSON.stringify(defaults));
         }
 
         // Load playoff selections from localStorage (legacy)
@@ -91,6 +138,7 @@ export default function Predictions() {
         if (savedPlayoffs) {
           setPlayoffSelections(JSON.parse(savedPlayoffs));
         }
+        setLoading(false);
       }
     };
 
@@ -198,8 +246,39 @@ export default function Predictions() {
   const isComplete = Object.keys(predictions).length === 12;
 
   const handleContinue = async () => {
+    console.log('[GROUPS] handleContinue called');
+
+    // Check if there are real changes
+    const changesDetected = hasRealChanges();
+    console.log('[GROUPS] Changes detected:', changesDetected);
+
+    // If there are changes and we have a setId, check for subsequent data
+    if (changesDetected && setId) {
+      try {
+        const response = await predictionsAPI.hasSubsequentData(setId, 'groups');
+        const { hasThirds, hasKnockout } = response.data;
+        console.log('[GROUPS] Subsequent data:', { hasThirds, hasKnockout });
+
+        if (hasThirds || hasKnockout) {
+          // Show warning modal
+          setSubsequentData({ hasThirds, hasKnockout });
+          setShowResetWarning(true);
+          return;
+        }
+      } catch (err) {
+        console.error('[GROUPS] Error checking subsequent data:', err);
+        // Continue anyway if check fails
+      }
+    }
+
+    // No changes or no subsequent data - proceed normally
+    await saveAndNavigate();
+  };
+
+  const saveAndNavigate = async (resetFirst = false) => {
     setSaving(true);
     setError(null);
+    setShowResetWarning(false);
 
     // Guardar en localStorage primero (respaldo inmediato)
     localStorage.setItem('natalia_predictions', JSON.stringify(predictions));
@@ -219,7 +298,17 @@ export default function Predictions() {
     const nextUrl = setId ? `/terceros?setId=${setId}` : '/terceros';
 
     try {
+      // If we need to reset subsequent data first
+      if (resetFirst && setId) {
+        console.log('[GROUPS] Resetting subsequent data...');
+        await predictionsAPI.resetFromGroups(setId);
+      }
+
       await predictionsAPI.saveGroups(predictionsArray, setId);
+
+      // Update snapshot to current state after successful save
+      originalPredictionsRef.current = JSON.parse(JSON.stringify(predictions));
+
       setSaved(true);
       setSaving(false);
       window.scrollTo(0, 0);
@@ -233,6 +322,14 @@ export default function Predictions() {
         navigate(nextUrl);
       }, 800);
     }
+  };
+
+  const handleConfirmReset = () => {
+    saveAndNavigate(true);
+  };
+
+  const handleCancelReset = () => {
+    setShowResetWarning(false);
   };
 
   const handleBack = () => {
@@ -254,6 +351,18 @@ export default function Predictions() {
       <ChevronRight className="ml-1 h-4 w-4" />
     </Button>
   );
+
+  // Show loading spinner while data is loading
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[50vh]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-muted-foreground">Cargando datos...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -307,6 +416,31 @@ export default function Predictions() {
         <BackButton size="lg" />
         <NextButton size="lg" />
       </div>
+
+      {/* Reset Warning Modal */}
+      <Dialog open={showResetWarning} onOpenChange={setShowResetWarning}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cambios detectados</DialogTitle>
+            <DialogDescription>
+              Has modificado el orden de los grupos. Esto afectará las siguientes fases que ya tienes completadas:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                {subsequentData.hasThirds && <li>Selección de terceros lugares</li>}
+                {subsequentData.hasKnockout && <li>Predicciones de eliminatorias</li>}
+              </ul>
+              <p className="mt-3 font-medium">Si continúas, estas selecciones serán borradas y tendrás que completarlas de nuevo.</p>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={handleCancelReset}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmReset} disabled={saving}>
+              {saving ? 'Guardando...' : 'Continuar y borrar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
