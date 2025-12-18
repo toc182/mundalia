@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ChevronLeft, ChevronRight, Trophy, Save } from 'lucide-react';
 import { mockTeams } from '@/data/mockData';
-import { playoffs } from '@/data/playoffsData';
 import {
   roundOf32Structure,
   roundOf16Structure,
@@ -16,16 +15,7 @@ import {
 } from '@/data/knockoutBracket';
 import { getThirdPlaceAssignments } from '@/data/thirdPlaceCombinations';
 import { predictionsAPI, predictionSetsAPI } from '@/services/api';
-
-// Mapeo de playoff ID a team ID en mockTeams
-const playoffToTeamId = {
-  'UEFA_A': 6,
-  'UEFA_B': 23,
-  'UEFA_C': 16,
-  'UEFA_D': 4,
-  'FIFA_1': 42,
-  'FIFA_2': 35,
-};
+import { getTeamById as getTeamByIdHelper } from '@/utils/predictionHelpers';
 
 export default function Knockout() {
   const navigate = useNavigate();
@@ -62,9 +52,7 @@ export default function Knockout() {
           }
 
           // Cargar predicciones de grupos del servidor
-          console.log('[KNOCKOUT] Loading groups for setId:', setId);
           const groupsResponse = await predictionsAPI.getMy(setId);
-          console.log('[KNOCKOUT] groupsResponse:', groupsResponse.data?.groupPredictions?.length, 'rows');
           if (groupsResponse.data?.groupPredictions?.length > 0) {
             const grouped = {};
             groupsResponse.data.groupPredictions.forEach(gp => {
@@ -73,10 +61,8 @@ export default function Knockout() {
               }
               grouped[gp.group_letter][gp.predicted_position - 1] = gp.team_id;
             });
-            console.log('[KNOCKOUT] Grouped predictions:', Object.keys(grouped).length, 'groups');
             setPredictions(grouped);
           } else {
-            console.log('[KNOCKOUT] No group predictions found');
           }
 
           // Cargar playoffs del servidor
@@ -186,32 +172,8 @@ export default function Knockout() {
     }, 300);
   }, []);
 
-  // Get the winning team from a playoff
-  const getPlayoffWinner = (playoffId) => {
-    const selection = playoffSelections[playoffId];
-    if (!selection?.final) return null;
-    const playoff = playoffs.find(p => p.id === playoffId);
-    if (!playoff) return null;
-    return playoff.teams.find(t => t.id === selection.final);
-  };
-
-  // Get team by ID
-  const getTeamById = (id) => {
-    const team = mockTeams.find(t => t.id === id);
-    if (!team) return null;
-
-    if (team.is_playoff) {
-      const playoffEntry = Object.entries(playoffToTeamId).find(([_, teamId]) => teamId === id);
-      if (playoffEntry) {
-        const playoffId = playoffEntry[0];
-        const winner = getPlayoffWinner(playoffId);
-        if (winner) {
-          return { ...winner, id: team.id, isPlayoffWinner: true };
-        }
-      }
-    }
-    return team;
-  };
+  // Get team by ID using centralized helper
+  const getTeamById = (id) => getTeamByIdHelper(id, playoffSelections);
 
   // Get team by position (1A, 2B, 3C, etc.)
   const getTeamByPosition = (position, group) => {

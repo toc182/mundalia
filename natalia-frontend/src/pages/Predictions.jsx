@@ -13,18 +13,8 @@ import {
 } from '@/components/ui/dialog';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { mockTeams, getAllGroups } from '@/data/mockData';
-import { playoffs } from '@/data/playoffsData';
 import { predictionsAPI } from '@/services/api';
-
-// Mapeo de playoff ID a team ID en mockTeams
-const playoffToTeamId = {
-  'UEFA_A': 6,   // Grupo B
-  'UEFA_B': 23,  // Grupo F
-  'UEFA_C': 16,  // Grupo D
-  'UEFA_D': 4,   // Grupo A
-  'FIFA_1': 42,  // Grupo K
-  'FIFA_2': 35,  // Grupo I
-};
+import { getTeamById as getTeamByIdHelper } from '@/utils/predictionHelpers';
 
 export default function Predictions() {
   const navigate = useNavigate();
@@ -145,43 +135,8 @@ export default function Predictions() {
     loadPredictions();
   }, [setId]);
 
-  // Get the winning team from a playoff
-  const getPlayoffWinner = (playoffId) => {
-    const selection = playoffSelections[playoffId];
-    if (!selection?.final) return null;
-
-    const playoff = playoffs.find(p => p.id === playoffId);
-    if (!playoff) return null;
-
-    return playoff.teams.find(t => t.id === selection.final);
-  };
-
-  // Get team by ID, replacing playoff placeholders with actual winners
-  const getTeamById = (id) => {
-    const team = mockTeams.find(t => t.id === id);
-    if (!team) return null;
-
-    // Check if this is a playoff placeholder
-    if (team.is_playoff) {
-      // Find which playoff this corresponds to
-      const playoffEntry = Object.entries(playoffToTeamId).find(([_, teamId]) => teamId === id);
-      if (playoffEntry) {
-        const playoffId = playoffEntry[0];
-        const winner = getPlayoffWinner(playoffId);
-        if (winner) {
-          // Return the winner team with the original ID for tracking
-          return {
-            ...winner,
-            id: team.id, // Keep original ID for predictions
-            originalPlayoffId: playoffId,
-            isPlayoffWinner: true,
-          };
-        }
-      }
-    }
-
-    return team;
-  };
+  // Get team by ID using centralized helper
+  const getTeamById = (id) => getTeamByIdHelper(id, playoffSelections);
 
   // Drag & drop handlers (desktop)
   const handleDragStart = (e, teamId) => {
@@ -246,18 +201,15 @@ export default function Predictions() {
   const isComplete = Object.keys(predictions).length === 12;
 
   const handleContinue = async () => {
-    console.log('[GROUPS] handleContinue called');
 
     // Check if there are real changes
     const changesDetected = hasRealChanges();
-    console.log('[GROUPS] Changes detected:', changesDetected);
 
     // If there are changes and we have a setId, check for subsequent data
     if (changesDetected && setId) {
       try {
         const response = await predictionsAPI.hasSubsequentData(setId, 'groups');
         const { hasThirds, hasKnockout } = response.data;
-        console.log('[GROUPS] Subsequent data:', { hasThirds, hasKnockout });
 
         if (hasThirds || hasKnockout) {
           // Show warning modal
@@ -300,7 +252,6 @@ export default function Predictions() {
     try {
       // If we need to reset subsequent data first
       if (resetFirst && setId) {
-        console.log('[GROUPS] Resetting subsequent data...');
         await predictionsAPI.resetFromGroups(setId);
       }
 

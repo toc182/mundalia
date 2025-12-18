@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -72,5 +73,9 @@ class ErrorBoundary extends React.Component {
     return this.props.children;
   }
 }
+
+ErrorBoundary.propTypes = {
+  children: PropTypes.node.isRequired,
+};
 
 export default ErrorBoundary;

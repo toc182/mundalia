@@ -20,16 +20,12 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setLoading(true);
-    console.log('[LOGIN] handleSubmit called');
 
     try {
       const result = await login(email, password);
-      console.log('[LOGIN] result:', result);
       if (result.success) {
-        console.log('[LOGIN] success, navigating to /');
         navigate('/');
       } else {
-        console.log('[LOGIN] failed:', result.error);
         setError(result.error || 'Error al iniciar sesion');
       }
     } catch (err) {

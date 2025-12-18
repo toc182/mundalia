@@ -4,6 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import PropTypes from 'prop-types';
 import { GripVertical, AlertTriangle, X } from 'lucide-react';
 import { Button } from './ui/button';
 import {
@@ -191,3 +192,26 @@ export default function TiebreakerModal({ tie, onResolve, onClose }) {
     </Dialog>
   );
 }
+
+TiebreakerModal.propTypes = {
+  tie: PropTypes.shape({
+    group: PropTypes.string.isRequired,
+    reason: PropTypes.string.isRequired,
+    teams: PropTypes.arrayOf(
+      PropTypes.shape({
+        teamId: PropTypes.number.isRequired,
+        teamName: PropTypes.string.isRequired,
+        teamCode: PropTypes.string,
+        flagUrl: PropTypes.string,
+        points: PropTypes.number,
+        goalDifference: PropTypes.number,
+      })
+    ).isRequired,
+  }),
+  onResolve: PropTypes.func.isRequired,
+  onClose: PropTypes.func.isRequired,
+};
+
+TiebreakerModal.defaultProps = {
+  tie: null,
+};

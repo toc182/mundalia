@@ -51,7 +51,6 @@ export default function Playoffs() {
 
   useEffect(() => {
     const loadSelections = async () => {
-      console.log('[PLAYOFFS] loadSelections called, setId:', setId);
       // Si hay setId, solo cargar del servidor (sin fallback a localStorage)
       if (setId) {
         try {
@@ -61,21 +60,17 @@ export default function Playoffs() {
             predictionSetsAPI.getById(setId),
           ]);
 
-          console.log('[PLAYOFFS] getPlayoffs response:', playoffsRes.data);
           if (playoffsRes.data && Object.keys(playoffsRes.data).length > 0) {
             setSelections(playoffsRes.data);
             // Save snapshot of original selections
             originalSelectionsRef.current = JSON.parse(JSON.stringify(playoffsRes.data));
-            console.log('[PLAYOFFS] Loaded selections from API');
           } else {
-            console.log('[PLAYOFFS] No data from API, starting blank');
             originalSelectionsRef.current = {};
           }
 
           // Set prediction mode from the prediction set
           if (setInfoRes.data?.mode) {
             setPredictionMode(setInfoRes.data.mode);
-            console.log('[PLAYOFFS] Prediction mode:', setInfoRes.data.mode);
           }
         } catch (err) {
           // Error de servidor, empezar en blanco
@@ -84,13 +79,11 @@ export default function Playoffs() {
         }
       } else {
         // Sin setId: comportamiento legacy con localStorage
-        console.log('[PLAYOFFS] No setId, checking localStorage');
         const savedSelections = localStorage.getItem('natalia_playoffs');
         if (savedSelections) {
           const parsed = JSON.parse(savedSelections);
           setSelections(parsed);
           originalSelectionsRef.current = JSON.parse(JSON.stringify(parsed));
-          console.log('[PLAYOFFS] Loaded from localStorage');
         } else {
           originalSelectionsRef.current = {};
         }
@@ -136,21 +129,15 @@ export default function Playoffs() {
   };
 
   const handleContinue = async () => {
-    console.log('[PLAYOFFS] handleContinue called');
-    console.log('[PLAYOFFS] setId:', setId);
-    console.log('[PLAYOFFS] predictionMode:', predictionMode);
-    console.log('[PLAYOFFS] selections:', selections);
 
     // Check if there are real changes
     const changesDetected = hasRealChanges();
-    console.log('[PLAYOFFS] Changes detected:', changesDetected);
 
     // If there are changes and we have a setId, check for subsequent data
     if (changesDetected && setId) {
       try {
         const response = await predictionsAPI.hasSubsequentData(setId, 'playoffs');
         const { hasGroups, hasThirds, hasKnockout } = response.data;
-        console.log('[PLAYOFFS] Subsequent data:', { hasGroups, hasThirds, hasKnockout });
 
         if (hasGroups || hasThirds || hasKnockout) {
           // Show warning modal
@@ -183,12 +170,10 @@ export default function Playoffs() {
     try {
       // If we need to reset subsequent data first
       if (resetFirst && setId) {
-        console.log('[PLAYOFFS] Resetting subsequent data...');
         await predictionsAPI.resetFromPlayoffs(setId);
       }
 
       const response = await predictionsAPI.savePlayoffs(selections, setId);
-      console.log('[PLAYOFFS] savePlayoffs response:', response.data);
 
       // Update snapshot to current state after successful save
       originalSelectionsRef.current = JSON.parse(JSON.stringify(selections));

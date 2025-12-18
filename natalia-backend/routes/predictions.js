@@ -26,7 +26,6 @@ async function getOrCreateDefaultSet(userId) {
 router.get('/my', auth, async (req, res) => {
   try {
     const setId = req.query.setId || await getOrCreateDefaultSet(req.user.id);
-    console.log('[GET MY] user:', req.user.id, 'setId:', setId);
 
     const [matchPredictions, groupPredictions] = await Promise.all([
       db.query(`
@@ -50,7 +49,6 @@ router.get('/my', auth, async (req, res) => {
       `, [req.user.id, setId])
     ]);
 
-    console.log('[GET MY] groupPredictions count:', groupPredictions.rows.length);
     res.json({
       matchPredictions: matchPredictions.rows,
       groupPredictions: groupPredictions.rows
@@ -84,8 +82,6 @@ router.get('/groups', auth, async (req, res) => {
 router.post('/groups', auth, async (req, res) => {
   const { predictions, setId: requestSetId } = req.body; // [{group_letter, team_id, predicted_position}]
 
-  console.log('[GROUPS POST] user:', req.user.id, 'requestSetId:', requestSetId);
-  console.log('[GROUPS POST] predictions count:', predictions?.length);
 
   try {
     // Check deadline
@@ -96,17 +92,14 @@ router.post('/groups', auth, async (req, res) => {
     if (deadline.rows.length > 0) {
       const deadlineDate = new Date(deadline.rows[0].value);
       if (new Date() > deadlineDate) {
-        console.log('[GROUPS POST] Deadline passed');
         return res.status(400).json({ error: 'Deadline for group predictions has passed' });
       }
     }
 
     const setId = requestSetId || await getOrCreateDefaultSet(req.user.id);
-    console.log('[GROUPS POST] resolved setId:', setId);
 
     // Delete existing predictions for this set
     const deleteResult = await db.query('DELETE FROM group_predictions WHERE user_id = $1 AND prediction_set_id = $2', [req.user.id, setId]);
-    console.log('[GROUPS POST] deleted rows:', deleteResult.rowCount);
 
     // Insert new predictions
     let insertCount = 0;
@@ -117,7 +110,6 @@ router.post('/groups', auth, async (req, res) => {
       );
       insertCount++;
     }
-    console.log('[GROUPS POST] inserted rows:', insertCount);
 
     res.json({ message: 'Group predictions saved successfully', setId });
   } catch (err) {
@@ -201,16 +193,12 @@ router.get('/playoffs', auth, async (req, res) => {
 router.post('/playoffs', auth, async (req, res) => {
   const { predictions, setId: requestSetId } = req.body; // { playoff_id: { semi1, semi2, final } }
 
-  console.log('[PLAYOFFS POST] user:', req.user.id, 'requestSetId:', requestSetId);
-  console.log('[PLAYOFFS POST] predictions:', JSON.stringify(predictions));
 
   try {
     const setId = requestSetId || await getOrCreateDefaultSet(req.user.id);
-    console.log('[PLAYOFFS POST] resolved setId:', setId);
 
     // Delete existing predictions for this set
     const deleteResult = await db.query('DELETE FROM playoff_predictions WHERE user_id = $1 AND prediction_set_id = $2', [req.user.id, setId]);
-    console.log('[PLAYOFFS POST] deleted rows:', deleteResult.rowCount);
 
     // Insert new predictions
     let insertedCount = 0;
@@ -223,7 +211,6 @@ router.post('/playoffs', auth, async (req, res) => {
         insertedCount++;
       }
     }
-    console.log('[PLAYOFFS POST] inserted rows:', insertedCount);
 
     res.json({ message: 'Playoff predictions saved successfully', setId });
   } catch (err) {

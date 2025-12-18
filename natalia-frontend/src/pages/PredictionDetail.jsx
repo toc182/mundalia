@@ -16,16 +16,7 @@ import {
   finalMatch
 } from '@/data/knockoutBracket';
 import { predictionSetsAPI } from '@/services/api';
-
-// Mapeo de playoff ID a team ID en mockTeams
-const playoffToTeamId = {
-  'UEFA_A': 6,
-  'UEFA_B': 23,
-  'UEFA_C': 16,
-  'UEFA_D': 4,
-  'FIFA_1': 42,
-  'FIFA_2': 35,
-};
+import { getTeamById as getTeamByIdHelper, getPlayoffWinner as getPlayoffWinnerHelper } from '@/utils/predictionHelpers';
 
 export default function PredictionDetail() {
   const { id } = useParams();
@@ -89,36 +80,11 @@ export default function PredictionDetail() {
     loadPredictionSet();
   }, [id]);
 
-  // Get the winning team from a playoff
-  const getPlayoffWinner = (playoffId) => {
-    const selection = playoffSelections[playoffId];
-    if (!selection?.final) return null;
-    const playoff = playoffs.find(p => p.id === playoffId);
-    if (!playoff) return null;
-    // Handle string vs number comparison
-    const finalId = typeof selection.final === 'string' ? parseInt(selection.final, 10) : selection.final;
-    return playoff.teams.find(t => t.id === finalId);
-  };
+  // Get team by ID using centralized helper
+  const getTeamById = (teamId) => getTeamByIdHelper(teamId, playoffSelections);
 
-  // Get team by ID
-  const getTeamById = (teamId) => {
-    // Handle string vs number
-    const numId = typeof teamId === 'string' ? parseInt(teamId, 10) : teamId;
-    const team = mockTeams.find(t => t.id === numId);
-    if (!team) return null;
-
-    if (team.is_playoff) {
-      const playoffEntry = Object.entries(playoffToTeamId).find(([_, tid]) => tid === numId);
-      if (playoffEntry) {
-        const playoffId = playoffEntry[0];
-        const winner = getPlayoffWinner(playoffId);
-        if (winner) {
-          return { ...winner, id: team.id, isPlayoffWinner: true };
-        }
-      }
-    }
-    return team;
-  };
+  // Get playoff winner using centralized helper
+  const getPlayoffWinner = (playoffId) => getPlayoffWinnerHelper(playoffId, playoffSelections);
 
   const groups = getAllGroups();
   const completedPlayoffs = playoffs.filter(p => playoffSelections[p.id]?.final).length;

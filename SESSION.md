@@ -1,6 +1,6 @@
 # SESSION.md - Estado Actual del Proyecto
 
-## Ultima Actualizacion: 2025-12-17 (AUDITORÍA DE SEGURIDAD)
+## Ultima Actualizacion: 2025-12-18 (SEMANA 4 - TESTING Y CI/CD)
 
 ---
 
@@ -39,15 +39,58 @@ natalia-backend/
 └── utils/validators.js     # Nuevo - funciones de validación
 ```
 
-### Pendiente (Semana 2+)
-Ver `AUDIT_REPORT.md` para la lista completa de mejoras pendientes:
-- ErrorBoundary en frontend
-- Optimización N+1 queries en leaderboard
-- Caching de leaderboard
-- Connection pool configuración
-- Tests unitarios
-- Code splitting con React.lazy
-- PropTypes
+### Mejoras Semana 2 Implementadas
+
+| Mejora | Archivo | Descripción |
+|--------|---------|-------------|
+| ErrorBoundary | components/ErrorBoundary.jsx | Atrapa errores de React, muestra UI amigable |
+| Connection Pool | config/db.js | Max 20 conexiones, timeouts configurados |
+| N+1 Queries Fix | routes/leaderboard.js | De 2N+2 queries a solo 5 queries |
+| Caching | routes/leaderboard.js | Cache de 5 minutos para leaderboard |
+
+### Mejoras Semana 3 Implementadas (2025-12-18)
+
+| Mejora | Archivo(s) | Descripción |
+|--------|------------|-------------|
+| predictionHelpers.js | utils/predictionHelpers.js | Funciones centralizadas: PLAYOFF_TO_TEAM_ID, getPlayoffWinner, getTeamById |
+| Eliminación código duplicado | 7 archivos actualizados | Removido playoffToTeamId duplicado de Predictions, ThirdPlaces, Knockout, PredictionsScores, Admin, PredictionDetail |
+| Code splitting | App.jsx | React.lazy para 11 páginas, bundle principal de 574kb a 366kb (-36%) |
+| Console.logs revisados | Frontend/Backend | Solo console.error en catch blocks (apropiado) |
+
+### Mejoras Semana 4 Implementadas (2025-12-18)
+
+| Mejora | Archivo(s) | Descripción |
+|--------|------------|-------------|
+| CI/CD | .github/workflows/ci.yml | GitHub Actions para tests automáticos en push/PR |
+| Jest Backend | __tests__/auth.test.js | 9 tests para auth (register, login, health) |
+| Vitest Frontend | src/__tests__/*.test.js | 21 tests para predictionHelpers |
+| PropTypes | ErrorBoundary, GroupScoreInput, TiebreakerModal | Validación de props en componentes críticos |
+
+### Packages de Testing Instalados
+- **Backend:** jest@30.2.0, supertest@7.1.4
+- **Frontend:** vitest@4.0.16, @testing-library/react@16.3.1, happy-dom@20.0.11, prop-types@15.x
+
+### Comandos de Test
+```bash
+# Backend
+cd natalia-backend && npm test          # Corre todos los tests
+cd natalia-backend && npm run test:watch  # Watch mode
+
+# Frontend
+cd natalia-frontend && npm test         # Corre todos los tests
+cd natalia-frontend && npm run test:watch  # Watch mode
+```
+
+### Cobertura Actual
+- **Backend auth.js:** 64% líneas cubiertas
+- **Frontend predictionHelpers:** 100% funciones probadas
+
+### Plan Completado
+Se completaron las 4 semanas del plan de mejoras de AUDIT_REPORT.md:
+- Semana 1: Seguridad (Helmet, rate limiting, validaciones)
+- Semana 2: Estabilidad (ErrorBoundary, connection pool, caching)
+- Semana 3: Calidad de código (refactoring, code splitting)
+- Semana 4: Testing y CI/CD (Jest, Vitest, GitHub Actions, PropTypes)
 
 ---
 

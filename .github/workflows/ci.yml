@@ -1,0 +1,98 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ============================================
+  # Backend Tests
+  # ============================================
+  test-backend:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: natalia-backend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: natalia-backend
+        run: npm ci
+
+      - name: Run tests
+        working-directory: natalia-backend
+        run: npm test --if-present
+
+      - name: Run linter
+        working-directory: natalia-backend
+        run: npm run lint --if-present
+
+  # ============================================
+  # Frontend Tests & Build
+  # ============================================
+  test-frontend:
+    name: Frontend Tests & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: natalia-frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: natalia-frontend
+        run: npm ci
+
+      - name: Run tests
+        working-directory: natalia-frontend
+        run: npm test --if-present
+
+      - name: Run linter
+        working-directory: natalia-frontend
+        run: npm run lint --if-present
+
+      - name: Build
+        working-directory: natalia-frontend
+        run: npm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-build
+          path: natalia-frontend/dist
+          retention-days: 7
+
+  # ============================================
+  # Deploy notification (optional)
+  # ============================================
+  deploy-status:
+    name: Deploy Status
+    runs-on: ubuntu-latest
+    needs: [test-backend, test-frontend]
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+
+    steps:
+      - name: Deploy notification
+        run: |
+          echo "All tests passed!"
+          echo "Vercel will auto-deploy frontend from master branch"
+          echo "Railway will auto-deploy backend from master branch"

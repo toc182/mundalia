@@ -20,11 +20,11 @@ import {
 import GroupScoreInput from '../components/GroupScoreInput';
 import TiebreakerModal from '../components/TiebreakerModal';
 import { getTeamsByGroup, getAllGroups } from '../data/mockData';
-import { playoffs } from '../data/playoffsData';
 import { ALL_GROUPS } from '../data/groupMatches';
 import { calculateGroupStandings, sortThirdPlaceTeams } from '../utils/fifaTiebreaker';
 import { getThirdPlaceCombination } from '../data/thirdPlaceCombinations';
 import { predictionsAPI, predictionSetsAPI } from '../services/api';
+import { PLAYOFF_TO_TEAM_ID, getPlayoffWinner } from '../utils/predictionHelpers';
 
 export default function PredictionsScores() {
   const [searchParams] = useSearchParams();
@@ -49,37 +49,25 @@ export default function PredictionsScores() {
   const getGroupTeams = useCallback((groupLetter) => {
     const teams = getTeamsByGroup(groupLetter);
 
-    // Map playoff IDs to team IDs in mockData
-    const playoffToTeamId = {
-      'UEFA_A': 6,
-      'UEFA_B': 23,
-      'UEFA_C': 16,
-      'UEFA_D': 4,
-      'FIFA_1': 42,
-      'FIFA_2': 35,
-    };
-
     return teams.map(team => {
       if (team.is_playoff) {
         // Check if we have a playoff selection for this team
-        const playoffId = Object.keys(playoffToTeamId).find(
-          key => playoffToTeamId[key] === team.id
+        const playoffId = Object.keys(PLAYOFF_TO_TEAM_ID).find(
+          key => PLAYOFF_TO_TEAM_ID[key] === team.id
         );
 
-        if (playoffId && playoffSelections[playoffId]?.final) {
-          const winnerTeamId = playoffSelections[playoffId].final;
+        if (playoffId) {
+          const winnerTeam = getPlayoffWinner(playoffId, playoffSelections);
 
-          // Find the playoff data and get the winner team's name
-          const playoff = playoffs.find(p => p.id === playoffId);
-          const winnerTeam = playoff?.teams.find(t => t.id === winnerTeamId);
-
-          return {
-            ...team,
-            name: winnerTeam?.name || `Ganador ${playoffId.replace('_', ' ')}`,
-            code: winnerTeam?.code || team.code,
-            flag_url: winnerTeam?.flag_url || team.flag_url,
-            selectedWinner: winnerTeamId,
-          };
+          if (winnerTeam) {
+            return {
+              ...team,
+              name: winnerTeam.name,
+              code: winnerTeam.code,
+              flag_url: winnerTeam.flag_url,
+              selectedWinner: playoffSelections[playoffId].final,
+            };
+          }
         }
       }
       return team;
@@ -356,15 +344,12 @@ export default function PredictionsScores() {
 
     try {
       // Save scores
-      console.log('[SCORES] Saving scores for setId:', setId);
       await predictionsAPI.saveScores(scores, setId);
-      console.log('[SCORES] Scores saved successfully');
 
       // Convert calculated standings to group predictions format
       const groupPositions = [];
       ALL_GROUPS.forEach(group => {
         const standings = groupStandings[group]?.standings || [];
-        console.log(`[SCORES] Group ${group} standings:`, standings.map(t => ({ teamId: t.teamId, name: t.teamName })));
         standings.forEach((team, index) => {
           groupPositions.push({
             group_letter: group,
@@ -374,20 +359,14 @@ export default function PredictionsScores() {
         });
       });
 
-      console.log('[SCORES] Saving group positions:', groupPositions.length, 'entries');
       await predictionsAPI.saveGroups(groupPositions, setId);
-      console.log('[SCORES] Group positions saved successfully');
 
       // Save third places
-      console.log('[SCORES] Saving third places:', thirdPlaceInfo.qualifyingGroups);
       await predictionsAPI.saveThirdPlaces(thirdPlaceInfo.qualifyingGroups, setId);
-      console.log('[SCORES] Third places saved successfully');
 
       // Clear knockout if requested (user confirmed changes)
       if (clearBracket) {
-        console.log('[SCORES] Clearing knockout predictions due to group changes');
         await predictionsAPI.saveKnockout({}, setId);
-        console.log('[SCORES] Knockout predictions cleared');
       }
 
       // Navigate to knockout

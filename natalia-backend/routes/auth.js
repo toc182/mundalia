@@ -158,7 +158,6 @@ router.post('/google', googleAuthLimiter, async (req, res) => {
     const payload = ticket.getPayload();
     const { sub: googleId, email, name, picture } = payload;
 
-    console.log('[GOOGLE AUTH] Verified user:', email);
 
     // Check if user exists by google_id
     let result = await db.query(
@@ -171,7 +170,6 @@ router.post('/google', googleAuthLimiter, async (req, res) => {
     if (result.rows.length > 0) {
       // User exists with this Google ID
       user = result.rows[0];
-      console.log('[GOOGLE AUTH] Existing user by google_id:', user.id);
     } else {
       // Check if user exists by email (might have registered with email/password before)
       result = await db.query(
@@ -186,7 +184,6 @@ router.post('/google', googleAuthLimiter, async (req, res) => {
           'UPDATE users SET google_id = $1 WHERE id = $2',
           [googleId, user.id]
         );
-        console.log('[GOOGLE AUTH] Linked Google to existing user:', user.id);
       } else {
         // Create new user
         result = await db.query(
@@ -194,7 +191,6 @@ router.post('/google', googleAuthLimiter, async (req, res) => {
           [email, name, googleId]
         );
         user = result.rows[0];
-        console.log('[GOOGLE AUTH] Created new user:', user.id);
       }
     }
 

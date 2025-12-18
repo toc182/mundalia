@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { adminAPI } from '@/services/api';
 import { mockTeams, getAllGroups, getTeamsByGroup } from '@/data/mockData';
 import { playoffs } from '@/data/playoffsData';
+import { PLAYOFF_TO_TEAM_ID } from '@/utils/predictionHelpers';
 import { GROUP_MATCH_STRUCTURE, getMatchTeams } from '@/data/groupMatches';
 import {
   roundOf32Structure,
@@ -355,20 +356,10 @@ function GroupsTab({ realPlayoffs, realGroupMatches, showSuccess, setError }) {
   const getGroupTeams = useCallback((groupLetter) => {
     const teams = getTeamsByGroup(groupLetter);
 
-    // Map playoff IDs to team IDs in mockData
-    const playoffToTeamId = {
-      'UEFA_A': 6,
-      'UEFA_B': 23,
-      'UEFA_C': 16,
-      'UEFA_D': 4,
-      'FIFA_1': 42,
-      'FIFA_2': 35,
-    };
-
     return teams.map(team => {
       if (team.is_playoff) {
-        const playoffId = Object.keys(playoffToTeamId).find(
-          key => playoffToTeamId[key] === team.id
+        const playoffId = Object.keys(PLAYOFF_TO_TEAM_ID).find(
+          key => PLAYOFF_TO_TEAM_ID[key] === team.id
         );
         if (playoffId) {
           const playoffResult = realPlayoffs.find(r => r.playoff_id === playoffId);
@@ -679,16 +670,6 @@ function GroupsTab({ realPlayoffs, realGroupMatches, showSuccess, setError }) {
     </div>
   );
 }
-
-// Mapeo de playoff ID a team ID en mockTeams (constante global)
-const PLAYOFF_TO_TEAM_ID = {
-  'UEFA_A': 6,
-  'UEFA_B': 23,
-  'UEFA_C': 16,
-  'UEFA_D': 4,
-  'FIFA_1': 42,
-  'FIFA_2': 35,
-};
 
 // ============================================
 // KNOCKOUT TAB - Bracket visualization with scores

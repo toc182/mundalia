@@ -3,6 +3,7 @@
  * Shows 6 matches grouped by match day + calculated standings table
  */
 
+import PropTypes from 'prop-types';
 import { RotateCcw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
@@ -131,3 +132,42 @@ export default function GroupScoreInput({
     </Card>
   );
 }
+
+GroupScoreInput.propTypes = {
+  group: PropTypes.string.isRequired,
+  teams: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.number.isRequired,
+      name: PropTypes.string.isRequired,
+      code: PropTypes.string,
+      flag_url: PropTypes.string,
+    })
+  ).isRequired,
+  scores: PropTypes.objectOf(
+    PropTypes.shape({
+      a: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+      b: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+    })
+  ),
+  standings: PropTypes.array,
+  isComplete: PropTypes.bool,
+  isIncomplete: PropTypes.bool,
+  unresolvableTie: PropTypes.shape({
+    reason: PropTypes.string,
+  }),
+  onScoreChange: PropTypes.func.isRequired,
+  onResolveTie: PropTypes.func,
+  onReset: PropTypes.func,
+  disabled: PropTypes.bool,
+};
+
+GroupScoreInput.defaultProps = {
+  scores: {},
+  standings: [],
+  isComplete: false,
+  isIncomplete: false,
+  unresolvableTie: null,
+  onResolveTie: null,
+  onReset: null,
+  disabled: false,
+};

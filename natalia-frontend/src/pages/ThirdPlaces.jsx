@@ -14,19 +14,9 @@ import {
 } from '@/components/ui/dialog';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { mockTeams, getAllGroups } from '@/data/mockData';
-import { playoffs } from '@/data/playoffsData';
 import { getThirdPlaceCombination } from '@/data/thirdPlaceCombinations';
 import { predictionsAPI } from '@/services/api';
-
-// Mapeo de playoff ID a team ID en mockTeams
-const playoffToTeamId = {
-  'UEFA_A': 6,
-  'UEFA_B': 23,
-  'UEFA_C': 16,
-  'UEFA_D': 4,
-  'FIFA_1': 42,
-  'FIFA_2': 35,
-};
+import { getTeamById as getTeamByIdHelper } from '@/utils/predictionHelpers';
 
 export default function ThirdPlaces() {
   const navigate = useNavigate();
@@ -121,32 +111,8 @@ export default function ThirdPlaces() {
     loadData();
   }, [setId]);
 
-  // Get the winning team from a playoff
-  const getPlayoffWinner = (playoffId) => {
-    const selection = playoffSelections[playoffId];
-    if (!selection?.final) return null;
-    const playoff = playoffs.find(p => p.id === playoffId);
-    if (!playoff) return null;
-    return playoff.teams.find(t => t.id === selection.final);
-  };
-
-  // Get team by ID
-  const getTeamById = (id) => {
-    const team = mockTeams.find(t => t.id === id);
-    if (!team) return null;
-
-    if (team.is_playoff) {
-      const playoffEntry = Object.entries(playoffToTeamId).find(([_, teamId]) => teamId === id);
-      if (playoffEntry) {
-        const playoffId = playoffEntry[0];
-        const winner = getPlayoffWinner(playoffId);
-        if (winner) {
-          return { ...winner, id: team.id, isPlayoffWinner: true };
-        }
-      }
-    }
-    return team;
-  };
+  // Get team by ID using centralized helper
+  const getTeamById = (id) => getTeamByIdHelper(id, playoffSelections);
 
   // Get the third place team for each group
   const getThirdPlaceTeams = () => {
@@ -180,18 +146,15 @@ export default function ThirdPlaces() {
   const isComplete = bestThirdPlaces.length === 8 && thirdPlaceCombination;
 
   const handleFinish = async () => {
-    console.log('[THIRDS] handleFinish called');
 
     // Check if there are real changes
     const changesDetected = hasRealChanges();
-    console.log('[THIRDS] Changes detected:', changesDetected);
 
     // If there are changes and we have a setId, check for subsequent data
     if (changesDetected && setId) {
       try {
         const response = await predictionsAPI.hasSubsequentData(setId, 'thirds');
         const { hasKnockout } = response.data;
-        console.log('[THIRDS] Subsequent data:', { hasKnockout });
 
         if (hasKnockout) {
           // Show warning modal
@@ -222,7 +185,6 @@ export default function ThirdPlaces() {
     try {
       // If we need to reset subsequent data first
       if (resetFirst && setId) {
-        console.log('[THIRDS] Resetting knockout data...');
         await predictionsAPI.resetFromThirds(setId);
       }
 
