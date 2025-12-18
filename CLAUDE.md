@@ -248,8 +248,9 @@ DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=natalia_dev
 DB_USER=postgres
-DB_PASSWORD=Dinocore51720
+DB_PASSWORD=<TU_PASSWORD_LOCAL>
 ```
+**NOTA:** Las credenciales reales están en el archivo `.env` local (no commiteado a git).
 
 ### Produccion (Railway)
 - `DATABASE_URL` auto-inyectada por Railway

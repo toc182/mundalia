@@ -15,7 +15,8 @@ const pool = new Pool(
     ? {
         ...poolConfig,
         connectionString: process.env.DATABASE_URL,
-        ssl: { rejectUnauthorized: false }
+        // SSL habilitado - Railway provee certificado valido
+        ssl: { rejectUnauthorized: true }
       }
     : {
         ...poolConfig,

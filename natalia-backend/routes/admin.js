@@ -66,6 +66,7 @@ router.get('/groups', async (req, res) => {
 });
 
 // Save real group match scores (bulk for one group - 6 matches)
+// Uses transaction to ensure data consistency
 router.post('/groups', async (req, res) => {
   const { group_letter, matches } = req.body;
   // matches = [{ match_index: 0, team_a_id, team_b_id, score_a, score_b }, ...]
@@ -74,13 +75,17 @@ router.post('/groups', async (req, res) => {
     return res.status(400).json({ error: 'Invalid data. Need group_letter and 6 matches.' });
   }
 
+  const client = await db.pool.connect();
+
   try {
+    await client.query('BEGIN');
+
     // Delete existing matches for this group
-    await db.query('DELETE FROM real_group_matches WHERE group_letter = $1', [group_letter]);
+    await client.query('DELETE FROM real_group_matches WHERE group_letter = $1', [group_letter]);
 
     // Insert new matches
     for (const match of matches) {
-      await db.query(`
+      await client.query(`
         INSERT INTO real_group_matches (group_letter, match_index, team_a_id, team_b_id, score_a, score_b)
         VALUES ($1, $2, $3, $4, $5, $6)
       `, [group_letter, match.match_index, match.team_a_id, match.team_b_id, match.score_a, match.score_b]);
@@ -88,17 +93,22 @@ router.post('/groups', async (req, res) => {
 
     // Also update/calculate standings in real_group_standings
     // (calculated from match results)
-    await updateGroupStandings(group_letter, matches);
+    await updateGroupStandings(client, group_letter, matches);
 
+    await client.query('COMMIT');
     res.json({ success: true });
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error('Error saving group matches:', err);
     res.status(500).json({ error: 'Server error' });
+  } finally {
+    client.release();
   }
 });
 
 // Helper function to calculate and update group standings from match results
-async function updateGroupStandings(groupLetter, matches) {
+// Accepts a client for transaction support
+async function updateGroupStandings(client, groupLetter, matches) {
   // Calculate points, GD, GF for each team
   const teamStats = {};
 
@@ -140,11 +150,11 @@ async function updateGroupStandings(groupLetter, matches) {
       return b[1].gf - a[1].gf;
     });
 
-  // Update standings table
-  await db.query('DELETE FROM real_group_standings WHERE group_letter = $1', [groupLetter]);
+  // Update standings table (uses client for transaction)
+  await client.query('DELETE FROM real_group_standings WHERE group_letter = $1', [groupLetter]);
 
   for (let i = 0; i < sorted.length; i++) {
-    await db.query(`
+    await client.query(`
       INSERT INTO real_group_standings (group_letter, team_id, final_position)
       VALUES ($1, $2, $3)
     `, [groupLetter, parseInt(sorted[i][0]), i + 1]);

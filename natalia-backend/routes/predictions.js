@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 const { auth } = require('../middleware/auth');
+const { isValidGroupLetter, isValidPosition, isValidTeamId, isValidMatchKey, isValidPlayoffId } = require('../utils/validators');
 
 // Helper to get or create default prediction set
 async function getOrCreateDefaultSet(userId) {
@@ -82,6 +83,22 @@ router.get('/groups', auth, async (req, res) => {
 router.post('/groups', auth, async (req, res) => {
   const { predictions, setId: requestSetId } = req.body; // [{group_letter, team_id, predicted_position}]
 
+  // Validacion de entrada
+  if (!Array.isArray(predictions)) {
+    return res.status(400).json({ error: 'predictions must be an array' });
+  }
+
+  for (const pred of predictions) {
+    if (!isValidGroupLetter(pred.group_letter)) {
+      return res.status(400).json({ error: `Invalid group_letter: ${pred.group_letter}` });
+    }
+    if (!isValidPosition(pred.predicted_position)) {
+      return res.status(400).json({ error: `Invalid predicted_position: ${pred.predicted_position}` });
+    }
+    if (!isValidTeamId(pred.team_id)) {
+      return res.status(400).json({ error: `Invalid team_id: ${pred.team_id}` });
+    }
+  }
 
   try {
     // Check deadline
@@ -308,6 +325,22 @@ router.get('/knockout', auth, async (req, res) => {
 // - Scores mode: { match_key: { winner, scoreA, scoreB } }
 router.post('/knockout', auth, async (req, res) => {
   const { predictions, setId: requestSetId } = req.body;
+
+  // Validacion de entrada
+  if (!predictions || typeof predictions !== 'object') {
+    return res.status(400).json({ error: 'predictions must be an object' });
+  }
+
+  for (const [matchKey, value] of Object.entries(predictions)) {
+    if (!isValidMatchKey(matchKey)) {
+      return res.status(400).json({ error: `Invalid matchKey: ${matchKey}` });
+    }
+    // Validar winner_team_id
+    const winnerId = typeof value === 'object' ? value?.winner : value;
+    if (winnerId && !isValidTeamId(winnerId)) {
+      return res.status(400).json({ error: `Invalid winner_team_id for ${matchKey}: ${winnerId}` });
+    }
+  }
 
   try {
     const setId = requestSetId || await getOrCreateDefaultSet(req.user.id);
