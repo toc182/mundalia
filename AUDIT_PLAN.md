@@ -103,22 +103,22 @@
 
 ---
 
-## FASE 4: CALIDAD DE CÓDIGO (Después)
+## FASE 4: CALIDAD DE CÓDIGO (EN PROGRESO)
 
 ### Checklist
 
-- [ ] **4.1 Extraer componente MatchBox**
+- [x] **4.2 Centralizar POINTS** (2025-12-18)
+  - Creado: `utils/scoring.js`
+  - Actualizado: `leaderboard.js`, `groups.js`
+
+- [x] **4.3 Eliminar código muerto** (2025-12-18)
+  - Eliminado: `components/Navbar.jsx`
+
+- [ ] **4.1 Extraer componente MatchBox** (Pendiente - complejidad alta)
   - De: `Playoffs.jsx`, `Knockout.jsx`
   - A: `components/MatchBox.jsx`
 
-- [ ] **4.2 Centralizar POINTS**
-  - De: `leaderboard.js`, `groups.js`
-  - A: `utils/scoring.js`
-
-- [ ] **4.3 Eliminar código muerto**
-  - `components/Navbar.jsx` (no usado)
-
-- [ ] **4.4 Estandarizar responses**
+- [ ] **4.4 Estandarizar responses** (Pendiente - cambio invasivo)
   - Formato: `{ data, error, message }`
 
 ---
@@ -189,6 +189,7 @@
 | 2025-12-18 | Seguridad | 7/7 items | Credenciales, SSL, validación, transacciones, JWT |
 | 2025-12-18 | Testing/CI | 5/5 items | PostgreSQL en CI, tests, npm audit, coverage |
 | 2025-12-18 | Performance | 4/4 items | N+1 queries, índices BD, React.memo, Promise.all |
+| 2025-12-18 | Calidad | 2/4 items | Centralizar POINTS, eliminar código muerto |
 
 ---
 
