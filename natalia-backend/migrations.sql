@@ -120,7 +120,53 @@ ADD COLUMN IF NOT EXISTS score_a INTEGER DEFAULT NULL,
 ADD COLUMN IF NOT EXISTS score_b INTEGER DEFAULT NULL;
 
 -- ============================================
--- MIGRACION 005: Indices optimizados para performance
+-- MIGRACION 005: Tablas de resultados reales (admin)
+-- Fecha: 2025-12-18
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS real_playoff_results (
+  id SERIAL PRIMARY KEY,
+  playoff_id VARCHAR(20) NOT NULL UNIQUE,
+  winner_team_id INTEGER NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS real_group_standings (
+  id SERIAL PRIMARY KEY,
+  group_letter VARCHAR(1) NOT NULL,
+  team_id INTEGER NOT NULL,
+  final_position INTEGER NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(group_letter, team_id),
+  UNIQUE(group_letter, final_position)
+);
+
+CREATE TABLE IF NOT EXISTS real_knockout_results (
+  id SERIAL PRIMARY KEY,
+  match_key VARCHAR(20) NOT NULL UNIQUE,
+  winner_team_id INTEGER NOT NULL,
+  score_a INTEGER,
+  score_b INTEGER,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS real_group_matches (
+  id SERIAL PRIMARY KEY,
+  group_letter VARCHAR(1) NOT NULL,
+  match_index INTEGER NOT NULL,
+  team_a_id INTEGER NOT NULL,
+  team_b_id INTEGER NOT NULL,
+  score_a INTEGER,
+  score_b INTEGER,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(group_letter, match_index)
+);
+
+-- ============================================
+-- MIGRACION 006: Indices optimizados para performance
 -- Fecha: 2025-12-18
 -- ============================================
 
