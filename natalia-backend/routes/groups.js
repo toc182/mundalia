@@ -108,6 +108,7 @@ function getMatchPoints(matchKey) {
 }
 
 // Calculate best score for a user (across all their prediction sets)
+// OPTIMIZED: Load all predictions in 2 queries instead of 2N
 async function calculateUserBestScore(userId) {
   // Get all complete prediction sets for user
   const predSets = await db.query(`
@@ -123,12 +124,17 @@ async function calculateUserBestScore(userId) {
 
   if (predSets.rows.length === 0) return 0;
 
-  // Get real results once
-  const [realGroupStandings, realKnockout] = await Promise.all([
+  const setIds = predSets.rows.map(ps => ps.id);
+
+  // OPTIMIZED: Load ALL data in 4 parallel queries (instead of 2N+2)
+  const [realGroupStandings, realKnockout, allGroupPreds, allKnockoutPreds] = await Promise.all([
     db.query('SELECT * FROM real_group_standings'),
-    db.query('SELECT * FROM real_knockout_results')
+    db.query('SELECT * FROM real_knockout_results'),
+    db.query('SELECT * FROM group_predictions WHERE prediction_set_id = ANY($1)', [setIds]),
+    db.query('SELECT * FROM knockout_predictions WHERE prediction_set_id = ANY($1)', [setIds])
   ]);
 
+  // Build lookup maps for real results
   const realGroupMap = {};
   realGroupStandings.rows.forEach(row => {
     if (!realGroupMap[row.group_letter]) realGroupMap[row.group_letter] = {};
@@ -140,18 +146,28 @@ async function calculateUserBestScore(userId) {
     realKnockoutMap[row.match_key] = row.winner_team_id;
   });
 
+  // Group predictions by set_id
+  const groupPredsBySet = {};
+  allGroupPreds.rows.forEach(pred => {
+    if (!groupPredsBySet[pred.prediction_set_id]) groupPredsBySet[pred.prediction_set_id] = [];
+    groupPredsBySet[pred.prediction_set_id].push(pred);
+  });
+
+  const knockoutPredsBySet = {};
+  allKnockoutPreds.rows.forEach(pred => {
+    if (!knockoutPredsBySet[pred.prediction_set_id]) knockoutPredsBySet[pred.prediction_set_id] = [];
+    knockoutPredsBySet[pred.prediction_set_id].push(pred);
+  });
+
+  // Calculate best score across all sets (in memory, no more queries)
   let bestScore = 0;
 
   for (const ps of predSets.rows) {
     let score = 0;
 
     // Score group predictions
-    const groupPreds = await db.query(
-      'SELECT * FROM group_predictions WHERE prediction_set_id = $1',
-      [ps.id]
-    );
-
-    groupPreds.rows.forEach(pred => {
+    const groupPreds = groupPredsBySet[ps.id] || [];
+    groupPreds.forEach(pred => {
       const realPositions = realGroupMap[pred.group_letter];
       if (!realPositions) return;
 
@@ -166,12 +182,8 @@ async function calculateUserBestScore(userId) {
     });
 
     // Score knockout predictions
-    const knockoutPreds = await db.query(
-      'SELECT * FROM knockout_predictions WHERE prediction_set_id = $1',
-      [ps.id]
-    );
-
-    knockoutPreds.rows.forEach(pred => {
+    const knockoutPreds = knockoutPredsBySet[ps.id] || [];
+    knockoutPreds.forEach(pred => {
       const realWinner = realKnockoutMap[pred.match_key];
       if (realWinner === undefined) return;
 

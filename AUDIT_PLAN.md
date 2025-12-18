@@ -44,9 +44,9 @@
   - Archivo: `natalia-backend/routes/admin.js`
   - POST /groups con transacción completa
 
-- [ ] **1.7 Fortalecer JWT (Opcional - Pendiente)**
-  - Generar nuevo JWT_SECRET con 32+ chars random
-  - Actualizar en Railway environment variables
+- [x] **1.7 Fortalecer JWT** ✅ (2025-12-18)
+  - Railway ya tiene JWT_SECRET diferente y seguro
+  - Local es solo para desarrollo (no expuesto)
 
 ---
 
@@ -77,25 +77,29 @@
 
 ---
 
-## FASE 3: PERFORMANCE (Después)
+## FASE 3: PERFORMANCE (COMPLETADA)
 
 ### Checklist
 
-- [ ] **3.1 Optimizar N+1 queries**
-  - `leaderboard.js:71` - Usar JOINs
-  - `groups.js:111` - Batch queries
+- [x] **3.1 Optimizar N+1 queries** (2025-12-18)
+  - `leaderboard.js` - Ya estaba optimizado con Promise.all y ANY()
+  - `groups.js:112-199` - Optimizado con batch queries usando ANY()
 
-- [ ] **3.2 Índices de BD**
-  ```sql
-  CREATE INDEX idx_group_predictions_user_set ON group_predictions(user_id, prediction_set_id);
-  CREATE INDEX idx_knockout_predictions_user_set ON knockout_predictions(user_id, prediction_set_id);
-  ```
+- [x] **3.2 Índices de BD** (2025-12-18)
+  - Archivo: `migrations.sql` (Migración 005)
+  - Índices compuestos para prediction_set_id + group_letter/match_key
+  - Índices para tablas de resultados reales
 
-- [ ] **3.3 React.memo en GroupCard**
-  - Archivo: `Predictions.jsx`
+- [x] **3.3 React.memo en GroupCard** (2025-12-18)
+  - Archivo: `Predictions.jsx:399`
+  - Componente envuelto con memo() para evitar re-renders innecesarios
 
-- [ ] **3.4 Promise.all en INSERTs**
-  - `predictions.js:106-112`
+- [x] **3.4 Promise.all en INSERTs** (2025-12-18)
+  - `predictions.js` - 4 endpoints optimizados:
+    - POST /groups (línea 122)
+    - POST /playoffs (línea 219)
+    - POST /knockout (línea 349)
+    - POST /scores (línea 443)
 
 ---
 
@@ -182,8 +186,9 @@
 | Fecha | Fase | Items Completados | Notas |
 |-------|------|-------------------|-------|
 | 2025-12-18 | Auditoría | Plan creado | Iniciando Fase 1 |
-| 2025-12-18 | Seguridad | 6/7 items | Credenciales, SSL, validación, transacciones |
+| 2025-12-18 | Seguridad | 7/7 items | Credenciales, SSL, validación, transacciones, JWT |
 | 2025-12-18 | Testing/CI | 5/5 items | PostgreSQL en CI, tests, npm audit, coverage |
+| 2025-12-18 | Performance | 4/4 items | N+1 queries, índices BD, React.memo, Promise.all |
 
 ---
 

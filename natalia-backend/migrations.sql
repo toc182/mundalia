@@ -120,6 +120,29 @@ ADD COLUMN IF NOT EXISTS score_a INTEGER DEFAULT NULL,
 ADD COLUMN IF NOT EXISTS score_b INTEGER DEFAULT NULL;
 
 -- ============================================
+-- MIGRACION 005: Indices optimizados para performance
+-- Fecha: 2025-12-18
+-- ============================================
+
+-- Indices compuestos para queries de leaderboard (evitar N+1)
+CREATE INDEX IF NOT EXISTS idx_group_predictions_set_group
+  ON group_predictions(prediction_set_id, group_letter);
+
+CREATE INDEX IF NOT EXISTS idx_knockout_predictions_set_match
+  ON knockout_predictions(prediction_set_id, match_key);
+
+-- Indices para tablas de resultados reales (admin scoring)
+CREATE INDEX IF NOT EXISTS idx_real_group_standings_group
+  ON real_group_standings(group_letter);
+
+CREATE INDEX IF NOT EXISTS idx_real_knockout_results_match
+  ON real_knockout_results(match_key);
+
+-- Indice para busqueda de prediction_sets por usuario
+CREATE INDEX IF NOT EXISTS idx_prediction_sets_user_created
+  ON prediction_sets(user_id, created_at DESC);
+
+-- ============================================
 -- NUEVA MIGRACION: Agregar aqui abajo
 -- Fecha: YYYY-MM-DD
 -- ============================================

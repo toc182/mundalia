@@ -118,15 +118,13 @@ router.post('/groups', auth, async (req, res) => {
     // Delete existing predictions for this set
     const deleteResult = await db.query('DELETE FROM group_predictions WHERE user_id = $1 AND prediction_set_id = $2', [req.user.id, setId]);
 
-    // Insert new predictions
-    let insertCount = 0;
-    for (const pred of predictions) {
-      await db.query(
+    // Insert new predictions (parallelized for performance)
+    await Promise.all(predictions.map(pred =>
+      db.query(
         'INSERT INTO group_predictions (user_id, group_letter, team_id, predicted_position, prediction_set_id) VALUES ($1, $2, $3, $4, $5)',
         [req.user.id, pred.group_letter, pred.team_id, pred.predicted_position, setId]
-      );
-      insertCount++;
-    }
+      )
+    ));
 
     res.json({ message: 'Group predictions saved successfully', setId });
   } catch (err) {
@@ -217,17 +215,16 @@ router.post('/playoffs', auth, async (req, res) => {
     // Delete existing predictions for this set
     const deleteResult = await db.query('DELETE FROM playoff_predictions WHERE user_id = $1 AND prediction_set_id = $2', [req.user.id, setId]);
 
-    // Insert new predictions
-    let insertedCount = 0;
-    for (const [playoffId, selection] of Object.entries(predictions)) {
-      if (selection && (selection.semi1 || selection.semi2 || selection.final)) {
-        await db.query(`
+    // Insert new predictions (parallelized for performance)
+    const insertPromises = Object.entries(predictions)
+      .filter(([, selection]) => selection && (selection.semi1 || selection.semi2 || selection.final))
+      .map(([playoffId, selection]) =>
+        db.query(`
           INSERT INTO playoff_predictions (user_id, playoff_id, semifinal_winner_1, semifinal_winner_2, final_winner, prediction_set_id)
           VALUES ($1, $2, $3, $4, $5, $6)
-        `, [req.user.id, playoffId, selection.semi1 || null, selection.semi2 || null, selection.final || null, setId]);
-        insertedCount++;
-      }
-    }
+        `, [req.user.id, playoffId, selection.semi1 || null, selection.semi2 || null, selection.final || null, setId])
+      );
+    await Promise.all(insertPromises);
 
     res.json({ message: 'Playoff predictions saved successfully', setId });
   } catch (err) {
@@ -348,25 +345,30 @@ router.post('/knockout', auth, async (req, res) => {
     // Delete existing predictions for this set
     await db.query('DELETE FROM knockout_predictions WHERE user_id = $1 AND prediction_set_id = $2', [req.user.id, setId]);
 
-    // Insert new predictions
-    for (const [matchKey, value] of Object.entries(predictions)) {
-      if (value && typeof value === 'object') {
-        // Scores mode: { winner, scoreA, scoreB }
-        const { winner, scoreA, scoreB } = value;
-        if (winner) {
-          await db.query(`
-            INSERT INTO knockout_predictions (user_id, match_key, winner_team_id, score_a, score_b, prediction_set_id)
-            VALUES ($1, $2, $3, $4, $5, $6)
-          `, [req.user.id, matchKey, winner, scoreA ?? null, scoreB ?? null, setId]);
+    // Insert new predictions (parallelized for performance)
+    const insertPromises = Object.entries(predictions)
+      .filter(([, value]) => value)
+      .map(([matchKey, value]) => {
+        if (typeof value === 'object') {
+          // Scores mode: { winner, scoreA, scoreB }
+          const { winner, scoreA, scoreB } = value;
+          if (winner) {
+            return db.query(`
+              INSERT INTO knockout_predictions (user_id, match_key, winner_team_id, score_a, score_b, prediction_set_id)
+              VALUES ($1, $2, $3, $4, $5, $6)
+            `, [req.user.id, matchKey, winner, scoreA ?? null, scoreB ?? null, setId]);
+          }
+        } else {
+          // Positions mode: just winner_team_id
+          return db.query(`
+            INSERT INTO knockout_predictions (user_id, match_key, winner_team_id, prediction_set_id)
+            VALUES ($1, $2, $3, $4)
+          `, [req.user.id, matchKey, value, setId]);
         }
-      } else if (value) {
-        // Positions mode: just winner_team_id
-        await db.query(`
-          INSERT INTO knockout_predictions (user_id, match_key, winner_team_id, prediction_set_id)
-          VALUES ($1, $2, $3, $4)
-        `, [req.user.id, matchKey, value, setId]);
-      }
-    }
+        return null;
+      })
+      .filter(Boolean);
+    await Promise.all(insertPromises);
 
     res.json({ message: 'Knockout predictions saved successfully', setId });
   } catch (err) {
@@ -437,19 +439,20 @@ router.post('/scores', auth, async (req, res) => {
       [setId]
     );
 
-    // Insert new predictions
-    for (const [group, matches] of Object.entries(scores)) {
-      for (const [matchNum, score] of Object.entries(matches)) {
-        if (score.a !== undefined && score.b !== undefined) {
-          await db.query(
+    // Insert new predictions (parallelized for performance)
+    const insertPromises = Object.entries(scores).flatMap(([group, matches]) =>
+      Object.entries(matches)
+        .filter(([, score]) => score.a !== undefined && score.b !== undefined)
+        .map(([matchNum, score]) =>
+          db.query(
             `INSERT INTO score_predictions
              (user_id, prediction_set_id, group_letter, match_number, score_a, score_b)
              VALUES ($1, $2, $3, $4, $5, $6)`,
             [req.user.id, setId, group, parseInt(matchNum), score.a, score.b]
-          );
-        }
-      }
-    }
+          )
+        )
+    );
+    await Promise.all(insertPromises);
 
     res.json({ message: 'Score predictions saved successfully', setId });
   } catch (err) {

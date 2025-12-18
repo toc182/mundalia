@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -396,7 +396,7 @@ export default function Predictions() {
   );
 }
 
-function GroupCard({ group, teamIds, getTeamById, onMove, onReorder, onDragStart, onDragOver, onDrop }) {
+const GroupCard = memo(function GroupCard({ group, teamIds, getTeamById, onMove, onReorder, onDragStart, onDragOver, onDrop }) {
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [touchY, setTouchY] = useState(null);
   const itemRefs = useRef([]);
@@ -510,4 +510,4 @@ function GroupCard({ group, teamIds, getTeamById, onMove, onReorder, onDragStart
       </CardContent>
     </Card>
   );
-}
+});
