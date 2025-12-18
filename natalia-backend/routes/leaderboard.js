@@ -1,18 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
-
-// Points system
-const POINTS = {
-  GROUP_EXACT_POSITION: 3,    // Exact position in group
-  GROUP_QUALIFIER: 1,         // Team that qualifies (top 2)
-  ROUND_OF_32: 1,             // R32 (M73-M88)
-  ROUND_OF_16: 2,             // R16 (M89-M96)
-  QUARTERFINAL: 4,            // QF (M97-M100)
-  SEMIFINAL: 6,               // SF (M101-M102)
-  FINALIST: 8,                // Third place + Final (M103, M104)
-  CHAMPION: 15,               // Champion (M104)
-};
+const { POINTS, getMatchPoints } = require('../utils/scoring');
 
 // Cache configuration
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
@@ -20,18 +9,6 @@ const cache = {
   positions: { data: null, timestamp: 0 },
   scores: { data: null, timestamp: 0 }
 };
-
-// Helper to get match round from match key
-function getMatchPoints(matchKey) {
-  const matchNum = parseInt(matchKey.replace('M', ''));
-  if (matchNum >= 73 && matchNum <= 88) return POINTS.ROUND_OF_32;
-  if (matchNum >= 89 && matchNum <= 96) return POINTS.ROUND_OF_16;
-  if (matchNum >= 97 && matchNum <= 100) return POINTS.QUARTERFINAL;
-  if (matchNum >= 101 && matchNum <= 102) return POINTS.SEMIFINAL;
-  if (matchNum === 103) return POINTS.FINALIST; // Third place match
-  if (matchNum === 104) return POINTS.CHAMPION; // Final
-  return 0;
-}
 
 // Optimized: Calculate leaderboard with minimal queries
 async function calculateLeaderboard(mode) {

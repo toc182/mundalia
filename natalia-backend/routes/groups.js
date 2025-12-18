@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 const { auth } = require('../middleware/auth');
+const { POINTS, getMatchPoints } = require('../utils/scoring');
 
 // Get all private groups
 router.get('/', auth, async (req, res) => {
@@ -84,28 +85,7 @@ router.post('/join', auth, async (req, res) => {
   }
 });
 
-// Points system (same as leaderboard.js)
-const POINTS = {
-  GROUP_EXACT_POSITION: 3,
-  GROUP_QUALIFIER: 1,
-  ROUND_OF_32: 1,
-  ROUND_OF_16: 2,
-  QUARTERFINAL: 4,
-  SEMIFINAL: 6,
-  FINALIST: 8,
-  CHAMPION: 15,
-};
-
-function getMatchPoints(matchKey) {
-  const matchNum = parseInt(matchKey.replace('M', ''));
-  if (matchNum >= 73 && matchNum <= 88) return POINTS.ROUND_OF_32;
-  if (matchNum >= 89 && matchNum <= 96) return POINTS.ROUND_OF_16;
-  if (matchNum >= 97 && matchNum <= 100) return POINTS.QUARTERFINAL;
-  if (matchNum >= 101 && matchNum <= 102) return POINTS.SEMIFINAL;
-  if (matchNum === 103) return POINTS.FINALIST;
-  if (matchNum === 104) return POINTS.CHAMPION;
-  return 0;
-}
+// POINTS and getMatchPoints imported from utils/scoring.js
 
 // Calculate best score for a user (across all their prediction sets)
 // OPTIMIZED: Load all predictions in 2 queries instead of 2N
