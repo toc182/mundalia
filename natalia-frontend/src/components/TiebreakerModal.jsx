@@ -3,9 +3,9 @@
  * User drags to reorder teams that couldn't be separated by FIFA criteria
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import PropTypes from 'prop-types';
-import { GripVertical, AlertTriangle, X } from 'lucide-react';
+import { GripVertical, AlertTriangle } from 'lucide-react';
 import { Button } from './ui/button';
 import {
   Dialog,
@@ -18,15 +18,18 @@ import {
 import { Alert, AlertDescription } from './ui/alert';
 
 export default function TiebreakerModal({ tie, onResolve, onClose }) {
-  const [order, setOrder] = useState([]);
+  // Initialize order from tie data using useMemo
+  const initialOrder = useMemo(
+    () => tie?.teams?.map(t => t.teamId) || [],
+    [tie]
+  );
+  const [order, setOrder] = useState(initialOrder);
   const [draggedItem, setDraggedItem] = useState(null);
 
-  // Initialize order from tie data
-  useEffect(() => {
-    if (tie?.teams) {
-      setOrder(tie.teams.map(t => t.teamId));
-    }
-  }, [tie]);
+  // Reset order when tie changes
+  if (tie?.teams && order.length > 0 && order[0] !== initialOrder[0]) {
+    setOrder(initialOrder);
+  }
 
   // Handle drag start
   const handleDragStart = (e, teamId) => {
