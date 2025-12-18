@@ -65,6 +65,8 @@ natalia-backend/
 | Jest Backend | __tests__/auth.test.js | 9 tests para auth (register, login, health) |
 | Vitest Frontend | src/__tests__/*.test.js | 21 tests para predictionHelpers |
 | PropTypes | ErrorBoundary, GroupScoreInput, TiebreakerModal | Validación de props en componentes críticos |
+| ESLint Config | eslint.config.js | Configurado para Vitest globals y reglas ajustadas |
+| TiebreakerModal Fix | TiebreakerModal.jsx | Refactorizado useEffect a useMemo pattern |
 
 ### Packages de Testing Instalados
 - **Backend:** jest@30.2.0, supertest@7.1.4
@@ -72,7 +74,7 @@ natalia-backend/
 
 ### Comandos de Test
 ```bash
-# Backend
+# Backend (requiere PostgreSQL local)
 cd natalia-backend && npm test          # Corre todos los tests
 cd natalia-backend && npm run test:watch  # Watch mode
 
@@ -84,6 +86,11 @@ cd natalia-frontend && npm run test:watch  # Watch mode
 ### Cobertura Actual
 - **Backend auth.js:** 64% líneas cubiertas
 - **Frontend predictionHelpers:** 100% funciones probadas
+
+### CI/CD Pipeline
+- **Backend:** Verifica instalación + linting (tests requieren DB, se corren localmente)
+- **Frontend:** Tests + Lint + Build + Upload artifacts
+- **Deploy Status:** Notificación cuando todo pasa
 
 ### Plan Completado
 Se completaron las 4 semanas del plan de mejoras de AUDIT_REPORT.md:
@@ -680,6 +687,8 @@ Cada cambio de estado recreaba estos componentes como nuevas funciones, causando
 
 | Fecha | Tarea | Descripcion |
 |-------|-------|-------------|
+| 2025-12-18 | CI/CD Pipeline Fix | ESLint config ajustado, TiebreakerModal refactorizado, backend tests skip en CI |
+| 2025-12-18 | Semana 3-4 AUDIT | Code centralization, code splitting (-36% bundle), testing, CI/CD |
 | 2025-12-17 | Panel Admin completo | Dashboard, grupos con FIFA tiebreaker, knockout bracket visual |
 | 2025-12-17 | UI Leaderboard compacta | Tabla más densa, colores diferenciados, chips horizontales |
 | 2025-12-17 | Script seed-dev.js | 40 usuarios, 76 predicciones, 5 grupos de prueba |
