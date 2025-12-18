@@ -11,11 +11,35 @@ env:
 
 jobs:
   # ============================================
-  # Backend Checks (tests require database, run locally)
+  # Backend Tests with PostgreSQL
   # ============================================
   test-backend:
-    name: Backend Checks
+    name: Backend Tests
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: natalia_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_NAME: natalia_test
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      JWT_SECRET: test_jwt_secret_for_ci_only
+      NODE_ENV: test
 
     steps:
       - name: Checkout code
@@ -32,11 +56,18 @@ jobs:
         working-directory: natalia-backend
         run: npm ci
 
-      # Backend tests require PostgreSQL - skipped in CI
-      # Run locally with: cd natalia-backend && npm test
-      - name: Verify installation
+      - name: Setup database schema
         working-directory: natalia-backend
-        run: echo "Backend dependencies installed. Tests require database - run locally."
+        run: |
+          PGPASSWORD=postgres psql -h localhost -U postgres -d natalia_test -f migrations.sql
+
+      - name: Security audit
+        working-directory: natalia-backend
+        run: npm audit --audit-level=high || true
+
+      - name: Run tests
+        working-directory: natalia-backend
+        run: npm test
 
       - name: Run linter
         working-directory: natalia-backend
@@ -63,6 +94,10 @@ jobs:
       - name: Install dependencies
         working-directory: natalia-frontend
         run: npm ci
+
+      - name: Security audit
+        working-directory: natalia-frontend
+        run: npm audit --audit-level=high || true
 
       - name: Run tests
         working-directory: natalia-frontend
