@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS users (
   id SERIAL PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
   email VARCHAR(100) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
+  password VARCHAR(255),
+  role VARCHAR(20) DEFAULT 'user',
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -26,6 +27,11 @@ CREATE TABLE IF NOT EXISTS teams (
   group_letter VARCHAR(1),
   flag_url VARCHAR(255),
   is_playoff BOOLEAN DEFAULT FALSE
+);
+
+CREATE TABLE IF NOT EXISTS settings (
+  key VARCHAR(100) PRIMARY KEY,
+  value TEXT
 );
 
 CREATE TABLE IF NOT EXISTS prediction_sets (
