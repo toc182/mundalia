@@ -1,6 +1,55 @@
 # SESSION.md - Estado Actual del Proyecto
 
-## Ultima Actualizacion: 2025-12-18 (SEMANA 4 - TESTING Y CI/CD)
+## Ultima Actualizacion: 2025-12-18 (AUDITORÍA COMPLETA + MEJORAS)
+
+---
+
+## AUDITORÍA COMPLETA DE CÓDIGO - 2025-12-18
+
+Se realizó una auditoría exhaustiva del proyecto cubriendo seguridad, testing, performance y calidad de código. Ver `AUDIT_PLAN.md` para el plan detallado.
+
+### Fase 1: Seguridad (7/7 items)
+| Fix | Archivo | Descripción |
+|-----|---------|-------------|
+| Credenciales removidas | CLAUDE.md | Password local reemplazado con placeholder |
+| SSL fix | config/db.js | `rejectUnauthorized: true` en producción |
+| Validación inputs | predictions.js | Validación de group_letter, position, team_id, matchKey |
+| Transacciones | predictionSets.js | BEGIN/COMMIT/ROLLBACK en duplicate |
+| Transacciones | admin.js | Transacciones en POST /groups |
+| JWT seguro | Railway | Verificado que prod usa secret diferente |
+| validators.js | utils/validators.js | Funciones de validación centralizadas |
+
+### Fase 2: Testing y CI/CD (5/5 items)
+| Mejora | Archivo | Descripción |
+|--------|---------|-------------|
+| PostgreSQL en CI | ci.yml | Service postgres:15 con health checks |
+| Tests predictions | predictions.test.js | 20+ tests para endpoints de predicciones |
+| Tests admin | admin.test.js | Tests de autenticación y validación |
+| npm audit | ci.yml | Security scanning en frontend y backend |
+| Coverage thresholds | jest.config.js | 30% statements, 20% branches/functions |
+
+### Fase 3: Performance (4/4 items)
+| Mejora | Archivo | Descripción |
+|--------|---------|-------------|
+| N+1 fix groups.js | groups.js | Batch queries con ANY() en calculateUserBestScore |
+| Índices BD | migrations.sql | 5 índices compuestos para leaderboard queries |
+| React.memo | Predictions.jsx | GroupCard memoizado para evitar re-renders |
+| Promise.all | predictions.js | 4 endpoints con INSERTs paralelos |
+
+### Fase 4: Calidad de Código (2/4 items)
+| Mejora | Archivo | Descripción |
+|--------|---------|-------------|
+| Centralizar POINTS | utils/scoring.js | Sistema de puntos unificado |
+| Código muerto | Navbar.jsx | Componente no usado eliminado |
+| ~~Extraer MatchBox~~ | - | Pendiente (complejidad alta) |
+| ~~Estandarizar responses~~ | - | Pendiente (cambio invasivo) |
+
+### Esquema BD sincronizado
+Se agregaron a `migrations.sql` las tablas y columnas faltantes para que CI funcione:
+- Tabla `settings` para deadline checking
+- Tablas `real_*` para resultados admin
+- Columna `password` (era password_hash)
+- Columna `role` en users
 
 ---
 
