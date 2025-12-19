@@ -1,11 +1,42 @@
-const express = require('express');
-const router = express.Router();
-const db = require('../config/db');
-const { auth } = require('../middleware/auth');
+import express, { Request, Response, Router } from 'express';
+import db from '../config/db';
+import { auth } from '../middleware/auth';
+import { success, created, notFound, validationError, serverError } from '../utils/response';
+import { AuthenticatedRequest } from '../types';
+
+const router: Router = express.Router();
+
+interface PredictionSetRow {
+  id: number;
+  user_id: number;
+  name: string;
+  mode: 'positions' | 'scores';
+  is_active: boolean;
+  created_at: Date;
+  updated_at?: Date;
+  group_count?: number;
+  playoff_count?: number;
+  knockout_count?: number;
+  third_places?: string[];
+}
+
+interface CreateSetBody {
+  name: string;
+  mode?: 'positions' | 'scores';
+}
+
+interface UpdateSetBody {
+  name: string;
+}
+
+interface DuplicateSetBody {
+  name?: string;
+}
 
 // Get all prediction sets for user
-router.get('/', auth, async (req, res) => {
+router.get('/', auth, async (req: Request, res: Response): Promise<void> => {
   try {
+    const authReq = req as AuthenticatedRequest;
     const result = await db.query(
       `SELECT ps.*,
         (SELECT COUNT(*) FROM group_predictions WHERE prediction_set_id = ps.id) as group_count,
@@ -15,29 +46,30 @@ router.get('/', auth, async (req, res) => {
       FROM prediction_sets ps
       WHERE ps.user_id = $1
       ORDER BY ps.created_at DESC`,
-      [req.user.id]
+      [authReq.user.id]
     );
 
-    res.json(result.rows);
+    success(res, result.rows as PredictionSetRow[]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    serverError(res, err as Error);
   }
 });
 
 // Get single prediction set with all data
-router.get('/:id', auth, async (req, res) => {
+router.get('/:id', auth, async (req: Request, res: Response): Promise<void> => {
   try {
+    const authReq = req as AuthenticatedRequest;
     const setId = req.params.id;
 
     // Verify ownership
     const setResult = await db.query(
       'SELECT * FROM prediction_sets WHERE id = $1 AND user_id = $2',
-      [setId, req.user.id]
+      [setId, authReq.user.id]
     );
 
     if (setResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Prediction set not found' });
+      notFound(res, 'Prediction set not found');
+      return;
     }
 
     // Get all predictions for this set
@@ -55,8 +87,15 @@ router.get('/:id', auth, async (req, res) => {
     ]);
 
     // Format playoff predictions
-    const playoffs = {};
-    playoffPredictions.rows.forEach(row => {
+    interface PlayoffPredRow {
+      playoff_id: string;
+      semifinal_winner_1?: number;
+      semifinal_winner_2?: number;
+      final_winner?: number;
+    }
+
+    const playoffs: Record<string, { semi1?: number; semi2?: number; final?: number }> = {};
+    (playoffPredictions.rows as PlayoffPredRow[]).forEach(row => {
       playoffs[row.playoff_id] = {
         semi1: row.semifinal_winner_1,
         semi2: row.semifinal_winner_2,
@@ -65,98 +104,108 @@ router.get('/:id', auth, async (req, res) => {
     });
 
     // Format knockout predictions
-    const knockout = {};
-    knockoutPredictions.rows.forEach(row => {
+    interface KnockoutPredRow {
+      match_key: string;
+      winner_team_id: number;
+    }
+
+    const knockout: Record<string, number> = {};
+    (knockoutPredictions.rows as KnockoutPredRow[]).forEach(row => {
       knockout[row.match_key] = row.winner_team_id;
     });
 
-    res.json({
+    success(res, {
       ...setResult.rows[0],
       groupPredictions: groupPredictions.rows,
       playoffPredictions: playoffs,
-      thirdPlaces: thirdPlaces.rows[0]?.selected_groups || null,
+      thirdPlaces: (thirdPlaces.rows[0] as { selected_groups?: string[] })?.selected_groups || null,
       knockoutPredictions: knockout
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    serverError(res, err as Error);
   }
 });
 
 // Create new prediction set
-router.post('/', auth, async (req, res) => {
+router.post('/', auth, async (req: Request<unknown, unknown, CreateSetBody>, res: Response): Promise<void> => {
+  const authReq = req as AuthenticatedRequest;
   const { name, mode = 'positions' } = req.body;
 
   if (!name || name.trim().length === 0) {
-    return res.status(400).json({ error: 'Name is required' });
+    validationError(res, 'Name is required');
+    return;
   }
 
   if (!['positions', 'scores'].includes(mode)) {
-    return res.status(400).json({ error: 'Invalid mode. Must be "positions" or "scores"' });
+    validationError(res, 'Invalid mode. Must be "positions" or "scores"');
+    return;
   }
 
   try {
     const result = await db.query(
       'INSERT INTO prediction_sets (user_id, name, mode) VALUES ($1, $2, $3) RETURNING *',
-      [req.user.id, name.trim(), mode]
+      [authReq.user.id, name.trim(), mode]
     );
 
-    res.json(result.rows[0]);
+    created(res, result.rows[0] as PredictionSetRow);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    serverError(res, err as Error);
   }
 });
 
 // Update prediction set name
-router.put('/:id', auth, async (req, res) => {
-  const { name } = req.body;
+router.put('/:id', auth, async (req: Request, res: Response): Promise<void> => {
+  const authReq = req as unknown as AuthenticatedRequest;
+  const { name } = req.body as UpdateSetBody;
   const setId = req.params.id;
 
   if (!name || name.trim().length === 0) {
-    return res.status(400).json({ error: 'Name is required' });
+    validationError(res, 'Name is required');
+    return;
   }
 
   try {
     const result = await db.query(
       'UPDATE prediction_sets SET name = $1, updated_at = NOW() WHERE id = $2 AND user_id = $3 RETURNING *',
-      [name.trim(), setId, req.user.id]
+      [name.trim(), setId, authReq.user.id]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Prediction set not found' });
+      notFound(res, 'Prediction set not found');
+      return;
     }
 
-    res.json(result.rows[0]);
+    success(res, result.rows[0] as PredictionSetRow);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    serverError(res, err as Error);
   }
 });
 
 // Delete prediction set
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', auth, async (req: Request, res: Response): Promise<void> => {
+  const authReq = req as AuthenticatedRequest;
   const setId = req.params.id;
 
   try {
     const result = await db.query(
       'DELETE FROM prediction_sets WHERE id = $1 AND user_id = $2 RETURNING id',
-      [setId, req.user.id]
+      [setId, authReq.user.id]
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Prediction set not found' });
+      notFound(res, 'Prediction set not found');
+      return;
     }
 
-    res.json({ message: 'Prediction set deleted' });
+    success(res, null, 'Prediction set deleted');
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    serverError(res, err as Error);
   }
 });
 
 // Duplicate a prediction set (with transaction for data consistency)
-router.post('/:id/duplicate', auth, async (req, res) => {
+router.post('/:id/duplicate', auth, async (req: Request, res: Response): Promise<void> => {
+  const authReq = req as unknown as AuthenticatedRequest;
   const sourceSetId = req.params.id;
   const { name } = req.body;
 
@@ -167,25 +216,26 @@ router.post('/:id/duplicate', auth, async (req, res) => {
     // Verify ownership of source (before starting transaction)
     const sourceSet = await client.query(
       'SELECT * FROM prediction_sets WHERE id = $1 AND user_id = $2',
-      [sourceSetId, req.user.id]
+      [sourceSetId, authReq.user.id]
     );
 
     if (sourceSet.rows.length === 0) {
-      client.release();
-      return res.status(404).json({ error: 'Source prediction set not found' });
+      notFound(res, 'Source prediction set not found');
+      return;
     }
 
     // Start transaction
     await client.query('BEGIN');
 
     // Create new set (preserve mode from source)
-    const newName = name || `${sourceSet.rows[0].name} (copia)`;
-    const sourceMode = sourceSet.rows[0].mode || 'positions';
+    const sourceRow = sourceSet.rows[0] as PredictionSetRow;
+    const newName = name || `${sourceRow.name} (copia)`;
+    const sourceMode = sourceRow.mode || 'positions';
     const newSet = await client.query(
       'INSERT INTO prediction_sets (user_id, name, mode) VALUES ($1, $2, $3) RETURNING *',
-      [req.user.id, newName, sourceMode]
+      [authReq.user.id, newName, sourceMode]
     );
-    const newSetId = newSet.rows[0].id;
+    const newSetId = (newSet.rows[0] as PredictionSetRow).id;
 
     // Copy group predictions
     await client.query(`
@@ -218,15 +268,15 @@ router.post('/:id/duplicate', auth, async (req, res) => {
     // Commit transaction
     await client.query('COMMIT');
 
-    res.json(newSet.rows[0]);
+    created(res, newSet.rows[0] as PredictionSetRow);
   } catch (err) {
     // Rollback on any error
     await client.query('ROLLBACK');
     console.error('[DUPLICATE] Transaction error:', err);
-    res.status(500).json({ error: 'Server error' });
+    serverError(res, err as Error);
   } finally {
     client.release();
   }
 });
 
-module.exports = router;
+export default router;

@@ -1,7 +1,7 @@
-const { Pool } = require('pg');
+import { Pool, QueryResult, PoolConfig } from 'pg';
 
 // Configuracion del pool de conexiones
-const poolConfig = {
+const poolConfig: PoolConfig = {
   // Limites de conexiones
   max: 20,                      // Maximo 20 conexiones simultaneas
   idleTimeoutMillis: 30000,     // Cerrar conexiones inactivas despues de 30s
@@ -21,7 +21,7 @@ const pool = new Pool(
     : {
         ...poolConfig,
         host: process.env.DB_HOST,
-        port: process.env.DB_PORT,
+        port: parseInt(process.env.DB_PORT || '5432', 10),
         database: process.env.DB_NAME,
         user: process.env.DB_USER,
         password: process.env.DB_PASSWORD
@@ -29,11 +29,14 @@ const pool = new Pool(
 );
 
 // Log de errores del pool (no crashea la app)
-pool.on('error', (err) => {
+pool.on('error', (err: Error) => {
   console.error('[DB POOL] Unexpected error on idle client:', err.message);
 });
 
-module.exports = {
-  query: (text, params) => pool.query(text, params),
-  pool
+// Función query con tipos
+const query = (text: string, params?: unknown[]): Promise<QueryResult> => {
+  return pool.query(text, params);
 };
+
+export { query, pool };
+export default { query, pool };

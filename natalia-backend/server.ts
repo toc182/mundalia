@@ -1,11 +1,25 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const db = require('./config/db');
+import dotenv from 'dotenv';
+dotenv.config();
 
-const app = express();
+import express, { Request, Response, NextFunction, Application } from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import db from './config/db';
+
+// Import routes
+import authRoutes from './routes/auth';
+import usersRoutes from './routes/users';
+import teamsRoutes from './routes/teams';
+import matchesRoutes from './routes/matches';
+import predictionsRoutes from './routes/predictions';
+import predictionSetsRoutes from './routes/predictionSets';
+import groupsRoutes from './routes/groups';
+import leaderboardRoutes from './routes/leaderboard';
+import adminRoutes from './routes/admin';
+
+const app: Application = express();
 const PORT = process.env.PORT || 5000;
+const isProduction = process.env.NODE_ENV === 'production';
 
 // Security middleware - Helmet adds various HTTP headers for security
 app.use(helmet({
@@ -13,7 +27,7 @@ app.use(helmet({
 }));
 
 // Auto-run database migrations on startup
-const runMigrations = async () => {
+const runMigrations = async (): Promise<void> => {
   console.log('[MIGRATIONS] Running database migrations...');
   try {
     // Migration 002: Add mode column to prediction_sets
@@ -157,7 +171,8 @@ const runMigrations = async () => {
 
     console.log('[MIGRATIONS] All migrations completed successfully!');
   } catch (err) {
-    console.error('[MIGRATIONS] Error running migrations:', err.message);
+    const error = err as Error;
+    console.error('[MIGRATIONS] Error running migrations:', error.message);
     // Don't crash the server, just log the error
   }
 };
@@ -170,10 +185,9 @@ const allowedOrigins = [
   'http://localhost:5174',
   'https://mundalia.vercel.app'
 ];
-const isProduction = process.env.NODE_ENV === 'production';
 
 app.use(cors({
-  origin: function(origin, callback) {
+  origin: function(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
     // En produccion, rechazar requests sin origin (excepto health checks)
     if (!origin) {
       if (isProduction) {
@@ -194,23 +208,23 @@ app.use(cors({
 app.use(express.json({ limit: '10kb' }));
 
 // Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/users', require('./routes/users'));
-app.use('/api/teams', require('./routes/teams'));
-app.use('/api/matches', require('./routes/matches'));
-app.use('/api/predictions', require('./routes/predictions'));
-app.use('/api/prediction-sets', require('./routes/predictionSets'));
-app.use('/api/groups', require('./routes/groups'));
-app.use('/api/leaderboard', require('./routes/leaderboard'));
-app.use('/api/admin', require('./routes/admin'));
+app.use('/api/auth', authRoutes);
+app.use('/api/users', usersRoutes);
+app.use('/api/teams', teamsRoutes);
+app.use('/api/matches', matchesRoutes);
+app.use('/api/predictions', predictionsRoutes);
+app.use('/api/prediction-sets', predictionSetsRoutes);
+app.use('/api/groups', groupsRoutes);
+app.use('/api/leaderboard', leaderboardRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Health check
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 // Error handler - no exponer detalles en produccion
-app.use((err, req, res, next) => {
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   // Log completo solo en desarrollo
   if (!isProduction) {
     console.error(err.stack);
@@ -229,4 +243,4 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 // Export app for testing
-module.exports = app;
+export default app;

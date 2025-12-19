@@ -1,10 +1,43 @@
-const express = require('express');
-const router = express.Router();
-const db = require('../config/db');
-const { auth, adminAuth } = require('../middleware/auth');
+import express, { Request, Response, Router } from 'express';
+import db from '../config/db';
+import { adminAuth } from '../middleware/auth';
+
+const router: Router = express.Router();
+
+interface MatchRow {
+  id: number;
+  phase: string;
+  group_letter?: string;
+  team_a_id?: number;
+  team_b_id?: number;
+  team_a_name?: string;
+  team_a_code?: string;
+  team_a_flag?: string;
+  team_b_name?: string;
+  team_b_code?: string;
+  team_b_flag?: string;
+  match_date: Date;
+  result_a?: number;
+  result_b?: number;
+  winner_id?: number;
+}
+
+interface CreateMatchBody {
+  phase: string;
+  group_letter?: string;
+  team_a_id?: number;
+  team_b_id?: number;
+  match_date: string;
+}
+
+interface UpdateResultBody {
+  result_a: number;
+  result_b: number;
+  winner_id?: number;
+}
 
 // Get all matches
-router.get('/', async (req, res) => {
+router.get('/', async (_req: Request, res: Response): Promise<void> => {
   try {
     const result = await db.query(`
       SELECT m.*,
@@ -15,7 +48,7 @@ router.get('/', async (req, res) => {
       LEFT JOIN teams tb ON m.team_b_id = tb.id
       ORDER BY m.match_date, m.id
     `);
-    res.json(result.rows);
+    res.json(result.rows as MatchRow[]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
@@ -23,7 +56,7 @@ router.get('/', async (req, res) => {
 });
 
 // Get matches by phase
-router.get('/phase/:phase', async (req, res) => {
+router.get('/phase/:phase', async (req: Request, res: Response): Promise<void> => {
   try {
     const result = await db.query(`
       SELECT m.*,
@@ -35,7 +68,7 @@ router.get('/phase/:phase', async (req, res) => {
       WHERE m.phase = $1
       ORDER BY m.match_date, m.id
     `, [req.params.phase]);
-    res.json(result.rows);
+    res.json(result.rows as MatchRow[]);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
@@ -43,7 +76,7 @@ router.get('/phase/:phase', async (req, res) => {
 });
 
 // Admin: Create match
-router.post('/', adminAuth, async (req, res) => {
+router.post('/', adminAuth, async (req: Request<unknown, unknown, CreateMatchBody>, res: Response): Promise<void> => {
   const { phase, group_letter, team_a_id, team_b_id, match_date } = req.body;
 
   try {
@@ -51,7 +84,7 @@ router.post('/', adminAuth, async (req, res) => {
       'INSERT INTO matches (phase, group_letter, team_a_id, team_b_id, match_date) VALUES ($1, $2, $3, $4, $5) RETURNING *',
       [phase, group_letter, team_a_id, team_b_id, match_date]
     );
-    res.status(201).json(result.rows[0]);
+    res.status(201).json(result.rows[0] as MatchRow);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
@@ -59,7 +92,7 @@ router.post('/', adminAuth, async (req, res) => {
 });
 
 // Admin: Update match result
-router.put('/:id/result', adminAuth, async (req, res) => {
+router.put('/:id/result', adminAuth, async (req: Request<{ id: string }, unknown, UpdateResultBody>, res: Response): Promise<void> => {
   const { result_a, result_b, winner_id } = req.body;
 
   try {
@@ -69,14 +102,15 @@ router.put('/:id/result', adminAuth, async (req, res) => {
     );
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Match not found' });
+      res.status(404).json({ error: 'Match not found' });
+      return;
     }
 
-    res.json(result.rows[0]);
+    res.json(result.rows[0] as MatchRow);
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Server error' });
   }
 });
 
-module.exports = router;
+export default router;

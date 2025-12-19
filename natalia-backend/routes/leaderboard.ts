@@ -1,17 +1,77 @@
-const express = require('express');
-const router = express.Router();
-const db = require('../config/db');
-const { POINTS, getMatchPoints } = require('../utils/scoring');
+import express, { Request, Response, Router } from 'express';
+import db from '../config/db';
+import { POINTS, getMatchPoints } from '../utils/scoring';
+import { success, serverError } from '../utils/response';
+
+const router: Router = express.Router();
 
 // Cache configuration
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-const cache = {
+
+interface CacheEntry {
+  data: LeaderboardEntry[] | null;
+  timestamp: number;
+}
+
+interface LeaderboardCache {
+  positions: CacheEntry;
+  scores: CacheEntry;
+  [key: string]: CacheEntry;
+}
+
+const cache: LeaderboardCache = {
   positions: { data: null, timestamp: 0 },
   scores: { data: null, timestamp: 0 }
 };
 
+interface PredictionSetRow {
+  prediction_set_id: number;
+  prediction_name: string;
+  mode: string;
+  created_at: Date;
+  user_id: number;
+  user_name: string;
+  username?: string;
+  country?: string;
+}
+
+interface GroupPrediction {
+  prediction_set_id: number;
+  group_letter: string;
+  team_id: number;
+  predicted_position: number;
+}
+
+interface KnockoutPrediction {
+  prediction_set_id: number;
+  match_key: string;
+  winner_team_id: number;
+}
+
+interface RealGroupStanding {
+  group_letter: string;
+  team_id: number;
+  final_position: number;
+}
+
+interface RealKnockoutResult {
+  match_key: string;
+  winner_team_id: number;
+}
+
+interface PointsBreakdown {
+  groupExact: number;
+  groupQualifier: number;
+  knockout: number;
+}
+
+interface LeaderboardEntry extends PredictionSetRow {
+  total_points: number;
+  points_breakdown: PointsBreakdown;
+}
+
 // Optimized: Calculate leaderboard with minimal queries
-async function calculateLeaderboard(mode) {
+async function calculateLeaderboard(mode: string): Promise<LeaderboardEntry[]> {
   // Single query to get all complete prediction sets with user info
   const predictionSets = await db.query(`
     SELECT
@@ -40,7 +100,7 @@ async function calculateLeaderboard(mode) {
   }
 
   // Get all prediction set IDs
-  const setIds = predictionSets.rows.map(r => r.prediction_set_id);
+  const setIds = (predictionSets.rows as PredictionSetRow[]).map(r => r.prediction_set_id);
 
   // OPTIMIZED: Load ALL data in just 4 queries total (instead of 2N+2)
   const [realGroupStandings, realKnockout, allGroupPreds, allKnockoutPreds] = await Promise.all([
@@ -51,28 +111,28 @@ async function calculateLeaderboard(mode) {
   ]);
 
   // Build lookup maps for real results
-  const realGroupMap = {}; // { 'A': { teamId: position, ... }, ... }
-  realGroupStandings.rows.forEach(row => {
+  const realGroupMap: Record<string, Record<number, number>> = {};
+  (realGroupStandings.rows as RealGroupStanding[]).forEach(row => {
     if (!realGroupMap[row.group_letter]) realGroupMap[row.group_letter] = {};
     realGroupMap[row.group_letter][row.team_id] = row.final_position;
   });
 
-  const realKnockoutMap = {}; // { matchKey: winnerId }
-  realKnockout.rows.forEach(row => {
+  const realKnockoutMap: Record<string, number> = {};
+  (realKnockout.rows as RealKnockoutResult[]).forEach(row => {
     realKnockoutMap[row.match_key] = row.winner_team_id;
   });
 
   // Build prediction maps grouped by prediction_set_id
-  const groupPredsBySet = {}; // { setId: [predictions] }
-  allGroupPreds.rows.forEach(pred => {
+  const groupPredsBySet: Record<number, GroupPrediction[]> = {};
+  (allGroupPreds.rows as GroupPrediction[]).forEach(pred => {
     if (!groupPredsBySet[pred.prediction_set_id]) {
       groupPredsBySet[pred.prediction_set_id] = [];
     }
     groupPredsBySet[pred.prediction_set_id].push(pred);
   });
 
-  const knockoutPredsBySet = {}; // { setId: [predictions] }
-  allKnockoutPreds.rows.forEach(pred => {
+  const knockoutPredsBySet: Record<number, KnockoutPrediction[]> = {};
+  (allKnockoutPreds.rows as KnockoutPrediction[]).forEach(pred => {
     if (!knockoutPredsBySet[pred.prediction_set_id]) {
       knockoutPredsBySet[pred.prediction_set_id] = [];
     }
@@ -80,9 +140,9 @@ async function calculateLeaderboard(mode) {
   });
 
   // Calculate points for each prediction set (in memory, no more queries)
-  const leaderboard = predictionSets.rows.map(row => {
+  const leaderboard: LeaderboardEntry[] = (predictionSets.rows as PredictionSetRow[]).map(row => {
     let totalPoints = 0;
-    const breakdown = { groupExact: 0, groupQualifier: 0, knockout: 0 };
+    const breakdown: PointsBreakdown = { groupExact: 0, groupQualifier: 0, knockout: 0 };
 
     // Score group predictions
     const groupPreds = groupPredsBySet[row.prediction_set_id] || [];
@@ -132,14 +192,15 @@ async function calculateLeaderboard(mode) {
 }
 
 // Get global leaderboard with caching
-router.get('/', async (req, res) => {
-  const { mode = 'positions' } = req.query;
+router.get('/', async (req: Request, res: Response): Promise<void> => {
+  const mode = (req.query.mode as string) || 'positions';
 
   try {
     // Check cache
     const cached = cache[mode];
     if (cached && cached.data && (Date.now() - cached.timestamp < CACHE_TTL)) {
-      return res.json(cached.data);
+      success(res, cached.data);
+      return;
     }
 
     // Calculate fresh leaderboard
@@ -148,15 +209,19 @@ router.get('/', async (req, res) => {
     // Update cache
     cache[mode] = { data: leaderboard, timestamp: Date.now() };
 
-    res.json(leaderboard);
+    success(res, leaderboard);
   } catch (err) {
-    console.error('Leaderboard error:', err);
-    res.status(500).json({ error: 'Server error' });
+    serverError(res, err as Error);
   }
 });
 
+interface CountRow {
+  mode: string;
+  count: string;
+}
+
 // Get count of complete predictions by mode
-router.get('/counts', async (req, res) => {
+router.get('/counts', async (_req: Request, res: Response): Promise<void> => {
   try {
     const result = await db.query(`
       SELECT
@@ -172,16 +237,15 @@ router.get('/counts', async (req, res) => {
       GROUP BY ps.mode
     `);
 
-    const counts = { positions: 0, scores: 0 };
-    result.rows.forEach(row => {
-      counts[row.mode] = parseInt(row.count);
+    const counts: Record<string, number> = { positions: 0, scores: 0 };
+    (result.rows as CountRow[]).forEach(row => {
+      counts[row.mode] = parseInt(row.count, 10);
     });
 
-    res.json(counts);
+    success(res, counts);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    serverError(res, err as Error);
   }
 });
 
-module.exports = router;
+export default router;

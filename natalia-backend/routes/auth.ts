@@ -1,11 +1,13 @@
-const express = require('express');
-const router = express.Router();
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const { body, validationResult } = require('express-validator');
-const { OAuth2Client } = require('google-auth-library');
-const rateLimit = require('express-rate-limit');
-const db = require('../config/db');
+import express, { Request, Response, Router } from 'express';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import { body, validationResult, ValidationError } from 'express-validator';
+import { OAuth2Client, TokenPayload } from 'google-auth-library';
+import rateLimit from 'express-rate-limit';
+import db from '../config/db';
+import { success, created, validationError, error, serverError } from '../utils/response';
+
+const router: Router = express.Router();
 
 // Google OAuth client
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -14,7 +16,7 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
   max: 5, // 5 intentos por ventana
-  message: { error: 'Demasiados intentos de login. Intenta de nuevo en 15 minutos.' },
+  message: { success: false, error: 'Demasiados intentos de login. Intenta de nuevo en 15 minutos.', code: 'RATE_LIMIT' },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -22,7 +24,7 @@ const loginLimiter = rateLimit({
 const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hora
   max: 3, // 3 registros por hora por IP
-  message: { error: 'Demasiados registros. Intenta de nuevo en 1 hora.' },
+  message: { success: false, error: 'Demasiados registros. Intenta de nuevo en 1 hora.', code: 'RATE_LIMIT' },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -30,7 +32,7 @@ const registerLimiter = rateLimit({
 const googleAuthLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
   max: 10, // 10 intentos
-  message: { error: 'Demasiados intentos. Intenta de nuevo en 15 minutos.' },
+  message: { success: false, error: 'Demasiados intentos. Intenta de nuevo en 15 minutos.', code: 'RATE_LIMIT' },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -42,18 +44,47 @@ const passwordValidator = body('password')
   .matches(/[a-z]/).withMessage('La contraseña debe tener al menos una minúscula')
   .matches(/[0-9]/).withMessage('La contraseña debe tener al menos un número');
 
+interface RegisterBody {
+  email: string;
+  password: string;
+  name: string;
+}
+
+interface LoginBody {
+  email: string;
+  password: string;
+}
+
+interface GoogleAuthBody {
+  credential: string;
+}
+
+interface UserRow {
+  id: number;
+  email: string;
+  name: string;
+  username?: string;
+  role: string;
+  password?: string;
+  google_id?: string;
+  country?: string;
+  birth_date?: string;
+  created_at: Date;
+}
+
 // Register
 router.post('/register', registerLimiter, [
   body('email').isEmail().withMessage('Email inválido').normalizeEmail(),
   passwordValidator,
   body('name').trim().notEmpty().withMessage('El nombre es requerido')
-], async (req, res) => {
+], async (req: Request, res: Response): Promise<void> => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    validationError(res, errors.array().map((e: ValidationError) => e.msg as string));
+    return;
   }
 
-  const { email, password, name } = req.body;
+  const { email, password, name } = req.body as RegisterBody;
 
   try {
     // Check if user exists
@@ -63,7 +94,8 @@ router.post('/register', registerLimiter, [
     );
 
     if (userExists.rows.length > 0) {
-      return res.status(400).json({ error: 'Email already registered' });
+      error(res, 'Email already registered', 400, 'EMAIL_EXISTS');
+      return;
     }
 
     // Hash password
@@ -76,19 +108,18 @@ router.post('/register', registerLimiter, [
       [email, hashedPassword, name]
     );
 
-    const user = result.rows[0];
+    const user = result.rows[0] as UserRow;
 
     // Generate token
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET as string,
       { expiresIn: '7d' }
     );
 
-    res.status(201).json({ user, token });
+    created(res, { user, token });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    serverError(res, err as Error);
   }
 });
 
@@ -96,13 +127,14 @@ router.post('/register', registerLimiter, [
 router.post('/login', loginLimiter, [
   body('email').isEmail().normalizeEmail(),
   body('password').notEmpty()
-], async (req, res) => {
+], async (req: Request, res: Response): Promise<void> => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
-    return res.status(400).json({ errors: errors.array() });
+    validationError(res, errors.array().map((e: ValidationError) => e.msg as string));
+    return;
   }
 
-  const { email, password } = req.body;
+  const { email, password } = req.body as LoginBody;
 
   try {
     // Find user
@@ -112,40 +144,42 @@ router.post('/login', loginLimiter, [
     );
 
     if (result.rows.length === 0) {
-      return res.status(400).json({ error: 'Invalid credentials' });
+      error(res, 'Invalid credentials', 400, 'INVALID_CREDENTIALS');
+      return;
     }
 
-    const user = result.rows[0];
+    const user = result.rows[0] as UserRow;
 
     // Check password
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.password || '');
     if (!isMatch) {
-      return res.status(400).json({ error: 'Invalid credentials' });
+      error(res, 'Invalid credentials', 400, 'INVALID_CREDENTIALS');
+      return;
     }
 
     // Generate token
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET as string,
       { expiresIn: '7d' }
     );
 
-    res.json({
+    success(res, {
       user: { id: user.id, email: user.email, name: user.name, username: user.username, role: user.role },
       token
     });
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    serverError(res, err as Error);
   }
 });
 
 // Google OAuth Login/Register
-router.post('/google', googleAuthLimiter, async (req, res) => {
+router.post('/google', googleAuthLimiter, async (req: Request<unknown, unknown, GoogleAuthBody>, res: Response): Promise<void> => {
   const { credential } = req.body;
 
   if (!credential) {
-    return res.status(400).json({ error: 'No credential provided' });
+    error(res, 'No credential provided', 400, 'MISSING_CREDENTIAL');
+    return;
   }
 
   try {
@@ -155,9 +189,8 @@ router.post('/google', googleAuthLimiter, async (req, res) => {
       audience: process.env.GOOGLE_CLIENT_ID,
     });
 
-    const payload = ticket.getPayload();
-    const { sub: googleId, email, name, picture } = payload;
-
+    const payload = ticket.getPayload() as TokenPayload;
+    const { sub: googleId, email, name } = payload;
 
     // Check if user exists by google_id
     let result = await db.query(
@@ -165,11 +198,11 @@ router.post('/google', googleAuthLimiter, async (req, res) => {
       [googleId]
     );
 
-    let user;
+    let user: UserRow;
 
     if (result.rows.length > 0) {
       // User exists with this Google ID
-      user = result.rows[0];
+      user = result.rows[0] as UserRow;
     } else {
       // Check if user exists by email (might have registered with email/password before)
       result = await db.query(
@@ -179,7 +212,7 @@ router.post('/google', googleAuthLimiter, async (req, res) => {
 
       if (result.rows.length > 0) {
         // Link Google account to existing user
-        user = result.rows[0];
+        user = result.rows[0] as UserRow;
         await db.query(
           'UPDATE users SET google_id = $1 WHERE id = $2',
           [googleId, user.id]
@@ -190,7 +223,7 @@ router.post('/google', googleAuthLimiter, async (req, res) => {
           'INSERT INTO users (email, name, google_id) VALUES ($1, $2, $3) RETURNING id, email, name, role',
           [email, name, googleId]
         );
-        user = result.rows[0];
+        user = result.rows[0] as UserRow;
       }
     }
 
@@ -203,18 +236,18 @@ router.post('/google', googleAuthLimiter, async (req, res) => {
     // Generate JWT token
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET,
+      process.env.JWT_SECRET as string,
       { expiresIn: '7d' }
     );
 
-    res.json({
-      user: fullUser.rows[0],
+    success(res, {
+      user: fullUser.rows[0] as UserRow,
       token
     });
   } catch (err) {
     console.error('[GOOGLE AUTH] Error:', err);
-    res.status(401).json({ error: 'Invalid Google token' });
+    error(res, 'Invalid Google token', 401, 'INVALID_TOKEN');
   }
 });
 
-module.exports = router;
+export default router;

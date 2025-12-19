@@ -1,6 +1,70 @@
 # SESSION.md - Estado Actual del Proyecto
 
-## Ultima Actualizacion: 2025-12-18 (AUDITORÍA COMPLETA + MEJORAS)
+## Ultima Actualizacion: 2025-12-19 (MIGRACIÓN TYPESCRIPT BACKEND)
+
+---
+
+## MIGRACIÓN COMPLETA A TYPESCRIPT - 2025-12-19
+
+El backend ha sido migrado completamente a TypeScript, eliminando todos los archivos JavaScript duplicados.
+
+### Cambios Realizados
+
+| Categoría | Detalle |
+|-----------|---------|
+| **Archivos .ts** | server.ts, config/db.ts, middleware/auth.ts, routes/*.ts (10), utils/*.ts (3), types/index.ts |
+| **Tests .ts** | 8 archivos de test convertidos a TypeScript con ES modules |
+| **Archivos .js eliminados** | 16 archivos duplicados removidos |
+| **Cobertura** | 76.6% (174 tests pasando) |
+
+### Nuevos Tests Agregados
+
+| Archivo | Tests | Descripción |
+|---------|-------|-------------|
+| `scoring.test.ts` | 32 | Sistema de puntos completo (POINTS, getMatchPoints, getGroupPoints) |
+| `admin.test.ts` | 21 | Rutas admin (auth, stats, playoffs, knockout, groups) |
+| `predictions.test.ts` | 57 | Edge cases (scores mode, tiebreaker, reset, validation) |
+
+### Configuración TypeScript
+
+**tsconfig.json** - Configuración estricta para código fuente:
+- `strict: true`, `noImplicitAny: true`, `strictNullChecks: true`
+- Compila a `dist/` con ES2022
+
+**tsconfig.test.json** - Configuración relajada para tests:
+- `strict: false`, `noImplicitAny: false`
+- Permite tests sin tipado explícito
+
+**jest.config.js** - Usa ts-jest:
+- `preset: 'ts-jest'`
+- `testMatch: ['**/__tests__/**/*.test.ts']`
+
+### Scripts Actualizados (package.json)
+
+```bash
+npm run dev        # nodemon --exec ts-node server.ts
+npm run build      # tsc → genera dist/
+npm start          # node dist/server.js (producción)
+npm test           # jest con ts-jest
+npm run typecheck  # tsc --noEmit
+```
+
+### Tipos Definidos (types/index.ts)
+
+- `User`, `JwtPayload`, `AuthenticatedRequest`
+- `Team`, `PredictionSet`, `GroupPrediction`
+- `PlayoffPrediction`, `KnockoutPrediction`
+- `POINTS` configuration interface
+
+### Verificaciones Completadas
+
+| Check | Estado |
+|-------|--------|
+| TypeCheck (`tsc --noEmit`) | ✓ Sin errores |
+| Tests (174) | ✓ Todos pasan |
+| Dev server | ✓ Inicia con ts-node |
+| Build | ✓ Compila a dist/ |
+| Cobertura | ✓ 76.6% |
 
 ---
 
@@ -36,13 +100,25 @@ Se realizó una auditoría exhaustiva del proyecto cubriendo seguridad, testing,
 | React.memo | Predictions.jsx | GroupCard memoizado para evitar re-renders |
 | Promise.all | predictions.js | 4 endpoints con INSERTs paralelos |
 
-### Fase 4: Calidad de Código (2/4 items)
+### Fase 4: Calidad de Código (3/4 items)
 | Mejora | Archivo | Descripción |
 |--------|---------|-------------|
 | Centralizar POINTS | utils/scoring.js | Sistema de puntos unificado |
 | Código muerto | Navbar.jsx | Componente no usado eliminado |
-| ~~Extraer MatchBox~~ | - | Pendiente (complejidad alta) |
+| Extraer MatchBox | components/MatchBox.jsx | Componente unificado con 3 modos: click, scores, readonly |
 | ~~Estandarizar responses~~ | - | Pendiente (cambio invasivo) |
+
+### MatchBox Componente Unificado (2025-12-19)
+Se creó componente reutilizable `MatchBox.jsx` que unifica la visualización de partidos:
+- **Modo click**: Seleccionar ganador con click (Repechajes, Knockout posiciones)
+- **Modo scores**: Inputs de marcador + ganador derivado (Knockout marcadores)
+- **Modo readonly**: Solo visualización con checkmark (Ver Predicción)
+
+**Archivos actualizados:**
+- `src/components/MatchBox.jsx` - Componente nuevo centralizado
+- `src/pages/Playoffs.jsx` - Usa MatchBox importado
+- `src/pages/Knockout.jsx` - MobileMatchBox y DesktopBracketMatch usan MatchBox
+- `src/pages/PredictionDetail.jsx` - ReadonlyMatchBox wrapper usa MatchBox
 
 ### Esquema BD sincronizado
 Se agregaron a `migrations.sql` las tablas y columnas faltantes para que CI funcione:
@@ -546,18 +622,41 @@ src/
 └── App.jsx              # Routes
 ```
 
-### Backend (natalia-backend/)
+### Backend (natalia-backend/) - 100% TypeScript
 ```
 ├── config/
-│   └── db.js            # PostgreSQL pool (dev/prod conditional)
+│   └── db.ts            # PostgreSQL pool (dev/prod conditional)
 ├── middleware/
-│   └── auth.js          # JWT verification
+│   └── auth.ts          # JWT verification + admin role check
 ├── routes/
-│   ├── auth.js          # login, register
-│   ├── users.js         # me, update profile
-│   ├── predictions.js   # groups, playoffs, thirds, knockout
-│   └── predictionSets.js # CRUD prediction sets
-└── server.js            # Express + CORS
+│   ├── admin.ts         # Panel admin (resultados reales)
+│   ├── auth.ts          # login, register, Google OAuth
+│   ├── groups.ts        # Grupos privados
+│   ├── leaderboard.ts   # Rankings globales
+│   ├── matches.ts       # Info de partidos
+│   ├── predictions.ts   # groups, playoffs, thirds, knockout, scores
+│   ├── predictionSets.ts # CRUD prediction sets
+│   ├── teams.ts         # Info de equipos
+│   └── users.ts         # me, update profile, check-username
+├── types/
+│   └── index.ts         # Tipos compartidos
+├── utils/
+│   ├── response.ts      # Funciones de respuesta estandarizadas
+│   ├── scoring.ts       # Sistema de puntos centralizado
+│   └── validators.ts    # Validadores de entrada
+├── __tests__/
+│   ├── admin.test.ts    # 21 tests
+│   ├── auth.test.ts     # 9 tests
+│   ├── groups.test.ts   # 16 tests
+│   ├── leaderboard.test.ts # 11 tests
+│   ├── predictions.test.ts # 57 tests
+│   ├── predictionSets.test.ts # 13 tests
+│   ├── scoring.test.ts  # 32 tests
+│   ├── users.test.ts    # 15 tests
+│   └── setup.ts         # Jest setup
+├── server.ts            # Express + CORS + migrations
+├── tsconfig.json        # Config estricta
+└── tsconfig.test.json   # Config relajada para tests
 ```
 
 ### Base de Datos (PostgreSQL)
@@ -585,7 +684,7 @@ DB_HOST=localhost
 DB_PORT=5432
 DB_NAME=natalia_dev
 DB_USER=postgres
-DB_PASSWORD=Dinocore51720
+DB_PASSWORD=<tu-password-local>
 ```
 
 ### Comandos
@@ -736,6 +835,8 @@ Cada cambio de estado recreaba estos componentes como nuevas funciones, causando
 
 | Fecha | Tarea | Descripcion |
 |-------|-------|-------------|
+| 2025-12-19 | Migración TypeScript | Backend 100% TypeScript, 16 archivos .js eliminados, ts-jest configurado |
+| 2025-12-19 | Tests ampliados | 174 tests (scoring, admin, predictions edge cases), 76.6% cobertura |
 | 2025-12-18 | CI/CD Pipeline Fix | ESLint config ajustado, TiebreakerModal refactorizado, backend tests skip en CI |
 | 2025-12-18 | Semana 3-4 AUDIT | Code centralization, code splitting (-36% bundle), testing, CI/CD |
 | 2025-12-17 | Panel Admin completo | Dashboard, grupos con FIFA tiebreaker, knockout bracket visual |

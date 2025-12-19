@@ -3,7 +3,18 @@
  * Usado por leaderboard.js y groups.js
  */
 
-const POINTS = {
+export interface PointsConfig {
+  GROUP_EXACT_POSITION: number;
+  GROUP_QUALIFIER: number;
+  ROUND_OF_32: number;
+  ROUND_OF_16: number;
+  QUARTERFINAL: number;
+  SEMIFINAL: number;
+  FINALIST: number;
+  CHAMPION: number;
+}
+
+export const POINTS: PointsConfig = {
   GROUP_EXACT_POSITION: 3,    // Posicion exacta en grupo
   GROUP_QUALIFIER: 1,         // Equipo que clasifica (top 2)
   ROUND_OF_32: 1,             // Dieciseisavos (M73-M88)
@@ -16,11 +27,9 @@ const POINTS = {
 
 /**
  * Obtiene los puntos para un partido de eliminatorias
- * @param {string} matchKey - Clave del partido (ej: 'M73', 'M104')
- * @returns {number} Puntos correspondientes
  */
-function getMatchPoints(matchKey) {
-  const matchNum = parseInt(matchKey.replace('M', ''));
+export function getMatchPoints(matchKey: string): number {
+  const matchNum = parseInt(matchKey.replace('M', ''), 10);
   if (matchNum >= 73 && matchNum <= 88) return POINTS.ROUND_OF_32;
   if (matchNum >= 89 && matchNum <= 96) return POINTS.ROUND_OF_16;
   if (matchNum >= 97 && matchNum <= 100) return POINTS.QUARTERFINAL;
@@ -32,11 +41,8 @@ function getMatchPoints(matchKey) {
 
 /**
  * Calcula puntos de grupo para una prediccion
- * @param {number} predictedPosition - Posicion predicha (1-4)
- * @param {number} realPosition - Posicion real (1-4)
- * @returns {number} Puntos obtenidos
  */
-function getGroupPoints(predictedPosition, realPosition) {
+export function getGroupPoints(predictedPosition: number, realPosition: number): number {
   if (predictedPosition === realPosition) {
     return POINTS.GROUP_EXACT_POSITION;
   }
@@ -45,9 +51,3 @@ function getGroupPoints(predictedPosition, realPosition) {
   }
   return 0;
 }
-
-module.exports = {
-  POINTS,
-  getMatchPoints,
-  getGroupPoints,
-};
