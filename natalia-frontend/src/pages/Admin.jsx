@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -37,6 +37,9 @@ export default function Admin() {
   const [realGroupStandings, setRealGroupStandings] = useState([]);
   const [realKnockout, setRealKnockout] = useState([]);
 
+  // Timer ref for cleanup
+  const successTimerRef = useRef(null);
+
   const loadData = useCallback(async () => {
     if (!user || user.role !== 'admin') return;
     setLoading(true);
@@ -64,9 +67,17 @@ export default function Admin() {
     loadData();
   }, [loadData]);
 
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    };
+  }, []);
+
   const showSuccess = (msg) => {
     setSuccess(msg);
-    setTimeout(() => setSuccess(null), 3000);
+    if (successTimerRef.current) clearTimeout(successTimerRef.current);
+    successTimerRef.current = setTimeout(() => setSuccess(null), 3000);
   };
 
   const tabs = [

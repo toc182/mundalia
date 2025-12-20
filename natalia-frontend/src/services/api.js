@@ -25,9 +25,15 @@ api.interceptors.request.use(
   }
 );
 
-// Interceptor para manejar errores de respuesta
+// Interceptor para manejar respuestas y errores
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Desempaquetar formato estandarizado { success, data } del backend
+    if (response.data && typeof response.data === 'object' && 'success' in response.data) {
+      return { ...response, data: response.data.data };
+    }
+    return response;
+  },
   (error) => {
     // Si el servidor responde con 401, el token es invalido
     if (error.response?.status === 401) {

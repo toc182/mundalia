@@ -6,6 +6,7 @@ import { OAuth2Client, TokenPayload } from 'google-auth-library';
 import rateLimit from 'express-rate-limit';
 import db from '../config/db';
 import { success, created, validationError, error, serverError } from '../utils/response';
+import { UserRow } from '../types';
 
 const router: Router = express.Router();
 
@@ -57,19 +58,6 @@ interface LoginBody {
 
 interface GoogleAuthBody {
   credential: string;
-}
-
-interface UserRow {
-  id: number;
-  email: string;
-  name: string;
-  username?: string;
-  role: string;
-  password?: string;
-  google_id?: string;
-  country?: string;
-  birth_date?: string;
-  created_at: Date;
 }
 
 // Register
@@ -150,8 +138,14 @@ router.post('/login', loginLimiter, [
 
     const user = result.rows[0] as UserRow;
 
+    // Check if user has a password (Google OAuth users may not)
+    if (!user.password) {
+      error(res, 'This account uses Google login. Please sign in with Google.', 400, 'USE_GOOGLE_LOGIN');
+      return;
+    }
+
     // Check password
-    const isMatch = await bcrypt.compare(password, user.password || '');
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       error(res, 'Invalid credentials', 400, 'INVALID_CREDENTIALS');
       return;

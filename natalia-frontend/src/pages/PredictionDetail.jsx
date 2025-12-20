@@ -17,6 +17,7 @@ import {
 } from '@/data/knockoutBracket';
 import { predictionSetsAPI } from '@/services/api';
 import { getTeamById as getTeamByIdHelper, getPlayoffWinner as getPlayoffWinnerHelper } from '@/utils/predictionHelpers';
+import MatchBox from '@/components/MatchBox';
 
 export default function PredictionDetail() {
   const { id } = useParams();
@@ -457,8 +458,8 @@ export default function PredictionDetail() {
   );
 }
 
-// Componente para mostrar un partido con los dos equipos y el ganador resaltado
-function MatchBox({ match, getTeamById, knockoutPredictions, predictions, bestThirdPlaces, allMatches }) {
+// Componente wrapper que resuelve equipos y usa MatchBox unificado
+function ReadonlyMatchBox({ match, getTeamById, knockoutPredictions, predictions, bestThirdPlaces, allMatches }) {
   const winnerId = knockoutPredictions[match.matchId];
 
   // Encontrar el perdedor de un partido de semifinal
@@ -466,15 +467,12 @@ function MatchBox({ match, getTeamById, knockoutPredictions, predictions, bestTh
     const sfWinner = knockoutPredictions[matchId];
     if (!sfWinner) return null;
 
-    // Buscar la estructura del partido en todas las rondas
     const sfMatch = allMatches?.find(m => m.matchId === matchId);
     if (!sfMatch) return null;
 
-    // Obtener los dos equipos que jugaron esa semifinal
     const teamAId = knockoutPredictions[sfMatch.teamA?.from];
     const teamBId = knockoutPredictions[sfMatch.teamB?.from];
 
-    // El perdedor es el que no es el ganador
     const loserId = teamAId === sfWinner ? teamBId : teamAId;
     return loserId ? getTeamById(loserId) : null;
   };
@@ -483,23 +481,19 @@ function MatchBox({ match, getTeamById, knockoutPredictions, predictions, bestTh
   const resolveTeamSource = (source) => {
     if (!source) return null;
 
-    // R32 - equipos directos de grupos
     if (source.type === 'winner' && source.group) {
-      // 1ro del grupo
       const groupPreds = predictions[source.group];
       if (!groupPreds || !groupPreds[0]) return null;
       return getTeamById(groupPreds[0]);
     }
 
     if (source.type === 'runner_up' && source.group) {
-      // 2do del grupo
       const groupPreds = predictions[source.group];
       if (!groupPreds || !groupPreds[1]) return null;
       return getTeamById(groupPreds[1]);
     }
 
     if (source.type === 'third_place' && source.pools) {
-      // Mejor tercero de un pool de grupos
       const matchedGroup = bestThirdPlaces.find(g => source.pools.includes(g));
       if (!matchedGroup) return null;
       const groupPreds = predictions[matchedGroup];
@@ -511,13 +505,10 @@ function MatchBox({ match, getTeamById, knockoutPredictions, predictions, bestTh
       return null;
     }
 
-    // R16 y posteriores - ganador de partido previo
     if (source.from) {
-      // Si tiene position='loser', es para el partido de 3er puesto
       if (source.position === 'loser') {
         return findLoserOfMatch(source.from);
       }
-      // Ganador del partido previo (default o position='winner')
       const prevWinner = knockoutPredictions[source.from];
       if (!prevWinner) return null;
       return getTeamById(prevWinner);
@@ -528,32 +519,16 @@ function MatchBox({ match, getTeamById, knockoutPredictions, predictions, bestTh
 
   const teamA = resolveTeamSource(match.teamA);
   const teamB = resolveTeamSource(match.teamB);
-  const winner = winnerId ? getTeamById(winnerId) : null;
-
-  const TeamSlot = ({ team, isWinner }) => {
-    if (!team) {
-      return (
-        <div className="flex items-center gap-2 px-2 py-1 text-xs text-muted-foreground bg-muted/30 border-b last:border-b-0">
-          <span className="w-5 h-3 bg-gray-200 rounded"></span>
-          <span>Por definir</span>
-        </div>
-      );
-    }
-
-    return (
-      <div className={`flex items-center gap-2 px-2 py-1 text-xs border-b last:border-b-0 ${isWinner ? 'bg-green-100 font-semibold' : 'bg-white'}`}>
-        <img src={team.flag_url} alt={team.name} className="w-5 h-3 object-cover rounded" />
-        <span className="truncate">{team.name}</span>
-        {team.thirdPlaceFrom && <span className="text-[10px] text-muted-foreground">3{team.thirdPlaceFrom}</span>}
-        {isWinner && <span className="ml-auto text-green-600">✓</span>}
-      </div>
-    );
-  };
 
   return (
-    <div className="border rounded overflow-hidden w-[160px] shrink-0">
-      <TeamSlot team={teamA} isWinner={winner && teamA && winner.id === teamA.id} />
-      <TeamSlot team={teamB} isWinner={winner && teamB && winner.id === teamB.id} />
+    <div className="w-[160px] shrink-0">
+      <MatchBox
+        teamA={teamA}
+        teamB={teamB}
+        selectedWinner={winnerId}
+        readonly={true}
+        size="sm"
+      />
     </div>
   );
 }
@@ -569,7 +544,7 @@ function RoundMatches({ label, matches, getTeamById, knockoutPredictions, predic
       <p className="text-sm font-medium mb-2">{label} ({completedCount}/{matches.length})</p>
       <div className="flex flex-wrap gap-2">
         {matches.map((match) => (
-          <MatchBox
+          <ReadonlyMatchBox
             key={match.matchId}
             match={match}
             getTeamById={getTeamById}

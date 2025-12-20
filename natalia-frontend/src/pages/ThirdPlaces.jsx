@@ -33,6 +33,9 @@ export default function ThirdPlaces() {
 
   // Snapshot for change detection
   const originalThirdPlacesRef = useRef(null);
+
+  // Timer ref for cleanup
+  const navTimerRef = useRef(null);
   const [showResetWarning, setShowResetWarning] = useState(false);
   const [hasKnockoutData, setHasKnockoutData] = useState(false);
 
@@ -110,6 +113,13 @@ export default function ThirdPlaces() {
     };
     loadData();
   }, [setId]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (navTimerRef.current) clearTimeout(navTimerRef.current);
+    };
+  }, []);
 
   // Get team by ID using centralized helper
   const getTeamById = (id) => getTeamByIdHelper(id, playoffSelections);
@@ -200,7 +210,8 @@ export default function ThirdPlaces() {
       navigate(nextUrl);
     } catch (err) {
       setError('Error al guardar en servidor - Continuando con guardado local');
-      setTimeout(() => {
+      if (navTimerRef.current) clearTimeout(navTimerRef.current);
+      navTimerRef.current = setTimeout(() => {
         window.scrollTo(0, 0);
         navigate(nextUrl);
       }, 800);

@@ -15,6 +15,7 @@ import {
 import { ChevronRight } from 'lucide-react';
 import { playoffs } from '@/data/playoffsData';
 import { predictionsAPI, predictionSetsAPI } from '@/services/api';
+import MatchBox from '@/components/MatchBox';
 
 export default function Playoffs() {
   const navigate = useNavigate();
@@ -26,6 +27,9 @@ export default function Playoffs() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [predictionMode, setPredictionMode] = useState('positions'); // 'positions' | 'scores'
+
+  // Timer ref for cleanup
+  const navTimerRef = useRef(null);
 
   // Snapshot for change detection
   const originalSelectionsRef = useRef(null);
@@ -91,6 +95,13 @@ export default function Playoffs() {
     };
     loadSelections();
   }, [setId]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (navTimerRef.current) clearTimeout(navTimerRef.current);
+    };
+  }, []);
 
   const selectWinner = (playoffId, round, winnerId) => {
     setSelections(prev => {
@@ -184,7 +195,8 @@ export default function Playoffs() {
     } catch (err) {
       console.error('[PLAYOFFS] savePlayoffs error:', err.response?.data || err.message);
       setError('Error al guardar en servidor - Continuando con guardado local');
-      setTimeout(() => {
+      if (navTimerRef.current) clearTimeout(navTimerRef.current);
+      navTimerRef.current = setTimeout(() => {
         window.scrollTo(0, 0);
         navigate(nextUrl);
       }, 800);
@@ -325,47 +337,14 @@ function PlayoffBracket({ playoff, selections, onSelectWinner, getTeamById }) {
   const semi2Winner = selections.semi2;
   const finalWinner = selections.final;
 
-  // Match box component - same style as Knockout
-  const MatchBox = ({ teamAId, teamBId, round, selectedWinner }) => {
-    const teamA = getTeamById(teamAId);
-    const teamB = getTeamById(teamBId);
-    const canSelect = teamA && teamB;
-
-    const TeamSlot = ({ team, isTop }) => {
-      if (!team) {
-        return (
-          <div className={`h-[32px] px-3 py-1.5 text-sm text-muted-foreground bg-muted/30 border-x border-t ${!isTop ? 'border-b rounded-b' : 'rounded-t'} border-dashed border-gray-300 flex items-center`}>
-            Por definir
-          </div>
-        );
-      }
-
-      const isSelected = selectedWinner === team.id;
-      const isEliminated = selectedWinner && selectedWinner !== team.id;
-
-      return (
-        <button
-          onClick={() => canSelect && onSelectWinner(round, team.id)}
-          disabled={!canSelect}
-          className={`flex items-center gap-2 h-[32px] px-3 py-1.5 text-left w-full transition-colors
-            ${isTop ? 'rounded-t border-x border-t' : 'rounded-b border'}
-            ${isSelected ? 'bg-green-100 border-green-500 font-semibold' : isEliminated ? 'bg-gray-50 border-gray-300' : 'bg-white border-gray-300'}
-            ${!isSelected && !isEliminated && canSelect ? 'hover:bg-blue-50 active:bg-blue-100' : ''}
-          `}
-        >
-          <img src={team.flag_url} alt="" className={`w-6 h-4 object-cover rounded shrink-0 ${isEliminated ? 'opacity-50' : ''}`} />
-          <span className={`text-sm truncate ${isEliminated ? 'text-gray-400' : ''}`}>{team.name}</span>
-        </button>
-      );
-    };
-
-    return (
-      <div className="border border-gray-300 rounded overflow-hidden">
-        <TeamSlot team={teamA} isTop={true} />
-        <TeamSlot team={teamB} isTop={false} />
-      </div>
-    );
-  };
+  // Helper para crear props de MatchBox
+  const getMatchBoxProps = (teamAId, teamBId, round, selectedWinner) => ({
+    teamA: getTeamById(teamAId),
+    teamB: getTeamById(teamBId),
+    selectedWinner,
+    onSelectWinner: (teamId) => onSelectWinner(round, teamId),
+    size: 'md',
+  });
 
   return (
     <Card>
@@ -405,16 +384,10 @@ function PlayoffBracket({ playoff, selections, onSelectWinner, getTeamById }) {
               {/* Columna Semifinales */}
               <div className="flex flex-col gap-1 flex-1 min-w-0">
                 <MatchBox
-                  teamAId={playoff.bracket.semi1.teamA}
-                  teamBId={playoff.bracket.semi1.teamB}
-                  round="semi1"
-                  selectedWinner={semi1Winner}
+                  {...getMatchBoxProps(playoff.bracket.semi1.teamA, playoff.bracket.semi1.teamB, 'semi1', semi1Winner)}
                 />
                 <MatchBox
-                  teamAId={playoff.bracket.semi2.teamA}
-                  teamBId={playoff.bracket.semi2.teamB}
-                  round="semi2"
-                  selectedWinner={semi2Winner}
+                  {...getMatchBoxProps(playoff.bracket.semi2.teamA, playoff.bracket.semi2.teamB, 'semi2', semi2Winner)}
                 />
               </div>
 
@@ -429,10 +402,7 @@ function PlayoffBracket({ playoff, selections, onSelectWinner, getTeamById }) {
               {/* Columna Final */}
               <div className="flex-1 min-w-0">
                 <MatchBox
-                  teamAId={semi1Winner}
-                  teamBId={semi2Winner}
-                  round="final"
-                  selectedWinner={finalWinner}
+                  {...getMatchBoxProps(semi1Winner, semi2Winner, 'final', finalWinner)}
                 />
               </div>
             </div>
@@ -448,47 +418,14 @@ function PlayoffBracketFIFA({ playoff, selections, onSelectWinner, getTeamById }
   const finalWinner = selections.final;
   const seededTeam = getTeamById(playoff.bracket.finalTeamA);
 
-  // Match box component - same style as Knockout
-  const MatchBox = ({ teamAId, teamBId, round, selectedWinner }) => {
-    const teamA = getTeamById(teamAId);
-    const teamB = getTeamById(teamBId);
-    const canSelect = teamA && teamB;
-
-    const TeamSlot = ({ team, isTop }) => {
-      if (!team) {
-        return (
-          <div className={`h-[32px] px-3 py-1.5 text-sm text-muted-foreground bg-muted/30 border-x border-t ${!isTop ? 'border-b rounded-b' : 'rounded-t'} border-dashed border-gray-300 flex items-center`}>
-            Por definir
-          </div>
-        );
-      }
-
-      const isSelected = selectedWinner === team.id;
-      const isEliminated = selectedWinner && selectedWinner !== team.id;
-
-      return (
-        <button
-          onClick={() => canSelect && onSelectWinner(round, team.id)}
-          disabled={!canSelect}
-          className={`flex items-center gap-2 h-[32px] px-3 py-1.5 text-left w-full transition-colors
-            ${isTop ? 'rounded-t border-x border-t' : 'rounded-b border'}
-            ${isSelected ? 'bg-green-100 border-green-500 font-semibold' : isEliminated ? 'bg-gray-50 border-gray-300' : 'bg-white border-gray-300'}
-            ${!isSelected && !isEliminated && canSelect ? 'hover:bg-blue-50 active:bg-blue-100' : ''}
-          `}
-        >
-          <img src={team.flag_url} alt="" className={`w-6 h-4 object-cover rounded shrink-0 ${isEliminated ? 'opacity-50' : ''}`} />
-          <span className={`text-sm truncate ${isEliminated ? 'text-gray-400' : ''}`}>{team.name}</span>
-        </button>
-      );
-    };
-
-    return (
-      <div className="border border-gray-300 rounded overflow-hidden">
-        <TeamSlot team={teamA} isTop={true} />
-        <TeamSlot team={teamB} isTop={false} />
-      </div>
-    );
-  };
+  // Helper para crear props de MatchBox
+  const getMatchBoxProps = (teamAId, teamBId, round, selectedWinner) => ({
+    teamA: getTeamById(teamAId),
+    teamB: getTeamById(teamBId),
+    selectedWinner,
+    onSelectWinner: (teamId) => onSelectWinner(round, teamId),
+    size: 'md',
+  });
 
   // Seeded team box (team on top, "-" on bottom) - no clickeable
   const SeededTeamBox = () => {
@@ -549,10 +486,7 @@ function PlayoffBracketFIFA({ playoff, selections, onSelectWinner, getTeamById }
               <div className="flex flex-col gap-1 flex-1 min-w-0">
                 <SeededTeamBox />
                 <MatchBox
-                  teamAId={playoff.bracket.semi1.teamA}
-                  teamBId={playoff.bracket.semi1.teamB}
-                  round="semi1"
-                  selectedWinner={semi1Winner}
+                  {...getMatchBoxProps(playoff.bracket.semi1.teamA, playoff.bracket.semi1.teamB, 'semi1', semi1Winner)}
                 />
               </div>
 
@@ -567,10 +501,7 @@ function PlayoffBracketFIFA({ playoff, selections, onSelectWinner, getTeamById }
               {/* Columna Final */}
               <div className="flex-1 min-w-0">
                 <MatchBox
-                  teamAId={playoff.bracket.finalTeamA}
-                  teamBId={semi1Winner}
-                  round="final"
-                  selectedWinner={finalWinner}
+                  {...getMatchBoxProps(playoff.bracket.finalTeamA, semi1Winner, 'final', finalWinner)}
                 />
               </div>
             </div>

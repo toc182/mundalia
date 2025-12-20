@@ -18,6 +18,20 @@ export interface User {
   updated_at?: Date;
 }
 
+// UserRow - Used for database query results
+export interface UserRow {
+  id: number;
+  email: string;
+  name: string;
+  username?: string;
+  role: string;
+  password?: string;
+  google_id?: string;
+  country?: string;
+  birth_date?: string;
+  created_at: Date;
+}
+
 export interface JwtPayload {
   id: number;
   email: string;

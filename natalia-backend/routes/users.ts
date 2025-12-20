@@ -3,7 +3,7 @@ import rateLimit from 'express-rate-limit';
 import db from '../config/db';
 import { auth } from '../middleware/auth';
 import { success, error, notFound, serverError } from '../utils/response';
-import { AuthenticatedRequest } from '../types';
+import { AuthenticatedRequest, UserRow } from '../types';
 
 const router: Router = express.Router();
 
@@ -15,17 +15,6 @@ const checkUsernameLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-
-interface UserRow {
-  id: number;
-  email: string;
-  name: string;
-  username?: string;
-  role: string;
-  country?: string;
-  birth_date?: string;
-  created_at: Date;
-}
 
 interface UpdateProfileBody {
   name?: string;

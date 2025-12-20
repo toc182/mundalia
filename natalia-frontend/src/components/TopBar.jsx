@@ -47,8 +47,10 @@ export default function TopBar() {
         <button
           onClick={() => setMenuOpen(!menuOpen)}
           className="p-2 hover:bg-muted rounded-lg transition-colors"
+          aria-label={menuOpen ? "Cerrar menú" : "Abrir menú"}
+          aria-expanded={menuOpen}
         >
-          {menuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          {menuOpen ? <X className="h-6 w-6" aria-hidden="true" /> : <Menu className="h-6 w-6" aria-hidden="true" />}
         </button>
 
         {/* Logo centro */}
@@ -61,8 +63,10 @@ export default function TopBar() {
           <button
             onClick={() => setUserMenuOpen(!userMenuOpen)}
             className="p-2 hover:bg-muted rounded-lg transition-colors"
+            aria-label="Menú de usuario"
+            aria-expanded={userMenuOpen}
           >
-            <User className="h-6 w-6" />
+            <User className="h-6 w-6" aria-hidden="true" />
           </button>
 
           {/* Dropdown menu usuario */}
@@ -99,8 +103,12 @@ export default function TopBar() {
           <div
             className="fixed inset-0 bg-black/50 z-40 pt-14"
             onClick={() => setMenuOpen(false)}
+            aria-hidden="true"
           />
-          <nav className="fixed top-14 left-0 w-64 h-[calc(100vh-3.5rem)] bg-background border-r z-50 overflow-y-auto">
+          <nav
+            className="fixed top-14 left-0 w-64 h-[calc(100vh-3.5rem)] bg-background border-r z-50 overflow-y-auto"
+            aria-label="Navegación principal"
+          >
             <div className="p-4 space-y-1">
               <button
                 onClick={() => handleNavigation('/')}

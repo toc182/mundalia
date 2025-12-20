@@ -1,6 +1,64 @@
 # SESSION.md - Estado Actual del Proyecto
 
-## Ultima Actualizacion: 2025-12-19 (MIGRACIÓN TYPESCRIPT BACKEND)
+## Ultima Actualizacion: 2025-12-20 (AUDITORÍA INTEGRAL v2)
+
+---
+
+## AUDITORÍA INTEGRAL v2 - 2025-12-20
+
+Se realizó una auditoría completa del proyecto con implementación de correcciones.
+
+### Hallazgos y Correcciones
+
+| Severidad | Cantidad | Estado |
+|-----------|----------|--------|
+| ALTO | 1 | ✅ Corregido |
+| MEDIO | 5 | ✅ Corregidos |
+| BAJO | 7 | Pendientes (opcionales) |
+
+### Fase 1: Backend (6 correcciones)
+
+| Corrección | Archivo | Descripción |
+|------------|---------|-------------|
+| API consistente | `routes/matches.ts` | Migrado a usar helpers de response.ts |
+| API consistente | `routes/teams.ts` | Migrado a usar helpers de response.ts |
+| Validar password Google | `routes/auth.ts:154` | Mensaje claro para usuarios Google OAuth |
+| Transacción ACID | `routes/predictions.ts` | BEGIN/COMMIT/ROLLBACK en DELETE+INSERT |
+| Validar JWT_SECRET | `server.ts` | Validación en startup, exit si falta |
+| Validadores | `routes/predictions.ts` | Ya implementados (verificado) |
+
+### Fase 2: Frontend (7 archivos corregidos)
+
+**Problema:** setTimeout sin cleanup causaba memory leaks potenciales.
+
+**Solución:** useRef + useEffect cleanup en cada componente.
+
+| Archivo | Timer(s) Corregido(s) |
+|---------|----------------------|
+| `Account.jsx` | savedTimerRef |
+| `Admin.jsx` | successTimerRef |
+| `Groups.jsx` | messageTimerRef, copyTimerRef |
+| `Knockout.jsx` | savedTimerRef, navTimerRef |
+| `Playoffs.jsx` | navTimerRef |
+| `Predictions.jsx` | navTimerRef |
+| `ThirdPlaces.jsx` | navTimerRef |
+
+### Verificaciones
+
+| Check | Estado |
+|-------|--------|
+| TypeScript (`tsc --noEmit`) | ✅ Sin errores |
+| ESLint | ✅ Solo warnings de imports |
+| Tests | ✅ 174 pasando |
+
+### Pendiente (Fase 3 - Opcional)
+
+- [ ] Consolidar tipos UserRow en `types/index.ts`
+- [ ] Agregar tests para matches/teams routes
+- [ ] Agregar useCallback a Predictions.jsx
+- [ ] Migración a HttpOnly cookies (largo plazo)
+
+Ver `AUDIT_PLAN.md` para detalles completos.
 
 ---
 
@@ -819,12 +877,20 @@ Cada cambio de estado recreaba estos componentes como nuevas funciones, causando
 ## RESUMEN: Tareas Pendientes
 
 ### Prioridad Alta (UX)
-*Ninguna pendiente* - Todas las tareas de alta prioridad han sido completadas.
+
+| Feature | Descripcion |
+|---------|-------------|
+| Timer cuenta regresiva | Timer en Home mostrando tiempo restante para inicio del Mundial |
+| Cierre de predicciones | Admin puede bloquear entradas. Deadline automático: 1 hora antes del Mundial |
 
 ### Prioridad Media (Features)
-*Ninguna pendiente* - El sistema está 100% funcional.
+
+| Feature | Descripcion |
+|---------|-------------|
+| Soporte multi-idioma | Cambiar idioma de la página: Español, Inglés, Portugués, Francés, Alemán, Chino |
 
 ### Prioridad Baja (Nice to have)
+
 | Feature | Descripcion |
 |---------|-------------|
 | Puntos en grupos privados | Mostrar desglose de puntos en ranking de grupos |

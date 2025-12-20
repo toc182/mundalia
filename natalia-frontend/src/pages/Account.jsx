@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -235,6 +235,16 @@ export default function Account() {
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
 
+  // Timer ref for cleanup
+  const savedTimerRef = useRef(null);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+    };
+  }, []);
+
   // Check username availability with debounce
   const checkUsername = useCallback(async (value) => {
     if (!value || value === user?.username) {
@@ -284,7 +294,8 @@ export default function Account() {
       updateUser(response.data);
       setSaved(true);
       setUsernameStatus(null); // Reset status since it's now the user's username
-      setTimeout(() => setSaved(false), 3000);
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = setTimeout(() => setSaved(false), 3000);
     } catch (err) {
       setError(err.response?.data?.error || 'Error al guardar cambios');
     } finally {

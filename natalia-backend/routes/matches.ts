@@ -1,6 +1,7 @@
 import express, { Request, Response, Router } from 'express';
 import db from '../config/db';
 import { adminAuth } from '../middleware/auth';
+import { success, created, notFound, serverError } from '../utils/response';
 
 const router: Router = express.Router();
 
@@ -48,10 +49,9 @@ router.get('/', async (_req: Request, res: Response): Promise<void> => {
       LEFT JOIN teams tb ON m.team_b_id = tb.id
       ORDER BY m.match_date, m.id
     `);
-    res.json(result.rows as MatchRow[]);
+    success(res, result.rows as MatchRow[]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    serverError(res, err as Error);
   }
 });
 
@@ -68,10 +68,9 @@ router.get('/phase/:phase', async (req: Request, res: Response): Promise<void> =
       WHERE m.phase = $1
       ORDER BY m.match_date, m.id
     `, [req.params.phase]);
-    res.json(result.rows as MatchRow[]);
+    success(res, result.rows as MatchRow[]);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    serverError(res, err as Error);
   }
 });
 
@@ -84,10 +83,9 @@ router.post('/', adminAuth, async (req: Request<unknown, unknown, CreateMatchBod
       'INSERT INTO matches (phase, group_letter, team_a_id, team_b_id, match_date) VALUES ($1, $2, $3, $4, $5) RETURNING *',
       [phase, group_letter, team_a_id, team_b_id, match_date]
     );
-    res.status(201).json(result.rows[0] as MatchRow);
+    created(res, result.rows[0] as MatchRow);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    serverError(res, err as Error);
   }
 });
 
@@ -102,14 +100,13 @@ router.put('/:id/result', adminAuth, async (req: Request<{ id: string }, unknown
     );
 
     if (result.rows.length === 0) {
-      res.status(404).json({ error: 'Match not found' });
+      notFound(res, 'Match not found');
       return;
     }
 
-    res.json(result.rows[0] as MatchRow);
+    success(res, result.rows[0] as MatchRow);
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
+    serverError(res, err as Error);
   }
 });
 

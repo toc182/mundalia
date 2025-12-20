@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -26,8 +26,20 @@ export default function Groups() {
   const [leaderboard, setLeaderboard] = useState([]);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
 
+  // Timer refs for cleanup
+  const messageTimerRef = useRef(null);
+  const copyTimerRef = useRef(null);
+
   useEffect(() => {
     loadGroups();
+  }, []);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    };
   }, []);
 
   const loadGroups = async () => {
@@ -55,7 +67,8 @@ export default function Groups() {
       setNewGroupName('');
       setCreateOpen(false);
       setMessage({ type: 'success', text: `Grupo "${response.data.name}" creado. Código: ${response.data.code}` });
-      setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+      if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
+      messageTimerRef.current = setTimeout(() => setMessage({ type: '', text: '' }), 5000);
     } catch (err) {
       setMessage({ type: 'error', text: 'Error al crear el grupo' });
     } finally {
@@ -73,11 +86,13 @@ export default function Groups() {
       setJoinCode('');
       setJoinOpen(false);
       setMessage({ type: 'success', text: `Te has unido a "${response.data.group.name}"` });
-      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
+      messageTimerRef.current = setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     } catch (err) {
       const errorMsg = err.response?.data?.error || 'Error al unirse al grupo';
       setMessage({ type: 'error', text: errorMsg });
-      setTimeout(() => setMessage({ type: '', text: '' }), 3000);
+      if (messageTimerRef.current) clearTimeout(messageTimerRef.current);
+      messageTimerRef.current = setTimeout(() => setMessage({ type: '', text: '' }), 3000);
     } finally {
       setSaving(false);
     }
@@ -86,7 +101,8 @@ export default function Groups() {
   const copyCode = (code) => {
     navigator.clipboard.writeText(code);
     setCopiedCode(code);
-    setTimeout(() => setCopiedCode(null), 2000);
+    if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    copyTimerRef.current = setTimeout(() => setCopiedCode(null), 2000);
   };
 
   const openLeaderboard = async (group) => {

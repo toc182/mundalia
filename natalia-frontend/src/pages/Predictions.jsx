@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, memo } from 'react';
+import { useState, useEffect, useRef, memo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,6 +32,9 @@ export default function Predictions() {
   const originalPredictionsRef = useRef(null);
   const [showResetWarning, setShowResetWarning] = useState(false);
   const [subsequentData, setSubsequentData] = useState({ hasThirds: false, hasKnockout: false });
+
+  // Timer ref for cleanup
+  const navTimerRef = useRef(null);
 
   // Helper para inicializar todos los grupos con orden por defecto
   const getDefaultPredictions = () => {
@@ -94,6 +97,7 @@ export default function Predictions() {
           }
         } catch (err) {
           console.error('Error loading predictions:', err);
+          setError('Error al cargar las predicciones. Por favor recarga la página.');
           // En caso de error, inicializar con orden por defecto
           const defaults = getDefaultPredictions();
           setPredictions(defaults);
@@ -135,6 +139,13 @@ export default function Predictions() {
     loadPredictions();
   }, [setId]);
 
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (navTimerRef.current) clearTimeout(navTimerRef.current);
+    };
+  }, []);
+
   // Get team by ID using centralized helper
   const getTeamById = (id) => getTeamByIdHelper(id, playoffSelections);
 
@@ -165,35 +176,32 @@ export default function Predictions() {
     setSaved(false);
   };
 
-  const moveTeam = (group, fromIndex, direction) => {
+  const moveTeam = useCallback((group, fromIndex, direction) => {
     const toIndex = fromIndex + direction;
     if (toIndex < 0 || toIndex > 3) return;
 
-    const currentOrder = [...(predictions[group] || [])];
-    const temp = currentOrder[fromIndex];
-    currentOrder[fromIndex] = currentOrder[toIndex];
-    currentOrder[toIndex] = temp;
-
-    setPredictions(prev => ({
-      ...prev,
-      [group]: currentOrder
-    }));
+    setPredictions(prev => {
+      const currentOrder = [...(prev[group] || [])];
+      const temp = currentOrder[fromIndex];
+      currentOrder[fromIndex] = currentOrder[toIndex];
+      currentOrder[toIndex] = temp;
+      return { ...prev, [group]: currentOrder };
+    });
     setSaved(false);
-  };
+  }, []);
 
   // Reorder teams (for touch drag)
-  const reorderTeams = (group, fromIndex, toIndex) => {
+  const reorderTeams = useCallback((group, fromIndex, toIndex) => {
     if (fromIndex === toIndex) return;
-    const currentOrder = [...(predictions[group] || [])];
-    const [removed] = currentOrder.splice(fromIndex, 1);
-    currentOrder.splice(toIndex, 0, removed);
 
-    setPredictions(prev => ({
-      ...prev,
-      [group]: currentOrder
-    }));
+    setPredictions(prev => {
+      const currentOrder = [...(prev[group] || [])];
+      const [removed] = currentOrder.splice(fromIndex, 1);
+      currentOrder.splice(toIndex, 0, removed);
+      return { ...prev, [group]: currentOrder };
+    });
     setSaved(false);
-  };
+  }, []);
 
   const groups = getAllGroups();
 
@@ -268,7 +276,8 @@ export default function Predictions() {
       // Aunque falle el servidor, permitir continuar (ya está en localStorage)
       setError('Error al guardar en servidor - Continuando con guardado local');
       setSaving(false);
-      setTimeout(() => {
+      if (navTimerRef.current) clearTimeout(navTimerRef.current);
+      navTimerRef.current = setTimeout(() => {
         window.scrollTo(0, 0);
         navigate(nextUrl);
       }, 800);

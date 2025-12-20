@@ -135,18 +135,26 @@ router.post('/groups', auth, async (req: Request<unknown, unknown, SaveGroupsBod
 
     const setId = requestSetId || await getOrCreateDefaultSet(authReq.user.id);
 
-    // Delete existing predictions for this set
-    await db.query('DELETE FROM group_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]);
+    // Use transaction for atomic DELETE + INSERT
+    await db.query('BEGIN');
+    try {
+      // Delete existing predictions for this set
+      await db.query('DELETE FROM group_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]);
 
-    // Insert new predictions (parallelized for performance)
-    await Promise.all(predictions.map(pred =>
-      db.query(
-        'INSERT INTO group_predictions (user_id, group_letter, team_id, predicted_position, prediction_set_id) VALUES ($1, $2, $3, $4, $5)',
-        [authReq.user.id, pred.group_letter, pred.team_id, pred.predicted_position, setId]
-      )
-    ));
+      // Insert new predictions (parallelized for performance)
+      await Promise.all(predictions.map(pred =>
+        db.query(
+          'INSERT INTO group_predictions (user_id, group_letter, team_id, predicted_position, prediction_set_id) VALUES ($1, $2, $3, $4, $5)',
+          [authReq.user.id, pred.group_letter, pred.team_id, pred.predicted_position, setId]
+        )
+      ));
 
-    success(res, { setId }, 'Group predictions saved successfully');
+      await db.query('COMMIT');
+      success(res, { setId }, 'Group predictions saved successfully');
+    } catch (txErr) {
+      await db.query('ROLLBACK');
+      throw txErr;
+    }
   } catch (err) {
     console.error('[GROUPS POST] Error:', err);
     serverError(res, err as Error);

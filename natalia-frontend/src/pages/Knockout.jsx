@@ -16,6 +16,7 @@ import {
 import { getThirdPlaceAssignments } from '@/data/thirdPlaceCombinations';
 import { predictionsAPI, predictionSetsAPI } from '@/services/api';
 import { getTeamById as getTeamByIdHelper } from '@/utils/predictionHelpers';
+import MatchBox from '@/components/MatchBox';
 
 export default function Knockout() {
   const navigate = useNavigate();
@@ -36,6 +37,8 @@ export default function Knockout() {
   const [loading, setLoading] = useState(true); // Loading state para evitar flash de "debes completar"
   const scrollContainerRef = useRef(null);
   const isScrolling = useRef(false);
+  const savedTimerRef = useRef(null);
+  const navTimerRef = useRef(null);
 
   useEffect(() => {
     const loadData = async () => {
@@ -105,6 +108,7 @@ export default function Knockout() {
           // Si no hay datos, empezar en blanco
         } catch (err) {
           console.error('Error loading data:', err);
+          setError('Error al cargar los datos. Por favor recarga la página.');
         } finally {
           setLoading(false);
         }
@@ -134,6 +138,14 @@ export default function Knockout() {
     };
     loadData();
   }, [setId]);
+
+  // Cleanup timers on unmount
+  useEffect(() => {
+    return () => {
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+      if (navTimerRef.current) clearTimeout(navTimerRef.current);
+    };
+  }, []);
 
   // Orden de los slides (para mapear índice a round id) - definido aquí para usar en useCallback
   const slideRoundIds = ['r32', 'r16', 'qf', 'final'];
@@ -585,7 +597,8 @@ export default function Knockout() {
       await predictionsAPI.saveKnockout(dataToSave, setId);
       setSaved(true);
       // Clear saved message after 2 seconds
-      setTimeout(() => setSaved(false), 2000);
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = setTimeout(() => setSaved(false), 2000);
     } catch (err) {
       setError('Error al guardar en servidor');
     } finally {
@@ -632,7 +645,8 @@ export default function Knockout() {
       navigate(nextUrl);
     } catch (err) {
       setError('Error al guardar en servidor - Continuando con guardado local');
-      setTimeout(() => {
+      if (navTimerRef.current) clearTimeout(navTimerRef.current);
+      navTimerRef.current = setTimeout(() => {
         window.scrollTo(0, 0);
         navigate(nextUrl);
       }, 800);
@@ -851,96 +865,32 @@ export default function Knockout() {
   );
 }
 
-// Componente MobileMatchBox para móvil - FUERA del render para evitar recreación
+// Componente MobileMatchBox - wrapper que usa MatchBox unificado
 function MobileMatchBox({ match, predictionMode, knockoutScores, onScoreChange, onSelectWinner }) {
   if (!match) return null;
-  const canSelect = match.teamA && match.teamB;
   const showScoreInputs = predictionMode === 'scores';
   const score = knockoutScores[match.matchId] || {};
-  const isTied = showScoreInputs && score.a !== undefined && score.b !== undefined &&
-                score.a !== '' && score.b !== '' && Number(score.a) === Number(score.b);
-
-  const renderTeamSlot = (team, isTop, side) => {
-    const isSelected = match.selectedWinner === team?.id;
-    const isEliminated = match.selectedWinner && match.selectedWinner !== team?.id;
-    const teamScore = side === 'a' ? score.a : score.b;
-
-    // In scores mode with a tie, allow click to select winner
-    const canClick = showScoreInputs
-      ? (canSelect && isTied)
-      : canSelect;
-
-    if (!team) {
-      return (
-        <div className={`h-[36px] px-3 py-1.5 text-sm text-muted-foreground bg-muted/30 border-x border-t ${!isTop ? 'border-b rounded-b' : 'rounded-t'} border-dashed border-gray-300 flex items-center`}>
-          Por definir
-          {showScoreInputs && <span className="ml-auto w-10 text-center">-</span>}
-        </div>
-      );
-    }
-
-    return (
-      <div className={`flex items-center h-[36px] ${isTop ? 'rounded-t border-x border-t' : 'rounded-b border'}
-        ${isSelected ? 'bg-green-100 border-green-500' : isEliminated ? 'bg-gray-50 border-gray-300' : 'bg-white border-gray-300'}`}
-      >
-        {/* Team info - clickable for ties in scores mode, or always in positions mode */}
-        <button
-          onClick={() => canClick && onSelectWinner(match.matchId, team.id)}
-          disabled={!canClick}
-          tabIndex={showScoreInputs ? -1 : 0}
-          className={`flex items-center gap-2 flex-1 px-3 py-1.5 text-left transition-colors min-w-0
-            ${isSelected ? 'font-semibold' : ''}
-            ${!isSelected && !isEliminated && canClick ? 'hover:bg-blue-50 active:bg-blue-100' : ''}
-          `}
-        >
-          <img src={team.flag_url} alt="" className={`w-6 h-4 object-cover rounded shrink-0 ${isEliminated ? 'opacity-50' : ''}`} />
-          <span className={`text-sm truncate ${isEliminated ? 'text-gray-400' : ''}`}>{team.name}</span>
-          {team.thirdPlaceFrom && <span className="text-xs text-muted-foreground ml-auto">3{team.thirdPlaceFrom}</span>}
-        </button>
-
-        {/* Score input - only in scores mode */}
-        {showScoreInputs && (
-          <input
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            maxLength={2}
-            defaultValue={teamScore ?? ''}
-            key={`mobile-${match.matchId}-${side}-${teamScore ?? 'empty'}`}
-            onBlur={(e) => {
-              const val = e.target.value.replace(/[^0-9]/g, '');
-              const num = val === '' ? '' : Math.min(99, parseInt(val, 10));
-              onScoreChange(
-                match.matchId,
-                match.teamA?.id,
-                match.teamB?.id,
-                side === 'a' ? num : score.a,
-                side === 'b' ? num : score.b
-              );
-            }}
-            disabled={!canSelect}
-            className="w-10 h-7 mx-1 text-center border border-gray-300 rounded text-lg font-bold bg-white
-              focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary
-              disabled:bg-muted disabled:cursor-not-allowed
-              placeholder:text-gray-400 focus:placeholder:text-transparent"
-            placeholder="-"
-          />
-        )}
-      </div>
-    );
-  };
 
   return (
-    <div className="border border-gray-300 rounded overflow-hidden">
-      {renderTeamSlot(match.teamA, true, 'a')}
-      {renderTeamSlot(match.teamB, false, 'b')}
-      {/* Show penalty indicator for ties */}
-      {showScoreInputs && isTied && !match.selectedWinner && (
-        <div className="text-xs text-center py-1 bg-yellow-50 text-yellow-700 border-t border-yellow-200">
-          Empate - click para elegir ganador
-        </div>
-      )}
-    </div>
+    <MatchBox
+      teamA={match.teamA}
+      teamB={match.teamB}
+      selectedWinner={match.selectedWinner}
+      onSelectWinner={(teamId) => onSelectWinner(match.matchId, teamId)}
+      showScores={showScoreInputs}
+      scoreA={score.a}
+      scoreB={score.b}
+      onScoreChange={(side, value) => {
+        onScoreChange(
+          match.matchId,
+          match.teamA?.id,
+          match.teamB?.id,
+          side === 'a' ? value : score.a,
+          side === 'b' ? value : score.b
+        );
+      }}
+      size="lg"
+    />
   );
 }
 
@@ -1316,94 +1266,33 @@ function SingleMatch({ match, onSelectWinner, highlight = null }) {
   );
 }
 
-// Componente BracketMatch para desktop - FUERA del render para evitar recreación
+// Componente BracketMatch para desktop - wrapper que usa MatchBox unificado
 function DesktopBracketMatch({ match, predictionMode, knockoutScores, onScoreChange, onSelectWinner, matchWidth }) {
   if (!match) return null;
   const showScoreInputs = predictionMode === 'scores';
-  const canSelect = match.teamA && match.teamB;
   const score = knockoutScores[match.matchId] || {};
-  const isTied = showScoreInputs && score.a !== undefined && score.b !== undefined &&
-                score.a !== '' && score.b !== '' && Number(score.a) === Number(score.b);
-
-  const renderTeamSlot = (team, isTop, side) => {
-    const isSelected = match.selectedWinner === team?.id;
-    const isEliminated = match.selectedWinner && match.selectedWinner !== team?.id;
-    const teamScore = side === 'a' ? score.a : score.b;
-
-    // In scores mode with a tie, allow click to select winner
-    const canClick = showScoreInputs
-      ? (canSelect && isTied)
-      : canSelect;
-
-    if (!team) {
-      return (
-        <div className={`flex items-center h-[24px] px-2 py-0.5 text-[11px] text-muted-foreground bg-muted/30 border-x border-t ${!isTop ? 'border-b rounded-b' : 'rounded-t'} border-dashed border-gray-300`}>
-          <span className="flex-1">Por definir</span>
-          {showScoreInputs && <span className="w-8 text-center">-</span>}
-        </div>
-      );
-    }
-
-    return (
-      <div className={`flex items-center h-[24px] ${isTop ? 'rounded-t border-x border-t' : 'rounded-b border'}
-        ${isSelected ? 'bg-green-100 border-green-500' : isEliminated ? 'bg-gray-50 border-gray-300' : 'bg-white border-gray-300'}`}
-      >
-        {/* Team info - clickable */}
-        <button
-          onClick={() => canClick && onSelectWinner(match.matchId, team.id)}
-          disabled={!canClick}
-          tabIndex={showScoreInputs ? -1 : 0}
-          className={`flex items-center gap-1.5 flex-1 px-2 py-0.5 text-left transition-colors min-w-0
-            ${isSelected ? 'font-semibold' : ''}
-            ${!isSelected && !isEliminated && canClick ? 'hover:bg-blue-50' : ''}
-          `}
-        >
-          <img src={team.flag_url} alt="" className={`w-5 h-3 object-cover rounded shrink-0 ${isEliminated ? 'opacity-50' : ''}`} />
-          <span className={`text-[11px] truncate ${isEliminated ? 'text-gray-400' : ''}`}>{team.name}</span>
-        </button>
-
-        {/* Score input - only in scores mode */}
-        {showScoreInputs && (
-          <input
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            maxLength={2}
-            defaultValue={teamScore ?? ''}
-            key={`desktop-${match.matchId}-${side}-${teamScore ?? 'empty'}`}
-            onBlur={(e) => {
-              const val = e.target.value.replace(/[^0-9]/g, '');
-              const num = val === '' ? '' : Math.min(99, parseInt(val, 10));
-              onScoreChange(
-                match.matchId,
-                match.teamA?.id,
-                match.teamB?.id,
-                side === 'a' ? num : score.a,
-                side === 'b' ? num : score.b
-              );
-            }}
-            disabled={!canSelect}
-            className="w-7 h-5 mx-0.5 text-center border border-gray-300 rounded text-xs font-bold bg-white
-              focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary
-              disabled:bg-muted disabled:cursor-not-allowed
-              placeholder:text-gray-400 focus:placeholder:text-transparent"
-            placeholder="-"
-          />
-        )}
-      </div>
-    );
-  };
 
   return (
     <div style={{ width: matchWidth }} className="shrink-0">
-      {renderTeamSlot(match.teamA, true, 'a')}
-      {renderTeamSlot(match.teamB, false, 'b')}
-      {/* Show penalty indicator for ties */}
-      {showScoreInputs && isTied && !match.selectedWinner && (
-        <div className="text-[9px] text-center py-0.5 bg-yellow-50 text-yellow-700 border border-t-0 border-yellow-200 rounded-b">
-          Click para elegir ganador
-        </div>
-      )}
+      <MatchBox
+        teamA={match.teamA}
+        teamB={match.teamB}
+        selectedWinner={match.selectedWinner}
+        onSelectWinner={(teamId) => onSelectWinner(match.matchId, teamId)}
+        showScores={showScoreInputs}
+        scoreA={score.a}
+        scoreB={score.b}
+        onScoreChange={(side, value) => {
+          onScoreChange(
+            match.matchId,
+            match.teamA?.id,
+            match.teamB?.id,
+            side === 'a' ? value : score.a,
+            side === 'b' ? value : score.b
+          );
+        }}
+        size="sm"
+      />
     </div>
   );
 }
