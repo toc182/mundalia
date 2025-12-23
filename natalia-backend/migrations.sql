@@ -21,12 +21,13 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 CREATE TABLE IF NOT EXISTS teams (
-  id INTEGER PRIMARY KEY,
+  id SERIAL PRIMARY KEY,
   name VARCHAR(100) NOT NULL,
   code VARCHAR(10) NOT NULL,
   group_letter VARCHAR(1),
   flag_url VARCHAR(255),
-  is_playoff BOOLEAN DEFAULT FALSE
+  is_playoff BOOLEAN DEFAULT FALSE,
+  playoff_id VARCHAR(20)
 );
 
 CREATE TABLE IF NOT EXISTS settings (
@@ -78,6 +79,43 @@ CREATE TABLE IF NOT EXISTS knockout_predictions (
   winner_team_id INTEGER NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS matches (
+  id SERIAL PRIMARY KEY,
+  phase VARCHAR(20) NOT NULL,
+  group_letter VARCHAR(1),
+  team_a_id INTEGER REFERENCES teams(id),
+  team_b_id INTEGER REFERENCES teams(id),
+  match_date TIMESTAMP,
+  result_a INTEGER,
+  result_b INTEGER,
+  winner_id INTEGER REFERENCES teams(id)
+);
+
+CREATE TABLE IF NOT EXISTS match_predictions (
+  id SERIAL PRIMARY KEY,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  match_id INTEGER REFERENCES matches(id) ON DELETE CASCADE,
+  predicted_winner_id INTEGER REFERENCES teams(id),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, match_id)
+);
+
+CREATE TABLE IF NOT EXISTS private_groups (
+  id SERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  code VARCHAR(10) UNIQUE NOT NULL,
+  owner_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS private_group_members (
+  id SERIAL PRIMARY KEY,
+  group_id INTEGER REFERENCES private_groups(id) ON DELETE CASCADE,
+  user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+  joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(group_id, user_id)
+);
+
 -- Indices
 CREATE INDEX IF NOT EXISTS idx_prediction_sets_user ON prediction_sets(user_id);
 CREATE INDEX IF NOT EXISTS idx_group_predictions_set ON group_predictions(prediction_set_id);
@@ -102,10 +140,10 @@ CREATE TABLE IF NOT EXISTS score_predictions (
   user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   prediction_set_id INTEGER REFERENCES prediction_sets(id) ON DELETE CASCADE,
   group_letter VARCHAR(1) NOT NULL,
-  match_index INTEGER NOT NULL,
+  match_number INTEGER NOT NULL,
   score_a INTEGER,
   score_b INTEGER,
-  UNIQUE(prediction_set_id, group_letter, match_index)
+  UNIQUE(prediction_set_id, group_letter, match_number)
 );
 
 CREATE TABLE IF NOT EXISTS tiebreaker_decisions (
@@ -113,7 +151,8 @@ CREATE TABLE IF NOT EXISTS tiebreaker_decisions (
   user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
   prediction_set_id INTEGER REFERENCES prediction_sets(id) ON DELETE CASCADE,
   group_letter VARCHAR(1) NOT NULL,
-  team_order TEXT NOT NULL,
+  tied_team_ids INTEGER[] NOT NULL,
+  resolved_order INTEGER[] NOT NULL,
   UNIQUE(prediction_set_id, group_letter)
 );
 
