@@ -49,7 +49,8 @@ CREATE TABLE IF NOT EXISTS group_predictions (
   prediction_set_id INTEGER REFERENCES prediction_sets(id) ON DELETE CASCADE,
   group_letter VARCHAR(1) NOT NULL,
   team_id INTEGER NOT NULL,
-  predicted_position INTEGER NOT NULL
+  predicted_position INTEGER NOT NULL,
+  UNIQUE(user_id, prediction_set_id, group_letter, predicted_position)
 );
 
 CREATE TABLE IF NOT EXISTS playoff_predictions (
