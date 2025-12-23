@@ -8,8 +8,8 @@ export const VALID_MATCH_PATTERN = /^M([1-9]|[1-9][0-9]|10[0-4])$/;
 // Grupos validos: A-L (12 grupos)
 export const VALID_GROUP_PATTERN = /^[A-L]$/;
 
-// Playoff IDs validos
-export const VALID_PLAYOFF_IDS = ['uefa_a', 'uefa_b', 'uefa_c', 'uefa_d', 'fifa_1', 'fifa_2'] as const;
+// Playoff IDs validos (mayúsculas para coincidir con frontend)
+export const VALID_PLAYOFF_IDS = ['UEFA_A', 'UEFA_B', 'UEFA_C', 'UEFA_D', 'FIFA_1', 'FIFA_2'] as const;
 
 export type PlayoffIdType = typeof VALID_PLAYOFF_IDS[number];
 

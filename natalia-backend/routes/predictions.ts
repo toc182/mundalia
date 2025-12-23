@@ -1,5 +1,5 @@
 import express, { Request, Response, Router } from 'express';
-import db from '../config/db';
+import db, { pool } from '../config/db';
 import { auth } from '../middleware/auth';
 import { isValidGroupLetter, isValidPosition, isValidTeamId, isValidMatchKey, isValidPlayoffId } from '../utils/validators';
 import { success, error, notFound, validationError, serverError } from '../utils/response';
@@ -135,25 +135,29 @@ router.post('/groups', auth, async (req: Request<unknown, unknown, SaveGroupsBod
 
     const setId = requestSetId || await getOrCreateDefaultSet(authReq.user.id);
 
-    // Use transaction for atomic DELETE + INSERT
-    await db.query('BEGIN');
+    // Use dedicated client for transaction (required for BEGIN/COMMIT to work)
+    const client = await pool.connect();
     try {
-      // Delete existing predictions for this set
-      await db.query('DELETE FROM group_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]);
+      await client.query('BEGIN');
 
-      // Insert new predictions (parallelized for performance)
-      await Promise.all(predictions.map(pred =>
-        db.query(
+      // Delete existing predictions for this set
+      await client.query('DELETE FROM group_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]);
+
+      // Insert new predictions sequentially to avoid race conditions
+      for (const pred of predictions) {
+        await client.query(
           'INSERT INTO group_predictions (user_id, group_letter, team_id, predicted_position, prediction_set_id) VALUES ($1, $2, $3, $4, $5)',
           [authReq.user.id, pred.group_letter, pred.team_id, pred.predicted_position, setId]
-        )
-      ));
+        );
+      }
 
-      await db.query('COMMIT');
+      await client.query('COMMIT');
       success(res, { setId }, 'Group predictions saved successfully');
     } catch (txErr) {
-      await db.query('ROLLBACK');
+      await client.query('ROLLBACK');
       throw txErr;
+    } finally {
+      client.release();
     }
   } catch (err) {
     console.error('[GROUPS POST] Error:', err);

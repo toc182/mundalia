@@ -1,10 +1,162 @@
 # SESSION.md - Estado Actual del Proyecto
 
-## Ultima Actualizacion: 2025-12-20 (AUDITORÍA INTEGRAL v2)
+## Ultima Actualizacion: 2025-12-23 (CORRECCIÓN DE INCONSISTENCIAS)
 
 ---
 
-## AUDITORÍA INTEGRAL v2 - 2025-12-20
+## CORRECCIÓN DE INCONSISTENCIAS FRONTEND-BACKEND - 2025-12-23
+
+Se realizó una auditoría completa para encontrar y corregir inconsistencias entre los tipos del frontend y las respuestas reales del backend. Estos problemas causaban bugs en runtime donde el frontend esperaba propiedades que no existían.
+
+### Problemas Detectados y Corregidos
+
+| Problema | Severidad | Archivo(s) | Descripción |
+|----------|-----------|------------|-------------|
+| Leaderboard response | ALTA | `api.ts`, `types/index.ts` | Frontend esperaba `{entries, total}`, backend retorna array |
+| Predictions /all | ALTA | `api.ts` | Propiedades `groups`, `knockout` vs `groupPredictions`, `knockoutPredictions` |
+| has-subsequent-data | ALTA | `api.ts` | Frontend esperaba `{hasData, phases}`, backend retorna `{hasGroups, hasThirds, hasKnockout}` |
+| PredictionSet counts | MEDIA | `types/index.ts`, `MyPredictions.tsx` | `groups_count` vs `group_count`, `has_thirds` vs `third_places` |
+| Team.group | MEDIA | `types/index.ts` | Frontend usaba `group`, backend retorna `group_letter` |
+| Score Predictions | MEDIA | `api.ts` | Frontend esperaba array, backend retorna nested object |
+| Tiebreaker response | MEDIA | `api.ts` | Tipo incorrecto `Record<string, number[]>` vs `{tiedTeamIds, resolvedOrder}` |
+| AdminStats | BAJA | `types/index.ts` | Campo `complete_predictions` no existe en backend |
+| LeaderboardEntry | BAJA | `types/index.ts` | Campo `rank` no existe, `user_name` vs `username` |
+
+### Archivos Modificados
+
+**Frontend Types (`types/index.ts`):**
+- `Team.group` → `Team.group_letter`
+- `PredictionSet`: `groups_count`→`group_count`, `playoffs_count`→`playoff_count`, `has_thirds`→`third_places`
+- `LeaderboardEntry`: Actualizado con campos correctos del backend
+- `AdminStats`: Eliminado `complete_predictions`
+- `ScorePrediction`: Convertido a comentario (es nested object, no interface)
+
+**Frontend API (`api.ts`):**
+- `leaderboardAPI.getGlobal`: Retorna `LeaderboardEntry[]` en vez de `{entries, total}`
+- `predictionsAPI.getAll`: Usa `groupPredictions`, `knockoutPredictions`, `thirdPlaces`
+- `predictionsAPI.hasSubsequentData`: Retorna `{hasGroups, hasThirds, hasKnockout}`
+- `predictionsAPI.getScores`: Retorna `Record<string, Record<number, {a,b}>>`
+- `predictionsAPI.saveScores`: Acepta nested object
+- `predictionsAPI.getTiebreaker`: Retorna `Record<string, {tiedTeamIds, resolvedOrder}>`
+- `predictionsAPI.saveTiebreaker`: Usa `group` en vez de `groupLetter`
+
+**Frontend Pages:**
+- `MyPredictions.tsx`: Usa `group_count`, `playoff_count`, `third_places` correctamente
+
+### Bugs Corregidos en Sesión Anterior (mismo día)
+
+| Bug | Causa | Solución |
+|-----|-------|----------|
+| Playoffs no se guardaban (400 Invalid playoff_id) | validators.ts usaba minúsculas (`uefa_a`) | Cambiar a mayúsculas (`UEFA_A`) |
+| Grupos no se guardaban (duplicate key constraint) | Transacción usando pool.query() en vez de client dedicado | Usar `pool.connect()` para transacción |
+| Grupos no cargaban en Knockout | `getMy` retorna objeto, código esperaba array | Usar `getGroups` que retorna array |
+| Terceros no cargaban en Knockout | `selected_groups` vs `selectedGroups` | Corregir a camelCase |
+| Playoffs no cargaban en Knockout | Formato `{semifinal_winner_1}` vs `{semi1}` | Usar formato del backend directamente |
+
+### Verificación
+
+Los cambios fueron aplicados y el frontend compila correctamente con HMR. La aplicación está lista para testing.
+
+---
+
+## MIGRACIÓN FRONTEND A TYPESCRIPT - 2025-12-22
+
+El frontend ha sido migrado completamente a TypeScript.
+
+### Archivos Migrados
+
+**Configuración:**
+- `tsconfig.json`, `tsconfig.node.json`, `vite-env.d.ts`
+
+**Core:**
+- `main.tsx`, `App.tsx`, `vite.config.ts`
+- `context/AuthContext.tsx`
+- `services/api.ts`, `services/predictions.ts`
+- `lib/utils.ts`
+- `types/index.ts`
+
+**Datos (con interfaces):**
+- `data/mockData.ts` - Team, MockTeam interfaces
+- `data/knockoutBracket.ts` - RoundOf32Match, KnockoutMatchStructure, etc.
+- `data/playoffsData.ts` - Playoff, PlayoffTeam, UEFABracket, FIFABracket
+- `data/groupMatches.ts` - GroupMatch, MatchTeams interfaces
+- `data/thirdPlaceCombinations.ts` - ThirdPlaceCombination, ThirdPlaceAssignments
+
+**Utils:**
+- `utils/fifaTiebreaker.ts` - TeamStats, MatchScore, GroupStandingsResult, etc.
+- `utils/predictionHelpers.ts` - PlayoffWinnerTeam, PlayoffSelections
+
+**Componentes UI (10):**
+- `components/ui/button.tsx`, `card.tsx`, `dialog.tsx`, `input.tsx`, `label.tsx`
+- `components/ui/select.tsx`, `table.tsx`, `textarea.tsx`, `alert.tsx`, `badge.tsx`
+
+**Componentes Custom (7):**
+- `components/TopBar.tsx`, `ErrorBoundary.tsx`, `MatchBox.tsx`
+- `components/GroupStandingsTable.tsx`, `MatchScoreRow.tsx`
+- `components/GroupScoreInput.tsx`, `TiebreakerModal.tsx`
+
+**Páginas (14):**
+- `pages/Home.tsx`, `pages/Login.tsx`, `pages/Register.tsx`, `pages/Account.tsx`
+- `pages/Groups.tsx`, `pages/Playoffs.tsx`, `pages/Predictions.tsx`, `pages/ThirdPlaces.tsx`
+- `pages/Knockout.tsx`, `pages/PredictionsScores.tsx`, `pages/PredictionDetail.tsx`
+- `pages/MyPredictions.tsx`, `pages/Leaderboard.tsx`, `pages/Admin.tsx`
+
+### Archivos Eliminados
+
+- Todos los `.jsx` convertidos a `.tsx`
+- `utils/fifaTiebreaker.js`, `utils/predictionHelpers.js`, `services/predictions.js`
+
+### Verificación
+
+| Check | Estado |
+|-------|--------|
+| Build (`npm run build`) | ✓ Sin errores |
+| Módulos transformados | 1870 |
+| Bundle size | 367kb (main) + lazy chunks |
+
+### Archivos Restantes en .js
+
+Solo archivos de test (pueden permanecer en .js):
+- `__tests__/setup.js`
+- `__tests__/predictionHelpers.test.js`
+
+---
+
+## AUDITORÍA INTEGRAL v3 - 2025-12-22
+
+Nueva auditoría completa del proyecto. Ver `AUDIT.md` para detalles.
+
+### Correcciones Realizadas
+
+| Corrección | Archivo | Descripción |
+|------------|---------|-------------|
+| Puntos knockout | `knockoutBracket.ts` | Sincronizado con scoring.ts (R32:1, R16:2, QF:4, SF:6, 3ro:8, Final:15) |
+| Tabla puntos Home | `Home.tsx` | Agregado Dieciseisavos, separado en secciones, clarificado descripciones |
+| Descripción 3er puesto | `Home.tsx` | "Acertar Finalista" → "Ganador 3er Puesto" |
+| Frontend TypeScript | Todo el src/ | Migración completa a TypeScript con interfaces |
+
+### Pendiente (según AUDIT.md)
+
+**Críticos:**
+- [x] Frontend en JavaScript (migrar a TypeScript) - COMPLETADO
+- [ ] Componentes monolíticos (Knockout.tsx 1589 líneas) - 1-2 días
+- [ ] N+1 queries en predictionSets.ts - 4 horas
+- [ ] Leaderboard LIMIT 500 - 30 min
+
+**Importantes:**
+- [ ] Transacciones incompletas en predictions.ts - 1 hora
+- [ ] Admin role query en cada request - 2 horas
+- [ ] Falta useMemo en cálculos knockout - 2 horas
+- [ ] Código duplicado en páginas - 4 horas
+
+**Nuevas Features (B2B):**
+- [ ] Config modos predicción (admin elige: Ganadores/Marcadores/Ambos) - 1 día
+- [ ] Timer countdown al Mundial - 2-4 horas
+- [ ] Cierre automático de predicciones - 4-8 horas
+
+---
+
+## AUDITORÍA INTEGRAL v2 - 2025-12-20 (ANTERIOR)
 
 Se realizó una auditoría completa del proyecto con implementación de correcciones.
 
