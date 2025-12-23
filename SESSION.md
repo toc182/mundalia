@@ -17,10 +17,47 @@ Después de la migración a TypeScript, producción dejó de funcionar. Se aplic
 | Google OAuth | `.env.production` | Faltaba `VITE_GOOGLE_CLIENT_ID` | Agregar client ID al archivo |
 | COOP Header | `vercel.json` | Google popup no podía comunicarse con ventana principal | Agregar `Cross-Origin-Opener-Policy: same-origin-allow-popups` |
 
-### Notas
+---
 
-- Los warnings de COOP en consola (`Cross-Origin-Opener-Policy policy would block the window.postMessage call`) son normales con Google Sign-In y no afectan la funcionalidad
-- El login con email/password y Google OAuth funcionan correctamente en producción
+## PENDIENTE: Error de Google Sign-In en consola
+
+### Problema
+
+Al cargar las páginas de Login/Register aparece este error en la consola:
+```
+[GSI_LOGGER]: The given origin is not allowed for the given client ID.
+Failed to load resource: the server responded with a status of 403
+```
+
+**Estado:** El login con Google FUNCIONA correctamente, pero el error aparece en consola.
+
+### Causa
+
+El componente `GoogleLogin` de `@react-oauth/google` carga un iframe de Google que intenta verificar el origen. Aunque `http://localhost:5174` y `https://mundalia.vercel.app` están configurados en Google Cloud Console como orígenes autorizados, el error persiste porque la app está en modo "Testing".
+
+### Intentos fallidos
+
+- `use_fedcm_for_prompt={false}` - No elimina el error (solo afecta One Tap, no el botón)
+- Publicar la app - Usuario no quiere hacerlo
+
+### Solución requerida
+
+Cambiar de `GoogleLogin` (iframe con id_token) a `useGoogleLogin` (popup con access_token):
+
+**Frontend:**
+1. Reemplazar `GoogleLogin` por botón custom + `useGoogleLogin` hook
+2. El hook devuelve `access_token` en vez de `id_token` (credential)
+
+**Backend (`routes/auth.ts`):**
+1. Modificar endpoint `POST /auth/google` para aceptar `access_token`
+2. Verificar token llamando a `https://www.googleapis.com/oauth2/v3/userinfo` con el access_token
+3. Obtener email/nombre del usuario de la respuesta
+4. Crear/vincular usuario como antes
+
+**Archivos a modificar:**
+- `natalia-frontend/src/pages/Login.tsx`
+- `natalia-frontend/src/pages/Register.tsx`
+- `natalia-backend/routes/auth.ts`
 
 ---
 
