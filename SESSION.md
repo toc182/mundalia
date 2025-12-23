@@ -1,6 +1,26 @@
 # SESSION.md - Estado Actual del Proyecto
 
-## Ultima Actualizacion: 2025-12-23 (CI/CD FIXES + AUDITORÍA)
+## Ultima Actualizacion: 2025-12-23 (PRODUCTION FIXES)
+
+---
+
+## PRODUCTION FIXES - 2025-12-23
+
+Después de la migración a TypeScript, producción dejó de funcionar. Se aplicaron los siguientes fixes:
+
+### Fixes Aplicados
+
+| Fix | Archivo | Problema | Solución |
+|-----|---------|----------|----------|
+| SSL | `config/db.ts` | Railway rechazaba conexiones con `rejectUnauthorized: true` | Cambiar a `rejectUnauthorized: false` |
+| CORS | `server.ts` | Requests sin header Origin eran rechazados | Permitir requests sin origin (health checks, server-to-server) |
+| Google OAuth | `.env.production` | Faltaba `VITE_GOOGLE_CLIENT_ID` | Agregar client ID al archivo |
+| COOP Header | `vercel.json` | Google popup no podía comunicarse con ventana principal | Agregar `Cross-Origin-Opener-Policy: same-origin-allow-popups` |
+
+### Notas
+
+- Los warnings de COOP en consola (`Cross-Origin-Opener-Policy policy would block the window.postMessage call`) son normales con Google Sign-In y no afectan la funcionalidad
+- El login con email/password y Google OAuth funcionan correctamente en producción
 
 ---
 
