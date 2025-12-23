@@ -212,18 +212,19 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function(origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) {
-    // En produccion, rechazar requests sin origin (excepto health checks)
+    // Permitir requests sin origin (health checks, server-to-server, Postman)
     if (!origin) {
-      if (isProduction) {
-        return callback(new Error('CORS: Missing origin'), false);
-      }
-      // En desarrollo, permitir requests sin origin (Postman, curl)
       return callback(null, true);
     }
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-    return callback(new Error('CORS not allowed'), false);
+    // En produccion, rechazar origins no permitidos
+    if (isProduction) {
+      return callback(new Error('CORS not allowed'), false);
+    }
+    // En desarrollo, permitir cualquier origin
+    return callback(null, true);
   },
   credentials: true
 }));
