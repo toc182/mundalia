@@ -74,7 +74,8 @@
       "Bash(npx tsc:*)",
       "Bash(cd:*)",
       "Bash(rm:*)",
-      "Bash(cmd //c \"taskkill /PID 57352 /F\")"
+      "Bash(cmd //c \"taskkill /PID 57352 /F\")",
+      "WebFetch(domain:mundalia-production.up.railway.app)"
     ],
     "deny": [],
     "ask": []

@@ -53,12 +53,17 @@ const runMigrations = async (): Promise<void> => {
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         prediction_set_id INTEGER REFERENCES prediction_sets(id) ON DELETE CASCADE,
         group_letter VARCHAR(1) NOT NULL,
-        match_index INTEGER NOT NULL,
+        match_number INTEGER NOT NULL,
         score_a INTEGER,
         score_b INTEGER,
-        UNIQUE(prediction_set_id, group_letter, match_index)
+        UNIQUE(prediction_set_id, group_letter, match_number)
       )
     `);
+    // Migration 003-fix: Rename column if table exists with old schema
+    await db.query(`
+      ALTER TABLE score_predictions
+      RENAME COLUMN match_index TO match_number
+    `).catch(() => {});
     console.log('[MIGRATIONS] ✓ score_predictions table');
 
     // Migration 003b: Create tiebreaker_decisions table
@@ -68,10 +73,20 @@ const runMigrations = async (): Promise<void> => {
         user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
         prediction_set_id INTEGER REFERENCES prediction_sets(id) ON DELETE CASCADE,
         group_letter VARCHAR(1) NOT NULL,
-        team_order TEXT NOT NULL,
+        tied_team_ids INTEGER[] NOT NULL,
+        resolved_order INTEGER[] NOT NULL,
         UNIQUE(prediction_set_id, group_letter)
       )
     `);
+    // Migration 003b-fix: Add new columns if table exists with old schema
+    await db.query(`
+      ALTER TABLE tiebreaker_decisions
+      ADD COLUMN IF NOT EXISTS tied_team_ids INTEGER[]
+    `).catch(() => {});
+    await db.query(`
+      ALTER TABLE tiebreaker_decisions
+      ADD COLUMN IF NOT EXISTS resolved_order INTEGER[]
+    `).catch(() => {});
     console.log('[MIGRATIONS] ✓ tiebreaker_decisions table');
 
     // Migration 004: Add score columns to knockout_predictions

@@ -1,6 +1,39 @@
 # SESSION.md - Estado Actual del Proyecto
 
-## Ultima Actualizacion: 2025-12-23 (CORRECCIÓN DE INCONSISTENCIAS)
+## Ultima Actualizacion: 2025-12-23 (CI/CD FIXES + AUDITORÍA)
+
+---
+
+## CI/CD FIXES - 2025-12-23
+
+El CI estaba fallando porque migrations.sql no tenía todas las tablas necesarias para tests en BD limpia.
+
+### Backend - migrations.sql corregido
+
+| Cambio | Descripción |
+|--------|-------------|
+| `teams.id` | Cambiado de `INTEGER` a `SERIAL` (auto-increment) |
+| `teams.playoff_id` | Columna agregada |
+| `matches` | Tabla nueva para partidos |
+| `match_predictions` | Tabla nueva para predicciones de partidos |
+| `private_groups` | Tabla nueva para grupos privados |
+| `private_group_members` | Tabla nueva para miembros de grupos |
+| `score_predictions.match_index` | Renombrado a `match_number` |
+| `tiebreaker_decisions.team_order` | Reemplazado por `tied_team_ids` + `resolved_order` (arrays) |
+| `group_predictions` | Agregado UNIQUE constraint |
+
+### Backend - Tests corregidos
+
+- `__tests__/predictions.test.ts`: Playoff IDs cambiados a mayúsculas (`UEFA_A` en vez de `uefa_a`)
+
+### Frontend - Tests agregados
+
+- `src/__tests__/setup.ts` - Archivo de configuración de vitest
+- `src/App.test.tsx` - Test placeholder (vitest falla con código 1 si no hay tests)
+
+### Resultado
+
+✅ CI pasa: Backend Tests (51s) + Frontend Tests & Build (17s)
 
 ---
 
