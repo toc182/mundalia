@@ -312,7 +312,7 @@ describe('Predictions Routes', () => {
   describe('POST /api/predictions/playoffs', () => {
     it('should save playoff predictions', async () => {
       const predictions = {
-        'uefa_a': { semi1: 1, semi2: 2, final: 1 },
+        'UEFA_A': { semi1: 1, semi2: 2, final: 1 },
       };
 
       const res = await request(app)
@@ -327,9 +327,9 @@ describe('Predictions Routes', () => {
 
     it('should save multiple playoff predictions', async () => {
       const predictions = {
-        'uefa_a': { semi1: 1, semi2: 2, final: 1 },
-        'uefa_b': { semi1: 3, semi2: 4, final: 3 },
-        'fifa_1': { semi1: 5, semi2: 6, final: 5 },
+        'UEFA_A': { semi1: 1, semi2: 2, final: 1 },
+        'UEFA_B': { semi1: 3, semi2: 4, final: 3 },
+        'FIFA_1': { semi1: 5, semi2: 6, final: 5 },
       };
 
       const res = await request(app)
