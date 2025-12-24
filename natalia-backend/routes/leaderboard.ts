@@ -2,11 +2,14 @@ import express, { Request, Response, Router } from 'express';
 import db from '../config/db';
 import { POINTS, getMatchPoints } from '../utils/scoring';
 import { success, serverError } from '../utils/response';
+import { optionalAuth } from '../middleware/auth';
 
 const router: Router = express.Router();
 
 // Cache configuration
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const DEFAULT_PAGE_SIZE = 100;
+const MAX_PAGE_SIZE = 100;
 
 interface CacheEntry {
   data: LeaderboardEntry[] | null;
@@ -23,6 +26,15 @@ const cache: LeaderboardCache = {
   positions: { data: null, timestamp: 0 },
   scores: { data: null, timestamp: 0 }
 };
+
+interface PaginatedLeaderboardResponse {
+  entries: LeaderboardEntry[];
+  total: number;
+  page: number;
+  totalPages: number;
+  userPosition: number | null;
+  userPage: number | null;
+}
 
 interface PredictionSetRow {
   prediction_set_id: number;
@@ -92,7 +104,6 @@ async function calculateLeaderboard(mode: string): Promise<LeaderboardEntry[]> {
           AND kp.match_key = 'M104'
           AND kp.winner_team_id IS NOT NULL
       )
-    LIMIT 500
   `, [mode]);
 
   if (predictionSets.rows.length === 0) {
@@ -191,25 +202,53 @@ async function calculateLeaderboard(mode: string): Promise<LeaderboardEntry[]> {
   return leaderboard;
 }
 
-// Get global leaderboard with caching
-router.get('/', async (req: Request, res: Response): Promise<void> => {
+// Get global leaderboard with caching and pagination
+router.get('/', optionalAuth, async (req: Request, res: Response): Promise<void> => {
   const mode = (req.query.mode as string) || 'positions';
+  const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
+  const limit = Math.min(MAX_PAGE_SIZE, Math.max(1, parseInt(req.query.limit as string, 10) || DEFAULT_PAGE_SIZE));
+  const userId = (req as any).user?.id || null;
 
   try {
-    // Check cache
+    // Check cache for full leaderboard
+    let leaderboard: LeaderboardEntry[];
     const cached = cache[mode];
     if (cached && cached.data && (Date.now() - cached.timestamp < CACHE_TTL)) {
-      success(res, cached.data);
-      return;
+      leaderboard = cached.data;
+    } else {
+      // Calculate fresh leaderboard
+      leaderboard = await calculateLeaderboard(mode);
+      // Update cache
+      cache[mode] = { data: leaderboard, timestamp: Date.now() };
     }
 
-    // Calculate fresh leaderboard
-    const leaderboard = await calculateLeaderboard(mode);
+    // Find user's position and page
+    let userPosition: number | null = null;
+    let userPage: number | null = null;
+    if (userId) {
+      const userIndex = leaderboard.findIndex(e => e.user_id === userId);
+      if (userIndex !== -1) {
+        userPosition = userIndex + 1;
+        userPage = Math.ceil(userPosition / limit);
+      }
+    }
 
-    // Update cache
-    cache[mode] = { data: leaderboard, timestamp: Date.now() };
+    // Paginate
+    const total = leaderboard.length;
+    const totalPages = Math.ceil(total / limit);
+    const startIndex = (page - 1) * limit;
+    const entries = leaderboard.slice(startIndex, startIndex + limit);
 
-    success(res, leaderboard);
+    const response: PaginatedLeaderboardResponse = {
+      entries,
+      total,
+      page,
+      totalPages,
+      userPosition,
+      userPage
+    };
+
+    success(res, response);
   } catch (err) {
     serverError(res, err as Error);
   }

@@ -215,10 +215,18 @@ export const groupsAPI = {
 
 // ============ LEADERBOARD ============
 
-// Backend returns array directly, not wrapped object
+interface PaginatedLeaderboardResponse {
+  entries: LeaderboardEntry[];
+  total: number;
+  page: number;
+  totalPages: number;
+  userPosition: number | null;
+  userPage: number | null;
+}
+
 export const leaderboardAPI = {
-  getGlobal: (mode: 'positions' | 'scores' = 'positions'): Promise<AxiosResponse<LeaderboardEntry[]>> =>
-    api.get('/leaderboard', { params: { mode } }),
+  getGlobal: (mode: 'positions' | 'scores' = 'positions', page = 1, limit = 100): Promise<AxiosResponse<PaginatedLeaderboardResponse>> =>
+    api.get('/leaderboard', { params: { mode, page, limit } }),
 
   getCounts: (): Promise<AxiosResponse<{ positions: number; scores: number }>> =>
     api.get('/leaderboard/counts'),

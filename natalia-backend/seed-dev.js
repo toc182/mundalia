@@ -284,9 +284,9 @@ async function seed() {
     const passwordHash = await bcrypt.hash('test123', 10);
     const createdUsers = [];
 
-    // Crear 40 usuarios
+    // Crear 130 usuarios (para tener 250+ predicciones completas)
     console.log('Creando usuarios...');
-    for (let i = 0; i < 40; i++) {
+    for (let i = 0; i < 130; i++) {
       const firstName = firstNames[i % firstNames.length];
       const lastName = lastNames[i % lastNames.length];
       const username = generateUsername(firstName, lastName, i);
@@ -302,7 +302,7 @@ async function seed() {
       );
 
       createdUsers.push({ id: result.rows[0].id, name: `${firstName} ${lastName}` });
-      process.stdout.write(`\rUsuarios creados: ${i + 1}/40`);
+      process.stdout.write(`\rUsuarios creados: ${i + 1}/130`);
     }
     console.log('\n');
 
@@ -327,8 +327,8 @@ async function seed() {
         const setId = setResult.rows[0].id;
         totalSets++;
 
-        // 70% de probabilidad de completar la prediccion
-        const shouldComplete = Math.random() > 0.3;
+        // 95% de probabilidad de completar la prediccion (para testing de paginacion)
+        const shouldComplete = Math.random() > 0.05;
 
         // Playoffs
         const playoffPreds = generatePlayoffPredictions(setId, user.id);

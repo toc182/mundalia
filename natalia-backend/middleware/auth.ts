@@ -54,4 +54,19 @@ const adminAuth = async (req: Request, res: Response, next: NextFunction): Promi
   });
 };
 
-export { auth, adminAuth };
+// Optional auth - sets user if token valid, continues anyway if not
+const optionalAuth = (req: Request, _res: Response, next: NextFunction): void => {
+  const token = req.header('Authorization')?.replace('Bearer ', '');
+
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
+      (req as AuthenticatedRequest).user = decoded;
+    } catch {
+      // Token invalid, but we continue anyway - just no user
+    }
+  }
+  next();
+};
+
+export { auth, adminAuth, optionalAuth };

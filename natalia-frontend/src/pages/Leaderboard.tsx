@@ -1,11 +1,11 @@
-import { useState, useEffect, SyntheticEvent } from 'react';
+import { useState, useEffect, SyntheticEvent, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { leaderboardAPI } from '@/services/api';
-import { Trophy, Users, ListOrdered, Calculator } from 'lucide-react';
+import { Trophy, Users, ListOrdered, Calculator, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface LeaderboardEntry {
   prediction_set_id: number;
@@ -16,6 +16,8 @@ interface LeaderboardEntry {
   total_points: number;
   country?: string;
 }
+
+const PAGE_SIZE = 100;
 
 // Get flag image URL from country code
 const getFlagUrl = (countryCode: string | undefined): string | null => {
@@ -31,6 +33,14 @@ export default function Leaderboard(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Pagination state
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [userPosition, setUserPosition] = useState<number | null>(null);
+  const [userPage, setUserPage] = useState<number | null>(null);
+  const initialLoadDone = useRef(false);
+
   useEffect(() => {
     const fetchCounts = async (): Promise<void> => {
       try {
@@ -43,12 +53,31 @@ export default function Leaderboard(): JSX.Element {
     fetchCounts();
   }, []);
 
+  // Reset page when mode changes
+  useEffect(() => {
+    setPage(1);
+    initialLoadDone.current = false;
+  }, [mode]);
+
   useEffect(() => {
     const fetchLeaderboard = async (): Promise<void> => {
       setLoading(true);
       try {
-        const response = await leaderboardAPI.getGlobal(mode);
-        setEntries(response.data as unknown as LeaderboardEntry[]);
+        const response = await leaderboardAPI.getGlobal(mode, page, PAGE_SIZE);
+        const data = response.data;
+        setEntries(data.entries);
+        setTotal(data.total);
+        setTotalPages(data.totalPages);
+        setUserPosition(data.userPosition);
+        setUserPage(data.userPage);
+
+        // On first load, auto-navigate to user's page if they have a position
+        if (!initialLoadDone.current && data.userPage && data.userPage !== page) {
+          initialLoadDone.current = true;
+          setPage(data.userPage);
+          return; // Will re-fetch with correct page
+        }
+        initialLoadDone.current = true;
       } catch {
         setError('Error al cargar el ranking');
       } finally {
@@ -56,7 +85,7 @@ export default function Leaderboard(): JSX.Element {
       }
     };
     fetchLeaderboard();
-  }, [mode]);
+  }, [mode, page]);
 
   const getMedalColor = (position: number): string => {
     switch (position) {
@@ -67,7 +96,8 @@ export default function Leaderboard(): JSX.Element {
     }
   };
 
-  const currentUserEntries = entries.filter(e => e.user_id === user?.id);
+  // Calculate base position for current page
+  const basePosition = (page - 1) * PAGE_SIZE;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -123,11 +153,51 @@ export default function Leaderboard(): JSX.Element {
           </CardContent>
         </Card>
       ) : (
+        <>
+        {/* Pagination controls - TOP */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-sm text-muted-foreground">
+              {total} predicciones · Página {page} de {totalPages}
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1 || loading}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Anterior
+              </Button>
+              {userPage && userPage !== page && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(userPage)}
+                  disabled={loading}
+                >
+                  Ir a mi posición
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages || loading}
+              >
+                Siguiente
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
+
         <Card>
           <CardContent className="pt-4">
             <div className="space-y-0.5">
               {entries.map((entry, index) => {
-                const position = index + 1;
+                const position = basePosition + index + 1;
                 const isCurrentUser = user && entry.user_id === user.id;
                 const displayName = entry.username || entry.user_name;
 
@@ -174,25 +244,71 @@ export default function Leaderboard(): JSX.Element {
             </div>
           </CardContent>
         </Card>
-      )}
 
-      {currentUserEntries.length > 0 && (
-        <Card className="mt-4">
-          <CardContent className="py-3">
-            <div className="text-xs text-muted-foreground mb-2">Tus posiciones:</div>
-            <div className="flex flex-wrap gap-2">
-              {currentUserEntries.map(entry => {
-                const position = entries.indexOf(entry) + 1;
-                return (
-                  <div key={entry.prediction_set_id} className="flex items-center gap-1 text-sm bg-muted/50 px-2 py-1 rounded">
-                    <span className="font-medium">#{position}</span>
-                    <span className="text-muted-foreground">{entry.prediction_name}</span>
-                  </div>
-                );
-              })}
+        {/* Pagination controls - BOTTOM */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4">
+            <div className="text-sm text-muted-foreground">
+              {total} predicciones · Página {page} de {totalPages}
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1 || loading}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Anterior
+              </Button>
+              {userPage && userPage !== page && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPage(userPage)}
+                  disabled={loading}
+                >
+                  Ir a mi posición
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages || loading}
+              >
+                Siguiente
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* User position card */}
+        {userPosition && (
+          <Card className="mt-4">
+            <CardContent className="py-3">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">Tu mejor posición:</div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-lg">#{userPosition}</span>
+                  <span className="text-sm text-muted-foreground">de {total}</span>
+                  {userPage && userPage !== page && (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="text-xs p-0 h-auto"
+                      onClick={() => setPage(userPage)}
+                    >
+                      (ver)
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        </>
       )}
     </div>
   );

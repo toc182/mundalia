@@ -77,36 +77,20 @@ src/
 
 ---
 
-### 1. Inconsistencia en Sistema de Puntos
+### 1. ~~Inconsistencia en Sistema de Puntos~~ ✅ RESUELTO
 
-**Archivos afectados:**
-- `natalia-frontend/src/data/knockoutBracket.js` (lineas 112-119)
-- `natalia-backend/utils/scoring.ts` (lineas 6-13)
+**Estado:** Verificado 2025-12-24 - Los puntos en Home.tsx coinciden con scoring.ts.
 
-**Problema:** Los puntos definidos en frontend NO coinciden con backend:
-
-| Ronda | knockoutBracket.js | scoring.ts (correcto) | Diferencia |
-|-------|--------------------|-----------------------|------------|
-| R32 (Dieciseisavos) | 2 pts | 1 pt | +1 |
-| R16 (Octavos) | 4 pts | 2 pts | +2 |
-| QF (Cuartos) | 6 pts | 4 pts | +2 |
-| SF (Semifinal) | 8 pts | 6 pts | +2 |
-| 3er puesto | 4 pts | 8 pts | -4 |
-| Final | 15 pts | 15 pts | 0 |
-
-**Impacto:** El frontend muestra puntos incorrectos al usuario. Cuando se calculen puntos reales, habra discrepancia.
-
-**Solucion:** Actualizar `knockoutBracket.js` lineas 112-119:
-```javascript
-export const KNOCKOUT_POINTS = {
-  roundOf32: 1,      // Era 2
-  roundOf16: 2,      // Era 4
-  quarterFinals: 4,  // Era 6
-  semiFinals: 6,     // Era 8
-  thirdPlace: 8,     // Era 4
-  final: 15,         // Correcto
-};
-```
+| Predicción | Frontend | Backend | ¿Coincide? |
+|------------|----------|---------|------------|
+| Posición exacta grupo | 3 pts | 3 | ✓ |
+| Equipo clasifica | 1 pt | 1 | ✓ |
+| Dieciseisavos | 1 pt | 1 | ✓ |
+| Octavos | 2 pts | 2 | ✓ |
+| Cuartos | 4 pts | 4 | ✓ |
+| Semifinal | 6 pts | 6 | ✓ |
+| 3er Puesto | 8 pts | 8 | ✓ |
+| Campeón | 15 pts | 15 | ✓ |
 
 ---
 
@@ -170,28 +154,17 @@ CREATE INDEX idx_knockout_predictions_set ON knockout_predictions(prediction_set
 
 ---
 
-### 4. Leaderboard Truncado
+### 4. ~~Leaderboard Truncado~~ ✅ RESUELTO
 
-**Archivo:** `natalia-backend/routes/leaderboard.ts` (linea 95)
+**Estado:** Resuelto 2025-12-24
 
-**Problema:**
-```typescript
-LIMIT 500
-```
-
-**Impacto:** Si hay 600 usuarios con predicciones completas, 100 no aparecen en ranking global.
-
-**Solucion:** Implementar paginacion o quitar limite:
-```typescript
-// Opcion 1: Sin limite
-// Quitar LIMIT 500
-
-// Opcion 2: Paginacion
-const page = parseInt(req.query.page as string) || 1;
-const limit = 50;
-const offset = (page - 1) * limit;
-// ... LIMIT ${limit} OFFSET ${offset}
-```
+**Solución implementada:** Paginación completa
+- Backend: Quitado LIMIT 500, implementada paginación con cache
+- Endpoint: `GET /leaderboard?mode=positions&page=1&limit=100`
+- Respuesta incluye: `entries`, `total`, `page`, `totalPages`, `userPosition`, `userPage`
+- Frontend: Controles de paginación arriba y abajo de la tabla
+- Auto-navega a la página donde está el usuario logueado
+- Nuevo middleware `optionalAuth` para detectar usuario sin requerir login
 
 ---
 

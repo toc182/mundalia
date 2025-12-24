@@ -75,7 +75,14 @@
       "Bash(cd:*)",
       "Bash(rm:*)",
       "Bash(cmd //c \"taskkill /PID 57352 /F\")",
-      "WebFetch(domain:mundalia-production.up.railway.app)"
+      "WebFetch(domain:mundalia-production.up.railway.app)",
+      "Bash(cmd //c \"taskkill /IM node.exe /F\")",
+      "Bash(cmd /c \"taskkill /IM node.exe /F\")",
+      "Bash(timeout /t 5 /nobreak)",
+      "Bash(cmd //c:*)",
+      "Bash(tasklist:*)",
+      "Bash(cmd /c \"taskkill /F /IM node.exe\")",
+      "Bash(cmd /c \"taskkill /F /PID 31144\")"
     ],
     "deny": [],
     "ask": []

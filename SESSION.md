@@ -1142,6 +1142,9 @@ Cada cambio de estado recreaba estos componentes como nuevas funciones, causando
 
 | Fecha | Tarea | Descripcion |
 |-------|-------|-------------|
+| 2025-12-24 | Leaderboard paginado | Máx 100 por página, controles arriba/abajo, auto-navega a página del usuario |
+| 2025-12-24 | Google OAuth server-side | Migrado a flujo redirect, elimina errores de consola GSI_LOGGER |
+| 2025-12-24 | Fix Knockout desktop | Botón "Finalizar" siempre visible en pantallas grandes |
 | 2025-12-19 | Migración TypeScript | Backend 100% TypeScript, 16 archivos .js eliminados, ts-jest configurado |
 | 2025-12-19 | Tests ampliados | 174 tests (scoring, admin, predictions edge cases), 76.6% cobertura |
 | 2025-12-18 | CI/CD Pipeline Fix | ESLint config ajustado, TiebreakerModal refactorizado, backend tests skip en CI |
