@@ -10,7 +10,6 @@ interface AuthResult {
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<AuthResult>;
-  loginWithGoogle: (credential: string) => Promise<AuthResult>;
   register: (name: string, email: string, password: string) => Promise<AuthResult>;
   logout: () => void;
   updateUser: (user: User) => void;
@@ -88,26 +87,6 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
     }
   };
 
-  const loginWithGoogle = async (credential: string): Promise<AuthResult> => {
-    setError(null);
-    try {
-      const response = await authAPI.googleLogin(credential);
-      const { token, user } = response.data;
-
-      localStorage.setItem('natalia_token', token);
-      localStorage.setItem('natalia_user', JSON.stringify(user));
-      setUser(user);
-
-      return { success: true };
-    } catch (err: unknown) {
-      console.error('[AUTH] Google login error:', err);
-      const error = err as { response?: { data?: { error?: string } } };
-      const message = error.response?.data?.error || 'Error al iniciar sesion con Google';
-      setError(message);
-      return { success: false, error: message };
-    }
-  };
-
   const logout = (): void => {
     localStorage.removeItem('natalia_token');
     localStorage.removeItem('natalia_user');
@@ -125,7 +104,6 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
     <AuthContext.Provider value={{
       user,
       login,
-      loginWithGoogle,
       register,
       logout,
       updateUser,

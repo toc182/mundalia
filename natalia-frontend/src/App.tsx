@@ -10,6 +10,7 @@ import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 
 // Lazy loaded pages (code splitting)
+const AuthCallback = lazy(() => import('@/pages/AuthCallback'));
 const Playoffs = lazy(() => import('@/pages/Playoffs'));
 const Predictions = lazy(() => import('@/pages/Predictions'));
 const ThirdPlaces = lazy(() => import('@/pages/ThirdPlaces'));
@@ -83,6 +84,7 @@ function AppRoutes(): JSX.Element {
         {/* Rutas publicas */}
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/ranking" element={<Leaderboard />} />
 
         {/* Rutas protegidas */}

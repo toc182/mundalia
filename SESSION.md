@@ -19,45 +19,37 @@ Después de la migración a TypeScript, producción dejó de funcionar. Se aplic
 
 ---
 
-## PENDIENTE: Error de Google Sign-In en consola
+## RESUELTO: Error de Google Sign-In en consola - 2025-12-24
 
-### Problema
+### Problema Original
 
-Al cargar las páginas de Login/Register aparece este error en la consola:
+Al cargar las páginas de Login/Register aparecía este error en la consola:
 ```
 [GSI_LOGGER]: The given origin is not allowed for the given client ID.
 Failed to load resource: the server responded with a status of 403
 ```
 
-**Estado:** El login con Google FUNCIONA correctamente, pero el error aparece en consola.
+### Solución Aplicada
 
-### Causa
+Se creó un nuevo OAuth client en Google Cloud Console con los orígenes autorizados correctos.
 
-El componente `GoogleLogin` de `@react-oauth/google` carga un iframe de Google que intenta verificar el origen. Aunque `http://localhost:5174` y `https://mundalia.vercel.app` están configurados en Google Cloud Console como orígenes autorizados, el error persiste porque la app está en modo "Testing".
+**Client ID unificado:** `637795242234-4l79nu0aend8lh91sm06fkhmk5h7tqps.apps.googleusercontent.com`
 
-### Intentos fallidos
+**Archivos actualizados:**
+- `natalia-frontend/.env` - VITE_GOOGLE_CLIENT_ID
+- `natalia-frontend/.env.production` - VITE_GOOGLE_CLIENT_ID
+- `natalia-backend/.env` - GOOGLE_CLIENT_ID (ya tenía el correcto)
 
-- `use_fedcm_for_prompt={false}` - No elimina el error (solo afecta One Tap, no el botón)
-- Publicar la app - Usuario no quiere hacerlo
+### Orígenes Autorizados en Google Cloud Console
 
-### Solución requerida
+Para que funcione en desarrollo y producción:
+- `http://localhost:5174`
+- `https://mundalia.vercel.app`
 
-Cambiar de `GoogleLogin` (iframe con id_token) a `useGoogleLogin` (popup con access_token):
+### Estado
 
-**Frontend:**
-1. Reemplazar `GoogleLogin` por botón custom + `useGoogleLogin` hook
-2. El hook devuelve `access_token` en vez de `id_token` (credential)
-
-**Backend (`routes/auth.ts`):**
-1. Modificar endpoint `POST /auth/google` para aceptar `access_token`
-2. Verificar token llamando a `https://www.googleapis.com/oauth2/v3/userinfo` con el access_token
-3. Obtener email/nombre del usuario de la respuesta
-4. Crear/vincular usuario como antes
-
-**Archivos a modificar:**
-- `natalia-frontend/src/pages/Login.tsx`
-- `natalia-frontend/src/pages/Register.tsx`
-- `natalia-backend/routes/auth.ts`
+✅ Login con Google funciona en desarrollo
+⏳ Pendiente verificar en producción después del deploy
 
 ---
 

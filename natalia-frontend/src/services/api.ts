@@ -71,8 +71,8 @@ export const authAPI = {
   register: (name: string, email: string, password: string): Promise<AxiosResponse<LoginResponse>> =>
     api.post('/auth/register', { name, email, password }),
 
-  googleLogin: (credential: string): Promise<AxiosResponse<LoginResponse>> =>
-    api.post('/auth/google', { credential }),
+  googleLogin: (accessToken: string): Promise<AxiosResponse<LoginResponse>> =>
+    api.post('/auth/google', { access_token: accessToken }),
 
   getMe: (): Promise<AxiosResponse<User>> =>
     api.get('/users/me'),
