@@ -31,14 +31,21 @@ Failed to load resource: the server responded with a status of 403
 
 ### Solución Aplicada
 
-Se creó un nuevo OAuth client en Google Cloud Console con los orígenes autorizados correctos.
+Migración a flujo OAuth server-side redirect (elimina errores de consola completamente).
 
-**Client ID unificado:** `637795242234-4l79nu0aend8lh91sm06fkhmk5h7tqps.apps.googleusercontent.com`
+**Cambios:**
+- Frontend ya no usa `@react-oauth/google` (eliminada dependencia)
+- Click en "Google" redirige a `/api/auth/google/redirect`
+- Backend maneja todo el flujo OAuth con Google
+- Backend redirige de vuelta al frontend con JWT token
 
-**Archivos actualizados:**
-- `natalia-frontend/.env` - VITE_GOOGLE_CLIENT_ID
-- `natalia-frontend/.env.production` - VITE_GOOGLE_CLIENT_ID
-- `natalia-backend/.env` - GOOGLE_CLIENT_ID (ya tenía el correcto)
+**Nuevos endpoints backend:**
+- `GET /auth/google/redirect` - Inicia flujo OAuth
+- `GET /auth/google/callback` - Recibe código de Google, crea/vincula usuario, redirige con token
+
+**Variables de entorno Railway:**
+- `GOOGLE_CLIENT_ID` - Client ID de OAuth
+- `GOOGLE_CLIENT_SECRET` - Client Secret de OAuth (nuevo, requerido para server-side flow)
 
 ### Orígenes Autorizados en Google Cloud Console
 
@@ -49,7 +56,7 @@ Para que funcione en desarrollo y producción:
 ### Estado
 
 ✅ Login con Google funciona en desarrollo
-⏳ Pendiente verificar en producción después del deploy
+✅ Login con Google funciona en producción (verificado 2025-12-24)
 
 ---
 
