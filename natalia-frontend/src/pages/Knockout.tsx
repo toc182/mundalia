@@ -975,7 +975,16 @@ export default function Knockout(): React.JSX.Element {
             Guardar
           </Button>
         </div>
-        <NavigationButton />
+        {/* Desktop: Finalizar siempre visible, Mobile: navegación por slides */}
+        <div className="hidden lg:block">
+          <Button onClick={handleFinish} disabled={saving || !isComplete}>
+            {saving ? 'Guardando...' : 'Finalizar'}
+            <Trophy className="ml-1 h-4 w-4" />
+          </Button>
+        </div>
+        <div className="lg:hidden">
+          <NavigationButton />
+        </div>
       </div>
 
       {saved && (
@@ -1027,7 +1036,11 @@ export default function Knockout(): React.JSX.Element {
               Guardar
             </Button>
           </div>
-          <NavigationButton size="lg" />
+          {/* Desktop: siempre mostrar Finalizar (deshabilitado hasta completar) */}
+          <Button onClick={handleFinish} disabled={saving || !isComplete} size="lg">
+            {saving ? 'Guardando...' : 'Finalizar'}
+            <Trophy className="ml-1 h-4 w-4" />
+          </Button>
         </div>
       </div>
 
