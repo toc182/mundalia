@@ -10,6 +10,7 @@ import {
   hasRealChanges,
   getPlayoffIdByTeamId,
   isPlayoffTeam,
+  type PlayoffSelections,
 } from '../utils/predictionHelpers';
 
 describe('predictionHelpers', () => {
@@ -44,17 +45,19 @@ describe('predictionHelpers', () => {
     });
 
     it('should return null when playoff not selected', () => {
-      const result = getPlayoffWinner('UEFA_A', { UEFA_B: { final: 1 } });
+      const selections: PlayoffSelections = { UEFA_B: { final: 1 } };
+      const result = getPlayoffWinner('UEFA_A', selections);
       expect(result).toBeNull();
     });
 
     it('should return null when final not selected', () => {
-      const result = getPlayoffWinner('UEFA_A', { UEFA_A: { semi1: 1 } });
+      const selections: PlayoffSelections = { UEFA_A: { semi1: 1 } };
+      const result = getPlayoffWinner('UEFA_A', selections);
       expect(result).toBeNull();
     });
 
     it('should handle null playoffSelections', () => {
-      const result = getPlayoffWinner('UEFA_A', null);
+      const result = getPlayoffWinner('UEFA_A', null as unknown as PlayoffSelections);
       expect(result).toBeNull();
     });
   });
@@ -64,12 +67,12 @@ describe('predictionHelpers', () => {
   // ============================================
   describe('getTeamById', () => {
     it('should return null for null id', () => {
-      const result = getTeamById(null, {});
+      const result = getTeamById(null as unknown as number, {});
       expect(result).toBeNull();
     });
 
     it('should return null for undefined id', () => {
-      const result = getTeamById(undefined, {});
+      const result = getTeamById(undefined as unknown as number, {});
       expect(result).toBeNull();
     });
 
@@ -81,7 +84,7 @@ describe('predictionHelpers', () => {
     });
 
     it('should handle string id', () => {
-      const result = getTeamById('1', {});
+      const result = getTeamById('1' as unknown as number, {});
       expect(result).not.toBeNull();
       expect(result).toHaveProperty('id', 1);
     });
