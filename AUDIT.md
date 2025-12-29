@@ -193,27 +193,23 @@ POST /groups ya tenía transacción implementada correctamente.
 
 ---
 
-### 7. Falta useMemo en Calculos Costosos
+### 7. ~~Falta useMemo en Calculos Costosos~~ ✅ RESUELTO
 
-**Archivo:** `natalia-frontend/src/pages/Knockout.jsx` (lineas 355-360)
+**Estado:** Resuelto 2025-12-29
 
-**Problema:**
+**Solución implementada:** Agregado `useMemo` a todos los cálculos de brackets en `Knockout.tsx`:
+
 ```javascript
-// Se recalcula en CADA render
-const r32Matches = buildR32Matches();
-const r16Matches = buildR16Matches();
-const qfMatches = buildQFMatches();
-const sfMatches = buildSFMatches();
+const thirdPlaceAssignments = useMemo(() => ..., [bestThirdPlaces]);
+const r32Matches = useMemo(() => buildR32Matches(), [predictions, playoffSelections, bestThirdPlaces, knockoutPredictions]);
+const r16Matches = useMemo(() => buildR16Matches(), [knockoutPredictions, playoffSelections]);
+const qfMatches = useMemo(() => buildQFMatches(), [knockoutPredictions, playoffSelections]);
+const sfMatches = useMemo(() => buildSFMatches(), [knockoutPredictions, playoffSelections]);
+const thirdPlace = useMemo(() => buildThirdPlaceMatch(), [knockoutPredictions, playoffSelections]);
+const final = useMemo(() => buildFinalMatch(), [knockoutPredictions, playoffSelections]);
 ```
 
-**Impacto:** Lag en mobile, especialmente al escribir scores.
-
-**Solucion:**
-```javascript
-const r32Matches = useMemo(() => buildR32Matches(), [predictions, playoffSelections, bestThirdPlaces]);
-const r16Matches = useMemo(() => buildR16Matches(), [r32Matches, knockoutPredictions]);
-// etc.
-```
+**Beneficio:** Los brackets solo se recalculan cuando cambian sus dependencias, no en cada keystroke.
 
 ---
 

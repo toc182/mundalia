@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, RefObject } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, RefObject } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -425,10 +425,11 @@ export default function Knockout(): React.JSX.Element {
     return getTeamById(teamId);
   };
 
-  // Get third place assignments based on selected best thirds
-  const thirdPlaceAssignments = bestThirdPlaces.length === 8
-    ? getThirdPlaceAssignments(bestThirdPlaces)
-    : null;
+  // Get third place assignments based on selected best thirds (memoized)
+  const thirdPlaceAssignments = useMemo(() =>
+    bestThirdPlaces.length === 8 ? getThirdPlaceAssignments(bestThirdPlaces) : null,
+    [bestThirdPlaces]
+  );
 
   // Get winner of a match from predictions
   const getMatchWinner = (matchId: string): PlayoffWinnerTeam | null => {
@@ -575,12 +576,13 @@ export default function Knockout(): React.JSX.Element {
     };
   };
 
-  const r32Matches = buildR32Matches();
-  const r16Matches = buildR16Matches();
-  const qfMatches = buildQFMatches();
-  const sfMatches = buildSFMatches();
-  const thirdPlace = buildThirdPlaceMatch();
-  const final = buildFinalMatch();
+  // Memoize bracket calculations to avoid recalculating on every render
+  const r32Matches = useMemo(() => buildR32Matches(), [predictions, playoffSelections, bestThirdPlaces, knockoutPredictions]);
+  const r16Matches = useMemo(() => buildR16Matches(), [knockoutPredictions, playoffSelections]);
+  const qfMatches = useMemo(() => buildQFMatches(), [knockoutPredictions, playoffSelections]);
+  const sfMatches = useMemo(() => buildSFMatches(), [knockoutPredictions, playoffSelections]);
+  const thirdPlace = useMemo(() => buildThirdPlaceMatch(), [knockoutPredictions, playoffSelections]);
+  const final = useMemo(() => buildFinalMatch(), [knockoutPredictions, playoffSelections]);
 
   // Helper to clear dependent predictions
   const clearDependentPredictions = (matchId: string, predictions: KnockoutPredictions): KnockoutPredictions => {
