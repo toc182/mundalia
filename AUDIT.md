@@ -160,29 +160,21 @@ Los subqueries ahora usan index scans en lugar de sequential scans.
 
 ## Problemas Importantes
 
-### 5. Transacciones Incompletas
+### 5. ~~Transacciones Incompletas~~ ✅ RESUELTO
 
-**Archivo:** `natalia-backend/routes/predictions.ts` (linea 296)
+**Estado:** Resuelto 2025-12-29
 
-**Problema:** DELETE sin transaccion:
-```typescript
-await db.query('DELETE FROM playoff_predictions WHERE prediction_set_id = $1', [setId]);
-// Si los INSERTs siguientes fallan, los datos se pierden
-await Promise.all(inserts);
-```
+**Solución implementada:** Todas las operaciones DELETE+INSERT ahora usan transacciones con `pool.connect()`, `BEGIN`, `COMMIT`, y `ROLLBACK` en caso de error.
 
-**Solucion:** Envolver en BEGIN/COMMIT:
-```typescript
-await db.query('BEGIN');
-try {
-  await db.query('DELETE FROM playoff_predictions WHERE prediction_set_id = $1', [setId]);
-  await Promise.all(inserts);
-  await db.query('COMMIT');
-} catch (err) {
-  await db.query('ROLLBACK');
-  throw err;
-}
-```
+**Endpoints corregidos:**
+- POST /playoffs - transacción agregada
+- POST /third-places - transacción agregada
+- POST /knockout - transacción agregada
+- POST /scores - transacción agregada
+- DELETE /reset-from-playoffs - transacción agregada
+- DELETE /reset-from-groups - transacción agregada
+
+POST /groups ya tenía transacción implementada correctamente.
 
 ---
 

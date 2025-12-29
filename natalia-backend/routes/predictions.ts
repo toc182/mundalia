@@ -296,21 +296,32 @@ router.post('/playoffs', auth, async (req: Request<unknown, unknown, SavePlayoff
   try {
     const setId = requestSetId || await getOrCreateDefaultSet(authReq.user.id);
 
-    // Delete existing predictions for this set
-    await db.query('DELETE FROM playoff_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]);
+    // Use dedicated client for transaction
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
 
-    // Insert new predictions (parallelized for performance)
-    const insertPromises = Object.entries(predictions)
-      .filter(([, selection]) => selection && (selection.semi1 || selection.semi2 || selection.final))
-      .map(([playoffId, selection]) =>
-        db.query(`
-          INSERT INTO playoff_predictions (user_id, playoff_id, semifinal_winner_1, semifinal_winner_2, final_winner, prediction_set_id)
-          VALUES ($1, $2, $3, $4, $5, $6)
-        `, [authReq.user.id, playoffId, selection.semi1 || null, selection.semi2 || null, selection.final || null, setId])
-      );
-    await Promise.all(insertPromises);
+      // Delete existing predictions for this set
+      await client.query('DELETE FROM playoff_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]);
 
-    success(res, { setId }, 'Playoff predictions saved successfully');
+      // Insert new predictions sequentially within transaction
+      for (const [playoffId, selection] of Object.entries(predictions)) {
+        if (selection && (selection.semi1 || selection.semi2 || selection.final)) {
+          await client.query(`
+            INSERT INTO playoff_predictions (user_id, playoff_id, semifinal_winner_1, semifinal_winner_2, final_winner, prediction_set_id)
+            VALUES ($1, $2, $3, $4, $5, $6)
+          `, [authReq.user.id, playoffId, selection.semi1 || null, selection.semi2 || null, selection.final || null, setId]);
+        }
+      }
+
+      await client.query('COMMIT');
+      success(res, { setId }, 'Playoff predictions saved successfully');
+    } catch (txErr) {
+      await client.query('ROLLBACK');
+      throw txErr;
+    } finally {
+      client.release();
+    }
   } catch (err) {
     console.error('[PLAYOFFS POST] error:', err);
     serverError(res, err as Error);
@@ -373,14 +384,26 @@ router.post('/third-places', auth, async (req: Request<unknown, unknown, SaveThi
   try {
     const setId = requestSetId || await getOrCreateDefaultSet(authReq.user.id);
 
-    // Delete existing for this set and insert new
-    await db.query('DELETE FROM third_place_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]);
-    await db.query(`
-      INSERT INTO third_place_predictions (user_id, selected_groups, prediction_set_id)
-      VALUES ($1, $2, $3)
-    `, [authReq.user.id, selectedGroups, setId]);
+    // Use dedicated client for transaction
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
 
-    success(res, { setId }, 'Third place predictions saved successfully');
+      // Delete existing for this set and insert new
+      await client.query('DELETE FROM third_place_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]);
+      await client.query(`
+        INSERT INTO third_place_predictions (user_id, selected_groups, prediction_set_id)
+        VALUES ($1, $2, $3)
+      `, [authReq.user.id, selectedGroups, setId]);
+
+      await client.query('COMMIT');
+      success(res, { setId }, 'Third place predictions saved successfully');
+    } catch (txErr) {
+      await client.query('ROLLBACK');
+      throw txErr;
+    } finally {
+      client.release();
+    }
   } catch (err) {
     serverError(res, err as Error);
   }
@@ -470,35 +493,44 @@ router.post('/knockout', auth, async (req: Request<unknown, unknown, SaveKnockou
   try {
     const setId = requestSetId || await getOrCreateDefaultSet(authReq.user.id);
 
-    // Delete existing predictions for this set
-    await db.query('DELETE FROM knockout_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]);
+    // Use dedicated client for transaction
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
 
-    // Insert new predictions (parallelized for performance)
-    const insertPromises = Object.entries(predictions)
-      .filter(([, value]) => value)
-      .map(([matchKey, value]) => {
-        if (typeof value === 'object') {
-          // Scores mode: { winner, scoreA, scoreB }
-          const { winner, scoreA, scoreB } = value as KnockoutPredValue;
-          if (winner) {
-            return db.query(`
-              INSERT INTO knockout_predictions (user_id, match_key, winner_team_id, score_a, score_b, prediction_set_id)
-              VALUES ($1, $2, $3, $4, $5, $6)
-            `, [authReq.user.id, matchKey, winner, scoreA ?? null, scoreB ?? null, setId]);
+      // Delete existing predictions for this set
+      await client.query('DELETE FROM knockout_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]);
+
+      // Insert new predictions sequentially within transaction
+      for (const [matchKey, value] of Object.entries(predictions)) {
+        if (value) {
+          if (typeof value === 'object') {
+            // Scores mode: { winner, scoreA, scoreB }
+            const { winner, scoreA, scoreB } = value as KnockoutPredValue;
+            if (winner) {
+              await client.query(`
+                INSERT INTO knockout_predictions (user_id, match_key, winner_team_id, score_a, score_b, prediction_set_id)
+                VALUES ($1, $2, $3, $4, $5, $6)
+              `, [authReq.user.id, matchKey, winner, scoreA ?? null, scoreB ?? null, setId]);
+            }
+          } else {
+            // Positions mode: just winner_team_id
+            await client.query(`
+              INSERT INTO knockout_predictions (user_id, match_key, winner_team_id, prediction_set_id)
+              VALUES ($1, $2, $3, $4)
+            `, [authReq.user.id, matchKey, value, setId]);
           }
-        } else {
-          // Positions mode: just winner_team_id
-          return db.query(`
-            INSERT INTO knockout_predictions (user_id, match_key, winner_team_id, prediction_set_id)
-            VALUES ($1, $2, $3, $4)
-          `, [authReq.user.id, matchKey, value, setId]);
         }
-        return null;
-      })
-      .filter(Boolean);
-    await Promise.all(insertPromises as Promise<unknown>[]);
+      }
 
-    success(res, { setId }, 'Knockout predictions saved successfully');
+      await client.query('COMMIT');
+      success(res, { setId }, 'Knockout predictions saved successfully');
+    } catch (txErr) {
+      await client.query('ROLLBACK');
+      throw txErr;
+    } finally {
+      client.release();
+    }
   } catch (err) {
     serverError(res, err as Error);
   }
@@ -611,28 +643,39 @@ router.post('/scores', auth, async (req: Request<unknown, unknown, SaveScoresBod
       return;
     }
 
-    // Delete existing predictions
-    await db.query(
-      'DELETE FROM score_predictions WHERE prediction_set_id = $1',
-      [setId]
-    );
+    // Use dedicated client for transaction
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
 
-    // Insert new predictions (parallelized for performance)
-    const insertPromises = Object.entries(scores).flatMap(([group, matches]) =>
-      Object.entries(matches)
-        .filter(([, score]) => score.a !== undefined && score.b !== undefined)
-        .map(([matchNum, score]) =>
-          db.query(
-            `INSERT INTO score_predictions
-             (user_id, prediction_set_id, group_letter, match_number, score_a, score_b)
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            [authReq.user.id, setId, group, parseInt(matchNum, 10), score.a, score.b]
-          )
-        )
-    );
-    await Promise.all(insertPromises);
+      // Delete existing predictions
+      await client.query(
+        'DELETE FROM score_predictions WHERE prediction_set_id = $1',
+        [setId]
+      );
 
-    success(res, { setId }, 'Score predictions saved successfully');
+      // Insert new predictions sequentially within transaction
+      for (const [group, matches] of Object.entries(scores)) {
+        for (const [matchNum, score] of Object.entries(matches)) {
+          if (score.a !== undefined && score.b !== undefined) {
+            await client.query(
+              `INSERT INTO score_predictions
+               (user_id, prediction_set_id, group_letter, match_number, score_a, score_b)
+               VALUES ($1, $2, $3, $4, $5, $6)`,
+              [authReq.user.id, setId, group, parseInt(matchNum, 10), score.a, score.b]
+            );
+          }
+        }
+      }
+
+      await client.query('COMMIT');
+      success(res, { setId }, 'Score predictions saved successfully');
+    } catch (txErr) {
+      await client.query('ROLLBACK');
+      throw txErr;
+    } finally {
+      client.release();
+    }
   } catch (err) {
     serverError(res, err as Error);
   }
@@ -793,11 +836,21 @@ router.delete('/reset-from-playoffs', auth, async (req: Request, res: Response):
       return;
     }
 
-    await db.query('DELETE FROM knockout_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]);
-    await db.query('DELETE FROM third_place_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]);
-    await db.query('DELETE FROM group_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]);
-
-    success(res, null, 'Reset from playoffs successful');
+    // Use dedicated client for transaction
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('DELETE FROM knockout_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]);
+      await client.query('DELETE FROM third_place_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]);
+      await client.query('DELETE FROM group_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]);
+      await client.query('COMMIT');
+      success(res, null, 'Reset from playoffs successful');
+    } catch (txErr) {
+      await client.query('ROLLBACK');
+      throw txErr;
+    } finally {
+      client.release();
+    }
   } catch (err) {
     serverError(res, err as Error);
   }
@@ -813,10 +866,20 @@ router.delete('/reset-from-groups', auth, async (req: Request, res: Response): P
       return;
     }
 
-    await db.query('DELETE FROM knockout_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]);
-    await db.query('DELETE FROM third_place_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]);
-
-    success(res, null, 'Reset from groups successful');
+    // Use dedicated client for transaction
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('DELETE FROM knockout_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]);
+      await client.query('DELETE FROM third_place_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]);
+      await client.query('COMMIT');
+      success(res, null, 'Reset from groups successful');
+    } catch (txErr) {
+      await client.query('ROLLBACK');
+      throw txErr;
+    } finally {
+      client.release();
+    }
   } catch (err) {
     serverError(res, err as Error);
   }
