@@ -8,7 +8,9 @@ import app from '../server';
 import db from '../config/db';
 
 // Helper to extract data from standardized response
-const getData = (res) => res.body.data ?? res.body;
+const getData = (res: request.Response) => res.body.data ?? res.body;
+// Helper to extract leaderboard entries from paginated response
+const getEntries = (res: request.Response) => getData(res)?.entries ?? getData(res);
 
 describe('Leaderboard Routes', () => {
   // Cleanup
@@ -30,7 +32,7 @@ describe('Leaderboard Routes', () => {
 
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(Array.isArray(getData(res))).toBe(true);
+      expect(Array.isArray(getEntries(res))).toBe(true);
     });
 
     it('should return leaderboard for positions mode explicitly', async () => {
@@ -39,7 +41,7 @@ describe('Leaderboard Routes', () => {
 
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(Array.isArray(getData(res))).toBe(true);
+      expect(Array.isArray(getEntries(res))).toBe(true);
     });
 
     it('should return leaderboard for scores mode', async () => {
@@ -48,7 +50,7 @@ describe('Leaderboard Routes', () => {
 
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
-      expect(Array.isArray(getData(res))).toBe(true);
+      expect(Array.isArray(getEntries(res))).toBe(true);
     });
 
     it('should include user info and points in results', async () => {
@@ -56,7 +58,7 @@ describe('Leaderboard Routes', () => {
         .get('/api/leaderboard?mode=positions');
 
       expect(res.statusCode).toBe(200);
-      const leaderboard = getData(res);
+      const leaderboard = getEntries(res);
       if (leaderboard.length > 0) {
         expect(leaderboard[0]).toHaveProperty('user_name');
         expect(leaderboard[0]).toHaveProperty('prediction_name');
@@ -70,7 +72,7 @@ describe('Leaderboard Routes', () => {
         .get('/api/leaderboard?mode=positions');
 
       expect(res.statusCode).toBe(200);
-      const leaderboard = getData(res);
+      const leaderboard = getEntries(res);
       if (leaderboard.length > 0) {
         const breakdown = leaderboard[0].points_breakdown;
         expect(breakdown).toHaveProperty('groupExact');
@@ -84,7 +86,7 @@ describe('Leaderboard Routes', () => {
         .get('/api/leaderboard?mode=positions');
 
       expect(res.statusCode).toBe(200);
-      const leaderboard = getData(res);
+      const leaderboard = getEntries(res);
       if (leaderboard.length > 1) {
         for (let i = 0; i < leaderboard.length - 1; i++) {
           expect(leaderboard[i].total_points).toBeGreaterThanOrEqual(leaderboard[i + 1].total_points);
@@ -103,8 +105,8 @@ describe('Leaderboard Routes', () => {
         .get('/api/leaderboard?mode=positions');
       expect(res2.statusCode).toBe(200);
 
-      // Results should be the same
-      expect(getData(res1)).toEqual(getData(res2));
+      // Results should be the same (compare entries array)
+      expect(getEntries(res1)).toEqual(getEntries(res2));
     });
   });
 
