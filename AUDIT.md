@@ -326,21 +326,25 @@ export function useStepNavigation(steps) {
 
 ---
 
-### 11. Sin Graceful Shutdown
+### 11. ~~Sin Graceful Shutdown~~ ✅ RESUELTO
 
-**Archivo:** `natalia-backend/server.ts`
+**Estado:** Resuelto 2025-12-29
 
-**Problema:** No hay handlers para SIGTERM/SIGINT:
+**Solución implementada:** Agregados handlers para SIGTERM y SIGINT en `server.ts`:
+
 ```typescript
-// Falta:
-process.on('SIGTERM', async () => {
-  console.log('Shutting down...');
-  await pool.end();  // Cerrar conexiones BD
+const gracefulShutdown = async (signal: string): Promise<void> => {
+  console.log(`[SHUTDOWN] ${signal} received, shutting down gracefully...`);
+  if (server) server.close();
+  await pool.end();
   process.exit(0);
-});
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 ```
 
-**Impacto:** En Railway, las conexiones pueden quedar colgadas al redesplegar.
+**Beneficio:** Redeploys en Railway cierran conexiones de BD correctamente, sin conexiones zombie.
 
 ---
 

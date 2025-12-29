@@ -13,7 +13,8 @@ for (const envVar of requiredEnvVars) {
 import express, { Request, Response, NextFunction, Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import db from './config/db';
+import http from 'http';
+import db, { pool } from './config/db';
 
 // Import routes
 import authRoutes from './routes/auth';
@@ -260,9 +261,39 @@ app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
+// Server instance for graceful shutdown
+let server: http.Server | null = null;
+
+// Graceful shutdown handler
+const gracefulShutdown = async (signal: string): Promise<void> => {
+  console.log(`\n[SHUTDOWN] ${signal} received, shutting down gracefully...`);
+
+  // Stop accepting new connections
+  if (server) {
+    server.close(() => {
+      console.log('[SHUTDOWN] HTTP server closed');
+    });
+  }
+
+  // Close database pool
+  try {
+    await pool.end();
+    console.log('[SHUTDOWN] Database pool closed');
+  } catch (err) {
+    console.error('[SHUTDOWN] Error closing database pool:', (err as Error).message);
+  }
+
+  console.log('[SHUTDOWN] Graceful shutdown complete');
+  process.exit(0);
+};
+
+// Register shutdown handlers
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
 // Only start listening if not in test mode
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, () => {
+  server = app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
   });
 }
