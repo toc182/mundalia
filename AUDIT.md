@@ -94,36 +94,35 @@ src/
 
 ---
 
-### 2. Componentes Monoliticos en Frontend
+### 2. ~~Componentes Monoliticos en Frontend~~ ✅ RESUELTO (Knockout.tsx)
 
-**Archivos afectados:**
-- `natalia-frontend/src/pages/Knockout.jsx` - **1,589 lineas**
-- `natalia-frontend/src/pages/Predictions.jsx` - **523 lineas**
-- `natalia-frontend/src/pages/Admin.jsx` - **800+ lineas**
-- `natalia-frontend/src/pages/PredictionsScores.jsx` - **600+ lineas**
+**Estado:** Resuelto 2025-12-29 (Knockout.tsx refactorizado)
 
-**Problema:** Componentes gigantes con multiples responsabilidades:
-- Estado (12+ useState en Knockout.jsx)
-- Fetch de datos
-- Logica de negocio (buildR32Matches, buildR16Matches, etc.)
-- Rendering desktop Y mobile
-- Sub-componentes definidos inline
+**Solución implementada para Knockout.tsx:**
 
-**Impacto:**
-- Imposible de testear unitariamente
-- Re-renders innecesarios (sin useMemo)
-- Dificil de debuggear
-- Codigo duplicado entre archivos
+Knockout.tsx pasó de **1,831 líneas** a **409 líneas** (78% de reducción).
 
-**Solucion:** Refactorizar en componentes mas pequenos:
+**Archivos creados:**
 ```
-Knockout.jsx (1589 lineas) ->
-  ├── components/knockout/MobileKnockout.jsx
-  ├── components/knockout/DesktopBracket.jsx
-  ├── components/knockout/MatchBox.jsx (ya existe)
-  ├── hooks/useKnockoutData.js
-  └── utils/knockoutHelpers.js
+src/types/knockout.ts           - Tipos e interfaces extraídos (~160 líneas)
+src/hooks/useKnockoutData.ts    - Custom hook con toda la lógica de datos (~400 líneas)
+src/components/knockout/
+  ├── index.ts                  - Exports centralizados
+  ├── MobileKnockout.tsx        - MobileMatchBox, MobileMatchPair, MobileKnockoutSlides (~250 líneas)
+  └── DesktopBracket.tsx        - DesktopBracketMatch, FullBracket (~280 líneas)
 ```
+
+**Beneficios:**
+- Cada archivo tiene una sola responsabilidad
+- Hook `useKnockoutData` encapsula toda la lógica de datos y estado
+- Componentes móvil y desktop separados
+- Tipos centralizados en `types/knockout.ts`
+- Más fácil de testear unitariamente
+
+**Archivos pendientes de refactorizar:**
+- `Predictions.tsx` - 523 líneas
+- `Admin.tsx` - 800+ líneas
+- `PredictionsScores.tsx` - 600+ líneas
 
 ---
 
