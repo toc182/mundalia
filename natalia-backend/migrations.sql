@@ -235,6 +235,21 @@ CREATE INDEX IF NOT EXISTS idx_prediction_sets_user_created
   ON prediction_sets(user_id, created_at DESC);
 
 -- ============================================
+-- MIGRACION 007: Indices faltantes para N+1 queries
+-- Fecha: 2025-12-29
+-- ============================================
+
+-- Indices para tablas que faltaban optimizar
+CREATE INDEX IF NOT EXISTS idx_third_place_predictions_set
+  ON third_place_predictions(prediction_set_id);
+
+CREATE INDEX IF NOT EXISTS idx_score_predictions_set
+  ON score_predictions(prediction_set_id);
+
+CREATE INDEX IF NOT EXISTS idx_tiebreaker_decisions_set
+  ON tiebreaker_decisions(prediction_set_id);
+
+-- ============================================
 -- NUEVA MIGRACION: Agregar aqui abajo
 -- Fecha: YYYY-MM-DD
 -- ============================================

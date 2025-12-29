@@ -127,30 +127,20 @@ Knockout.jsx (1589 lineas) ->
 
 ---
 
-### 3. N+1 Queries en Prediction Sets
+### 3. ~~N+1 Queries en Prediction Sets~~ ✅ RESUELTO
 
-**Archivo:** `natalia-backend/routes/predictionSets.ts` (lineas 40-60)
+**Estado:** Resuelto 2025-12-29
 
-**Problema:** Query con 5 subqueries por cada prediction set:
-```sql
-SELECT ps.*,
-  (SELECT COUNT(*) FROM group_predictions WHERE prediction_set_id = ps.id),
-  (SELECT COUNT(*) FROM playoff_predictions WHERE prediction_set_id = ps.id),
-  (SELECT COUNT(*) FROM knockout_predictions WHERE prediction_set_id = ps.id),
-  (SELECT selected_groups FROM third_place_predictions WHERE prediction_set_id = ps.id),
-  (SELECT match_key FROM knockout_predictions WHERE prediction_set_id = ps.id AND match_key = 'M104')
-FROM prediction_sets ps
-WHERE ps.user_id = $1
-```
+**Solución implementada:** Índices de base de datos
+- `idx_group_predictions_set` en `group_predictions(prediction_set_id)`
+- `idx_playoff_predictions_set` en `playoff_predictions(prediction_set_id)`
+- `idx_knockout_predictions_set` en `knockout_predictions(prediction_set_id)`
+- `idx_third_place_predictions_set` en `third_place_predictions(prediction_set_id)`
+- `idx_score_predictions_set` en `score_predictions(prediction_set_id)`
+- `idx_tiebreaker_decisions_set` en `tiebreaker_decisions(prediction_set_id)`
+- Índices compuestos adicionales para queries de leaderboard
 
-**Impacto:** Si usuario tiene 20 predicciones → 100+ queries sinteticas.
-
-**Solucion:** Usar JOINs o agregar indices:
-```sql
-CREATE INDEX idx_group_predictions_set ON group_predictions(prediction_set_id);
-CREATE INDEX idx_playoff_predictions_set ON playoff_predictions(prediction_set_id);
-CREATE INDEX idx_knockout_predictions_set ON knockout_predictions(prediction_set_id);
-```
+Los subqueries ahora usan index scans en lugar de sequential scans.
 
 ---
 
@@ -375,26 +365,22 @@ process.on('SIGTERM', async () => {
 
 ---
 
-### 12. Indices de BD No Documentados
+### 12. ~~Indices de BD No Documentados~~ ✅ RESUELTO
 
-**Archivo:** `natalia-backend/migrations.sql`
+**Estado:** Resuelto 2025-12-29
 
-**Problema:** Solo hay 5 indices basicos. Faltan indices para queries frecuentes.
+**Solución implementada:** Migraciones 006 y 007 en `migrations.sql`
 
-**Indices recomendados:**
-```sql
--- Para leaderboard queries
-CREATE INDEX idx_prediction_sets_mode_created
-  ON prediction_sets(mode, created_at DESC);
-
--- Para verificar predicciones completas
-CREATE INDEX idx_knockout_predictions_match_key
-  ON knockout_predictions(prediction_set_id, match_key);
-
--- Para grupos privados
-CREATE INDEX idx_private_group_members_user
-  ON private_group_members(user_id);
-```
+**Índices agregados:**
+- `idx_group_predictions_set` - prediction_set_id lookup
+- `idx_playoff_predictions_set` - prediction_set_id lookup
+- `idx_knockout_predictions_set` - prediction_set_id lookup
+- `idx_third_place_predictions_set` - prediction_set_id lookup
+- `idx_score_predictions_set` - prediction_set_id lookup
+- `idx_tiebreaker_decisions_set` - prediction_set_id lookup
+- `idx_group_predictions_set_group` - compuesto para grupos
+- `idx_knockout_predictions_set_match` - compuesto para knockout
+- `idx_prediction_sets_user_created` - para listar sets de usuario
 
 ---
 
