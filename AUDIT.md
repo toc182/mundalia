@@ -94,15 +94,11 @@ src/
 
 ---
 
-### 2. ~~Componentes Monoliticos en Frontend~~ ✅ RESUELTO (Knockout.tsx)
+### 2. ~~Componentes Monoliticos en Frontend~~ ✅ RESUELTO
 
-**Estado:** Resuelto 2025-12-29 (Knockout.tsx refactorizado)
+**Estado:** Resuelto 2025-12-29 (todos los componentes monolíticos refactorizados)
 
-**Solución implementada para Knockout.tsx:**
-
-Knockout.tsx pasó de **1,831 líneas** a **409 líneas** (78% de reducción).
-
-**Archivos creados:**
+#### Knockout.tsx: 1,831 → 409 líneas (78% reducción)
 ```
 src/types/knockout.ts           - Tipos e interfaces extraídos (~160 líneas)
 src/hooks/useKnockoutData.ts    - Custom hook con toda la lógica de datos (~400 líneas)
@@ -112,17 +108,36 @@ src/components/knockout/
   └── DesktopBracket.tsx        - DesktopBracketMatch, FullBracket (~280 líneas)
 ```
 
-**Beneficios:**
-- Cada archivo tiene una sola responsabilidad
-- Hook `useKnockoutData` encapsula toda la lógica de datos y estado
-- Componentes móvil y desktop separados
-- Tipos centralizados en `types/knockout.ts`
-- Más fácil de testear unitariamente
+#### Admin.tsx: 1,527 → 170 líneas (89% reducción)
+```
+src/types/admin.ts              - Tipos e interfaces admin (~100 líneas)
+src/components/admin/
+  ├── index.ts                  - Exports centralizados
+  ├── StatsTab.tsx              - Dashboard de estadísticas (~45 líneas)
+  ├── PlayoffsTab.tsx           - Gestión repechajes (~100 líneas)
+  ├── GroupsTab.tsx             - Gestión grupos (~350 líneas)
+  ├── KnockoutTab.tsx           - Gestión eliminatorias (~400 líneas)
+  └── AdminBracket.tsx          - Bracket visual admin (~300 líneas)
+```
 
-**Archivos pendientes de refactorizar:**
-- `Predictions.tsx` - 523 líneas
-- `Admin.tsx` - 800+ líneas
-- `PredictionsScores.tsx` - 600+ líneas
+#### Predictions.tsx: 563 → 403 líneas (28% reducción)
+```
+src/components/GroupCard.tsx    - Componente de grupo extraído (~130 líneas)
+- Usa StepNavigation reutilizable
+```
+
+#### PredictionsScores.tsx: 700 → 243 líneas (65% reducción)
+```
+src/types/predictionsScores.ts  - Tipos extraídos (~55 líneas)
+src/hooks/usePredictionsScores.ts - Custom hook con toda la lógica (~350 líneas)
+```
+
+**Beneficios totales:**
+- Archivos con responsabilidad única
+- Custom hooks encapsulan lógica de estado
+- Tipos centralizados facilitan mantenimiento
+- Componentes más fáciles de testear unitariamente
+- StepNavigation reutilizado en múltiples páginas
 
 ---
 

@@ -1,8 +1,7 @@
-import { useState, useEffect, useRef, memo, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -11,7 +10,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { StepNavigation } from '@/components/StepNavigation';
+import { GroupCard } from '@/components/GroupCard';
 import { mockTeams, getAllGroups } from '@/data/mockData';
 import { predictionsAPI } from '@/services/api';
 import { getTeamById as getTeamByIdHelper } from '@/utils/predictionHelpers';
@@ -38,21 +38,6 @@ interface GroupPrediction {
   group_letter: string;
   team_id: number;
   predicted_position: number;
-}
-
-interface ButtonComponentProps {
-  size?: 'default' | 'sm' | 'lg' | 'icon';
-}
-
-interface GroupCardProps {
-  group: string;
-  teamIds: number[];
-  getTeamById: (id: number) => Team | null;
-  onMove: (group: string, fromIndex: number, direction: number) => void;
-  onReorder: (group: string, fromIndex: number, toIndex: number) => void;
-  onDragStart: (e: React.DragEvent<HTMLDivElement>, teamId: number) => void;
-  onDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
-  onDrop: (e: React.DragEvent<HTMLDivElement>, targetIndex: number, group: string) => void;
 }
 
 export default function Predictions(): JSX.Element {
@@ -92,7 +77,6 @@ export default function Predictions(): JSX.Element {
     const original = originalPredictionsRef.current;
     const current = predictions;
 
-    // Compare each group's team order
     for (const group of getAllGroups()) {
       const origOrder = original[group] || [];
       const currOrder = current[group] || [];
@@ -110,14 +94,12 @@ export default function Predictions(): JSX.Element {
 
   useEffect(() => {
     const loadPredictions = async (): Promise<void> => {
-      // Si hay setId, cargar del servidor
       if (setId) {
         try {
           const response = await predictionsAPI.getMy(setId);
           const data = response.data;
 
           if (data.groupPredictions && data.groupPredictions.length > 0) {
-            // Convert array to grouped object
             const grouped: GroupPredictions = {};
             data.groupPredictions.forEach((gp: any) => {
               if (!grouped[gp.group_letter]) {
@@ -126,10 +108,8 @@ export default function Predictions(): JSX.Element {
               grouped[gp.group_letter][gp.predicted_position - 1] = gp.team_id;
             });
             setPredictions(grouped);
-            // Save snapshot of original predictions
             originalPredictionsRef.current = JSON.parse(JSON.stringify(grouped));
           } else {
-            // Si no hay datos guardados, inicializar con orden por defecto
             const defaults = getDefaultPredictions();
             setPredictions(defaults);
             originalPredictionsRef.current = JSON.parse(JSON.stringify(defaults));
@@ -137,13 +117,11 @@ export default function Predictions(): JSX.Element {
         } catch (err) {
           console.error('Error loading predictions:', err);
           setError('Error al cargar las predicciones. Por favor recarga la página.');
-          // En caso de error, inicializar con orden por defecto
           const defaults = getDefaultPredictions();
           setPredictions(defaults);
           originalPredictionsRef.current = JSON.parse(JSON.stringify(defaults));
         }
 
-        // También cargar playoffs del servidor para este set
         try {
           const playoffsResponse = await predictionsAPI.getPlayoffs(setId);
           if (playoffsResponse.data && Object.keys(playoffsResponse.data).length > 0) {
@@ -154,7 +132,6 @@ export default function Predictions(): JSX.Element {
         }
         setLoading(false);
       } else {
-        // Sin setId: comportamiento legacy con localStorage
         const savedPredictions = localStorage.getItem('natalia_predictions');
         if (savedPredictions) {
           const parsed = JSON.parse(savedPredictions);
@@ -166,7 +143,6 @@ export default function Predictions(): JSX.Element {
           originalPredictionsRef.current = JSON.parse(JSON.stringify(defaults));
         }
 
-        // Load playoff selections from localStorage (legacy)
         const savedPlayoffs = localStorage.getItem('natalia_playoffs');
         if (savedPlayoffs) {
           setPlayoffSelections(JSON.parse(savedPlayoffs));
@@ -185,10 +161,9 @@ export default function Predictions(): JSX.Element {
     };
   }, []);
 
-  // Get team by ID using centralized helper
   const getTeamById = (id: number): Team | null => getTeamByIdHelper(id, playoffSelections);
 
-  // Drag & drop handlers (desktop)
+  // Drag & drop handlers
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, teamId: number): void => {
     e.dataTransfer.setData('teamId', teamId.toString());
   };
@@ -229,7 +204,6 @@ export default function Predictions(): JSX.Element {
     setSaved(false);
   }, []);
 
-  // Reorder teams (for touch drag)
   const reorderTeams = useCallback((group: string, fromIndex: number, toIndex: number): void => {
     if (fromIndex === toIndex) return;
 
@@ -243,34 +217,26 @@ export default function Predictions(): JSX.Element {
   }, []);
 
   const groups = getAllGroups();
-
-  // Siempre completo porque inicializamos con orden por defecto
   const isComplete = Object.keys(predictions).length === 12;
 
   const handleContinue = async (): Promise<void> => {
-
-    // Check if there are real changes
     const changesDetected = hasRealChanges();
 
-    // If there are changes and we have a setId, check for subsequent data
     if (changesDetected && setId) {
       try {
         const response = await predictionsAPI.hasSubsequentData(setId, 'groups');
         const { hasThirds, hasKnockout } = response.data;
 
         if (hasThirds || hasKnockout) {
-          // Show warning modal
           setSubsequentData({ hasThirds, hasKnockout });
           setShowResetWarning(true);
           return;
         }
       } catch (err) {
         console.error('[GROUPS] Error checking subsequent data:', err);
-        // Continue anyway if check fails
       }
     }
 
-    // No changes or no subsequent data - proceed normally
     await saveAndNavigate();
   };
 
@@ -279,10 +245,8 @@ export default function Predictions(): JSX.Element {
     setError(null);
     setShowResetWarning(false);
 
-    // Guardar en localStorage primero (respaldo inmediato)
     localStorage.setItem('natalia_predictions', JSON.stringify(predictions));
 
-    // Convert predictions object to array format for API
     const predictionsArray: GroupPrediction[] = [];
     Object.entries(predictions).forEach(([groupLetter, teamIds]) => {
       teamIds.forEach((teamId, index) => {
@@ -297,14 +261,11 @@ export default function Predictions(): JSX.Element {
     const nextUrl = setId ? `/terceros?setId=${setId}` : '/terceros';
 
     try {
-      // If we need to reset subsequent data first
       if (resetFirst && setId) {
         await predictionsAPI.resetFromGroups(setId);
       }
 
       await predictionsAPI.saveGroups(predictionsArray, setId);
-
-      // Update snapshot to current state after successful save
       originalPredictionsRef.current = JSON.parse(JSON.stringify(predictions));
 
       setSaved(true);
@@ -312,7 +273,6 @@ export default function Predictions(): JSX.Element {
       window.scrollTo(0, 0);
       navigate(nextUrl);
     } catch (err) {
-      // Aunque falle el servidor, permitir continuar (ya está en localStorage)
       setError('Error al guardar en servidor - Continuando con guardado local');
       setSaving(false);
       if (navTimerRef.current) clearTimeout(navTimerRef.current);
@@ -337,21 +297,6 @@ export default function Predictions(): JSX.Element {
     navigate(backUrl);
   };
 
-  const BackButton = ({ size = 'default' }: ButtonComponentProps): JSX.Element => (
-    <Button variant="outline" onClick={handleBack} size={size}>
-      <ChevronLeft className="mr-1 h-4 w-4" />
-      Atras
-    </Button>
-  );
-
-  const NextButton = ({ size = 'default' }: ButtonComponentProps): JSX.Element => (
-    <Button onClick={handleContinue} disabled={!isComplete || saving} size={size}>
-      {saving ? 'Guardando...' : 'Siguiente'}
-      <ChevronRight className="ml-1 h-4 w-4" />
-    </Button>
-  );
-
-  // Show loading spinner while data is loading
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[50vh]">
@@ -365,7 +310,7 @@ export default function Predictions(): JSX.Element {
 
   return (
     <div className="container mx-auto px-4 py-6">
-      {/* Header con titulo */}
+      {/* Header */}
       <div className="mb-4">
         <h1 className="text-2xl font-bold">Predicciones de Grupos</h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -373,10 +318,15 @@ export default function Predictions(): JSX.Element {
         </p>
       </div>
 
-      {/* Botones de navegacion en linea separada */}
-      <div className="flex justify-between mb-6">
-        <BackButton />
-        <NextButton />
+      {/* Top navigation */}
+      <div className="mb-6">
+        <StepNavigation
+          onBack={handleBack}
+          onNext={handleContinue}
+          isComplete={isComplete}
+          saving={saving}
+          backLabel="Atrás"
+        />
       </div>
 
       {saved && (
@@ -393,7 +343,7 @@ export default function Predictions(): JSX.Element {
         </Alert>
       )}
 
-      {/* Grid de todos los grupos */}
+      {/* Groups grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {groups.map(group => (
           <GroupCard
@@ -411,9 +361,15 @@ export default function Predictions(): JSX.Element {
       </div>
 
       {/* Bottom navigation */}
-      <div className="flex justify-between mt-8 pt-6 border-t">
-        <BackButton size="lg" />
-        <NextButton size="lg" />
+      <div className="mt-8 pt-6 border-t">
+        <StepNavigation
+          onBack={handleBack}
+          onNext={handleContinue}
+          isComplete={isComplete}
+          saving={saving}
+          size="lg"
+          backLabel="Atrás"
+        />
       </div>
 
       {/* Reset Warning Modal */}
@@ -445,119 +401,3 @@ export default function Predictions(): JSX.Element {
     </div>
   );
 }
-
-const GroupCard = memo(function GroupCard({ group, teamIds, getTeamById, onMove, onReorder, onDragStart, onDragOver, onDrop }: GroupCardProps): JSX.Element {
-  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
-  const [touchY, setTouchY] = useState<number | null>(null);
-  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  // Si no hay teamIds, obtener equipos del grupo desde mockTeams
-  const displayTeamIds = teamIds.length > 0 ? teamIds : mockTeams
-    .filter(t => t.group_letter === group)
-    .map(t => t.id);
-
-  // Touch handlers for mobile drag
-  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>, index: number): void => {
-    setDraggedIndex(index);
-    setTouchY(e.touches[0].clientY);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>, currentIndex: number): void => {
-    if (draggedIndex === null || touchY === null) return;
-
-    const currentY = e.touches[0].clientY;
-    const diff = currentY - touchY;
-
-    // Determinar si se movió lo suficiente para cambiar posición
-    const itemHeight = 56; // altura aproximada de cada item
-
-    if (Math.abs(diff) > itemHeight / 2) {
-      const direction = diff > 0 ? 1 : -1;
-      const newIndex = draggedIndex + direction;
-
-      if (newIndex >= 0 && newIndex <= 3) {
-        onReorder(group, draggedIndex, newIndex);
-        setDraggedIndex(newIndex);
-        setTouchY(currentY);
-      }
-    }
-  };
-
-  const handleTouchEnd = (): void => {
-    setDraggedIndex(null);
-    setTouchY(null);
-  };
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg">Grupo {group}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {displayTeamIds.map((teamId, index) => {
-          const team = getTeamById(teamId);
-          if (!team) return null;
-
-          // Siempre mostrar colores de clasificacion
-          const qualifies = index < 2;
-          const isThird = index === 2;
-          const isDragging = draggedIndex === index;
-
-          return (
-            <div
-              key={team.id}
-              ref={el => itemRefs.current[index] = el}
-              draggable
-              onDragStart={(e) => onDragStart(e, team.id)}
-              onDragOver={onDragOver}
-              onDrop={(e) => onDrop(e, index, group)}
-              onTouchStart={(e) => handleTouchStart(e, index)}
-              onTouchMove={(e) => handleTouchMove(e, index)}
-              onTouchEnd={handleTouchEnd}
-              className={`flex items-center gap-2 p-2 rounded-lg border transition-all cursor-grab active:cursor-grabbing select-none
-                ${qualifies ? 'bg-green-50 border-green-200' : ''}
-                ${isThird ? 'bg-yellow-50 border-yellow-200' : ''}
-                ${isDragging ? 'opacity-50 scale-105 shadow-lg' : ''}
-                hover:shadow-md`}
-              style={{ touchAction: 'none' }}
-            >
-              <span className="text-sm font-medium text-muted-foreground w-5">
-                {index + 1}
-              </span>
-              <span className="text-lg cursor-grab">☰</span>
-              <img
-                src={team.flag_url}
-                alt={team.name}
-                className="w-8 h-5 object-cover rounded"
-              />
-              <div className="flex-1 min-w-0">
-                <span className="font-medium text-sm truncate block">{team.name}</span>
-                {team.is_playoff && !team.isPlayoffWinner && (
-                  <p className="text-xs text-muted-foreground truncate">{team.playoff_teams}</p>
-                )}
-              </div>
-              <div className="flex gap-1">
-                <button
-                  onClick={(e) => { e.stopPropagation(); onMove(group, index, -1); }}
-                  disabled={index === 0}
-                  className="w-10 h-10 flex items-center justify-center rounded bg-muted hover:bg-muted/80 active:bg-muted/60 disabled:opacity-30 text-xl font-bold select-none"
-                  style={{ touchAction: 'manipulation' }}
-                >
-                  ▲
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); onMove(group, index, 1); }}
-                  disabled={index === 3}
-                  className="w-10 h-10 flex items-center justify-center rounded bg-muted hover:bg-muted/80 active:bg-muted/60 disabled:opacity-30 text-xl font-bold select-none"
-                  style={{ touchAction: 'manipulation' }}
-                >
-                  ▼
-                </button>
-              </div>
-            </div>
-          );
-        })}
-      </CardContent>
-    </Card>
-  );
-});
