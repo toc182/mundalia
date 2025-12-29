@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { StepNavigation } from '@/components/StepNavigation';
 import { mockTeams, getAllGroups } from '@/data/mockData';
 import { getThirdPlaceCombination } from '@/data/thirdPlaceCombinations';
 import { predictionsAPI } from '@/services/api';
@@ -35,10 +35,6 @@ interface ThirdPlaceTeamInfo {
   group: string;
   team: Team | null;
   teamId: number | undefined;
-}
-
-interface ButtonComponentProps {
-  size?: 'default' | 'sm' | 'lg' | 'icon';
 }
 
 export default function ThirdPlaces(): JSX.Element {
@@ -257,19 +253,6 @@ export default function ThirdPlaces(): JSX.Element {
     navigate(backUrl);
   };
 
-  const BackButton = ({ size = 'default' }: ButtonComponentProps): JSX.Element => (
-    <Button variant="outline" onClick={handleBack} size={size}>
-      <ChevronLeft className="mr-1 h-4 w-4" />
-      Atras
-    </Button>
-  );
-
-  const NextButton = ({ size = 'default' }: ButtonComponentProps): JSX.Element => (
-    <Button onClick={handleFinish} disabled={!isComplete || saving} size={size}>
-      {saving ? 'Guardando...' : 'Siguiente'}
-      <ChevronRight className="ml-1 h-4 w-4" />
-    </Button>
-  );
 
   // Show loading spinner while data is loading
   if (loading) {
@@ -297,9 +280,14 @@ export default function ThirdPlaces(): JSX.Element {
       </div>
 
       {/* Botones de navegacion en linea separada */}
-      <div className="flex justify-between mb-6">
-        <BackButton />
-        <NextButton />
+      <div className="mb-6">
+        <StepNavigation
+          onBack={handleBack}
+          onNext={handleFinish}
+          isComplete={isComplete}
+          saving={saving}
+          backLabel="Atrás"
+        />
       </div>
 
       {saved && (
@@ -376,9 +364,15 @@ export default function ThirdPlaces(): JSX.Element {
       </Card>
 
       {/* Bottom navigation */}
-      <div className="flex justify-between mt-8 pt-6 border-t">
-        <BackButton size="lg" />
-        <NextButton size="lg" />
+      <div className="mt-8 pt-6 border-t">
+        <StepNavigation
+          onBack={handleBack}
+          onNext={handleFinish}
+          isComplete={isComplete}
+          saving={saving}
+          size="lg"
+          backLabel="Atrás"
+        />
       </div>
 
       {/* Reset Warning Modal */}

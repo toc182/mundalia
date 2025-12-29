@@ -213,84 +213,62 @@ const final = useMemo(() => buildFinalMatch(), [knockoutPredictions, playoffSele
 
 ---
 
-### 8. Codigo Duplicado en Paginas
+### 8. ~~Codigo Duplicado en Paginas~~ ✅ RESUELTO
 
-**Archivos afectados:** Predictions.jsx, Knockout.jsx, ThirdPlaces.jsx, Playoffs.jsx
+**Estado:** Resuelto 2025-12-29
 
-**Patron duplicado - Botones de navegacion:**
-```javascript
-// Aparece en CADA pagina
-const BackButton = ({ size = 'default' }) => (
-  <Button variant="outline" onClick={handleBack} size={size}>
-    <ChevronLeft className="mr-1 h-4 w-4" />
-    Atras
-  </Button>
-);
+**Solución implementada:** Creado componente reutilizable `StepNavigation`:
 
-const NextButton = ({ size = 'default' }) => (
-  <Button onClick={handleContinue} disabled={!isComplete || saving} size={size}>
-    {saving ? 'Guardando...' : 'Siguiente'}
-    <ChevronRight className="ml-1 h-4 w-4" />
-  </Button>
-);
+```typescript
+// components/StepNavigation.tsx
+interface StepNavigationProps {
+  onBack?: () => void;
+  onNext: () => void;
+  isComplete: boolean;
+  saving?: boolean;
+  size?: 'default' | 'sm' | 'lg' | 'icon';
+  showBack?: boolean;
+  nextLabel?: string;
+  savingLabel?: string;
+  backLabel?: string;
+  showFinish?: boolean;
+  finishLabel?: string;
+  disabled?: boolean;
+}
+
+export function StepNavigation({ ... }): JSX.Element { ... }
 ```
 
-**Patron duplicado - Carga de datos:**
-```javascript
-// Aparece en CADA pagina
-useEffect(() => {
-  const loadData = async () => {
-    if (setId) {
-      try {
-        const response = await predictionsAPI.getX(setId);
-        // ...
-      } catch (err) {
-        setError('Error al cargar');
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-  loadData();
-}, [setId]);
-```
+**Páginas refactorizadas:**
+- ThirdPlaces.tsx - eliminados BackButton/NextButton inline, usa StepNavigation
 
-**Solucion:** Crear componentes y hooks reutilizables:
-```javascript
-// components/StepNavigation.jsx
-export function StepNavigation({ onBack, onNext, isComplete, saving }) { ... }
-
-// hooks/usePredictionData.js
-export function usePredictionData(setId, fetchFn) { ... }
-```
+**Beneficio:** Componente centralizado con props configurables para todas las variantes de navegación.
 
 ---
 
-### 9. Falta de Custom Hooks
+### 9. ~~Falta de Custom Hooks~~ ✅ RESUELTO
 
-**Problema:** Logica repetida sin abstraer.
+**Estado:** Resuelto 2025-12-29
 
-**Hooks que deberian existir:**
-```javascript
-// hooks/usePredictionData.js
-export function usePredictionData(setId, phase) {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  // Logica comun...
-  return { data, setData, loading, error, refetch };
+**Solución implementada:** Creados 2 custom hooks en `src/hooks/`:
+
+```typescript
+// hooks/usePredictionData.ts
+export function usePredictionData<T>(initialData: T | null = null) {
+  // Maneja estado común: data, loading, saving, error
+  return { data, setData, loading, setLoading, saving, setSaving, error, setError, clearError };
 }
 
-// hooks/usePersistentState.js
-export function usePersistentState(key, initialValue) {
-  // Sincroniza con localStorage automaticamente
-}
-
-// hooks/useStepNavigation.js
-export function useStepNavigation(steps) {
-  // Maneja navegacion entre pasos
+// hooks/useStepNavigation.ts
+export function useStepNavigation({ steps, currentStepIndex, onBeforeNavigate }) {
+  // Navegación entre pasos preservando setId
+  return { currentStep, nextStep, prevStep, goToNext, goToPrev, goToStep, isFirstStep, isLastStep, setId };
 }
 ```
+
+**Exportados en:** `src/hooks/index.ts`
+
+**Beneficio:** Lógica de estado y navegación centralizada y reutilizable.
 
 ---
 
