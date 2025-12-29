@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import db from '../config/db';
 import { JwtPayload, AuthenticatedRequest } from '../types';
 
 const auth = (req: Request, res: Response, next: NextFunction): void => {
@@ -20,37 +19,20 @@ const auth = (req: Request, res: Response, next: NextFunction): void => {
   }
 };
 
-// Admin auth verifica el role en la BD para cada request
-// Esto previene que usuarios degradados mantengan acceso admin
-const adminAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-  auth(req, res, async () => {
-    try {
-      const authReq = req as AuthenticatedRequest;
-      // Verificar role actual en BD (no confiar solo en JWT)
-      const result = await db.query(
-        'SELECT role FROM users WHERE id = $1',
-        [authReq.user.id]
-      );
+// Admin auth verifica el role desde el JWT (sin query a BD)
+// El role se incluye en el token al hacer login/register
+// Nota: Si se cambia el role de un usuario, debe re-login para que tome efecto
+const adminAuth = (req: Request, res: Response, next: NextFunction): void => {
+  auth(req, res, () => {
+    const authReq = req as AuthenticatedRequest;
 
-      if (result.rows.length === 0) {
-        res.status(401).json({ error: 'User not found.' });
-        return;
-      }
-
-      const currentRole = result.rows[0].role as string;
-      if (currentRole !== 'admin') {
-        res.status(403).json({ error: 'Access denied. Admin only.' });
-        return;
-      }
-
-      // Actualizar req.user con role actual de BD
-      authReq.user.role = currentRole;
-      next();
-    } catch (err) {
-      const error = err as Error;
-      console.error('[ADMIN AUTH] Error checking role:', error.message);
-      res.status(500).json({ error: 'Server error' });
+    // Verificar role desde el token
+    if (authReq.user.role !== 'admin') {
+      res.status(403).json({ error: 'Access denied. Admin only.' });
+      return;
     }
+
+    next();
   });
 };
 

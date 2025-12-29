@@ -178,27 +178,18 @@ POST /groups ya tenía transacción implementada correctamente.
 
 ---
 
-### 6. Admin Role Query en Cada Request
+### 6. ~~Admin Role Query en Cada Request~~ ✅ RESUELTO
 
-**Archivo:** `natalia-backend/middleware/auth.ts` (lineas 25-55)
+**Estado:** Resuelto 2025-12-29
 
-**Problema:** El middleware `adminAuth` hace query a BD en cada request:
-```typescript
-const result = await db.query('SELECT role FROM users WHERE id = $1', [authReq.user.id]);
-```
+**Solución implementada:** El role ya se incluía en el JWT en login/register. Se modificó `adminAuth` para verificar el role directamente desde el token sin hacer query a la BD.
 
-**Impacto:** Latencia adicional en todos los endpoints de admin.
+**Cambios:**
+- `middleware/auth.ts`: `adminAuth` ahora es síncrono y verifica `authReq.user.role` del JWT
+- Se eliminó el import de `db` ya que no se necesita query
+- Nota: Si se cambia el role de un usuario en BD, debe re-login para que tome efecto
 
-**Solucion:** Cachear role en JWT:
-```typescript
-// Al crear token, incluir role
-const token = jwt.sign({ id: user.id, role: user.role }, secret);
-
-// En adminAuth, verificar desde token
-if (authReq.user.role !== 'admin') {
-  return res.status(403).json({ error: 'Admin required' });
-}
-```
+**Beneficio:** Eliminadas 100% de queries de verificación de admin.
 
 ---
 
