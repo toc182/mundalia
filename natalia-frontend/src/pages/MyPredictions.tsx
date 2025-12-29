@@ -170,19 +170,27 @@ export default function MyPredictions(): JSX.Element {
                   {/* Progress indicators */}
                   <div className="grid grid-cols-2 gap-2 text-xs mb-4">
                     <div className="flex items-center gap-1">
-                      <div className={`w-2 h-2 rounded-full ${parseInt(String(set.playoff_count || 0)) >= 6 ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      <span className={parseInt(String(set.playoff_count || 0)) >= 6 ? 'text-green-600' : 'text-gray-400'}>
+                        {parseInt(String(set.playoff_count || 0)) >= 6 ? '✓' : '○'}
+                      </span>
                       <span>Repechajes: {set.playoff_count || 0}/6</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <div className={`w-2 h-2 rounded-full ${parseInt(String(set.group_count || 0)) >= 48 ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      <span className={parseInt(String(set.group_count || 0)) >= 48 ? 'text-green-600' : 'text-gray-400'}>
+                        {parseInt(String(set.group_count || 0)) >= 48 ? '✓' : '○'}
+                      </span>
                       <span>Grupos: {Math.floor(parseInt(String(set.group_count || 0)) / 4)}/12</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <div className={`w-2 h-2 rounded-full ${set.third_places ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      <span className={set.third_places ? 'text-green-600' : 'text-gray-400'}>
+                        {set.third_places ? '✓' : '○'}
+                      </span>
                       <span>Terceros: {set.third_places ? 8 : 0}/8</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <div className={`w-2 h-2 rounded-full ${parseInt(String(set.knockout_count || 0)) >= 32 ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      <span className={parseInt(String(set.knockout_count || 0)) >= 32 ? 'text-green-600' : 'text-gray-400'}>
+                        {parseInt(String(set.knockout_count || 0)) >= 32 ? '✓' : '○'}
+                      </span>
                       <span>Bracket: {set.knockout_count || 0}/32</span>
                     </div>
                   </div>
@@ -235,6 +243,7 @@ export default function MyPredictions(): JSX.Element {
             </DialogDescription>
           </DialogHeader>
           <Input
+            autoFocus
             placeholder="Ej: Mi prediccion optimista"
             value={newName}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewName(e.target.value)}

@@ -286,34 +286,38 @@ export function useStepNavigation({ steps, currentStepIndex, onBeforeNavigate })
 
 ---
 
-### 10. Problemas de Accesibilidad
+### 10. ~~Problemas de Accesibilidad~~ ✅ PARCIALMENTE RESUELTO
 
-**Problema 1 - Falta focus management en modales:**
-```javascript
-// Cuando se abre modal, el foco NO se mueve al input
-<Dialog open={showCreateDialog}>
-  <Input ... />  // Usuario debe hacer click manualmente
-</Dialog>
+**Estado:** Resuelto 2025-12-29 (3 de 4 problemas)
+
+#### Problema 1 - Focus management en modales: ✅ RESUELTO
+```typescript
+// MyPredictions.tsx - Input ahora tiene autoFocus
+<Input autoFocus placeholder="Ej: Mi prediccion optimista" ... />
 ```
 
-**Problema 2 - Colores como unico indicador:**
-```javascript
-// Admin.jsx linea 542
-<Card className={isComplete ? 'border-green-300' : ''}>
-// Daltonicos no pueden distinguir
+#### Problema 2 - Colores como único indicador: ✅ RESUELTO
+```typescript
+// GroupCard.tsx - Agregados indicadores visuales
+{qualifies && <span className="text-green-600">✓</span>}
+{isThird && <span className="text-yellow-600">?</span>}
+
+// MyPredictions.tsx - Progress indicators con símbolos
+{isComplete ? '✓' : '○'} // Además del color
 ```
 
-**Problema 3 - Falta aria-labels:**
-```javascript
-// Knockout.jsx - botones sin descripcion
-<button onClick={() => moveUp()}>▲</button>  // Sin aria-label
+#### Problema 3 - Falta aria-labels: ✅ RESUELTO
+```typescript
+// GroupCard.tsx - Botones con aria-label descriptivo
+<button aria-label={`Mover ${team.name} arriba`}>▲</button>
+<button aria-label={`Mover ${team.name} abajo`}>▼</button>
 ```
 
-**Problema 4 - Textos pequenos:**
+#### Problema 4 - Textos pequeños: PENDIENTE
 ```javascript
-// Knockout.jsx linea 1159
+// Knockout.tsx linea 1159
 <div className="text-[10px] text-muted-foreground">
-// 10px es muy pequeno, bajo contraste
+// 10px es muy pequeño, bajo contraste
 ```
 
 ---

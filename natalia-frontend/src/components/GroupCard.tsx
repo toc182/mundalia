@@ -101,7 +101,9 @@ export const GroupCard = memo(function GroupCard({
               <span className="text-sm font-medium text-muted-foreground w-5">
                 {index + 1}
               </span>
-              <span className="text-lg cursor-grab">☰</span>
+              {qualifies && <span className="text-green-600 text-sm" aria-label="Clasifica">✓</span>}
+              {isThird && <span className="text-yellow-600 text-sm" aria-label="Posible clasificacion">?</span>}
+              <span className="text-lg cursor-grab" aria-hidden="true">☰</span>
               <img
                 src={team.flag_url}
                 alt={team.name}
@@ -117,6 +119,7 @@ export const GroupCard = memo(function GroupCard({
                 <button
                   onClick={(e) => { e.stopPropagation(); onMove(group, index, -1); }}
                   disabled={index === 0}
+                  aria-label={`Mover ${team.name} arriba`}
                   className="w-10 h-10 flex items-center justify-center rounded bg-muted hover:bg-muted/80 active:bg-muted/60 disabled:opacity-30 text-xl font-bold select-none"
                   style={{ touchAction: 'manipulation' }}
                 >
@@ -125,6 +128,7 @@ export const GroupCard = memo(function GroupCard({
                 <button
                   onClick={(e) => { e.stopPropagation(); onMove(group, index, 1); }}
                   disabled={index === 3}
+                  aria-label={`Mover ${team.name} abajo`}
                   className="w-10 h-10 flex items-center justify-center rounded bg-muted hover:bg-muted/80 active:bg-muted/60 disabled:opacity-30 text-xl font-bold select-none"
                   style={{ touchAction: 'manipulation' }}
                 >
