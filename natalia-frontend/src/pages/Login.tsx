@@ -1,5 +1,6 @@
 import { useState, FormEvent, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 export default function Login(): JSX.Element {
+  const { t } = useTranslation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -22,9 +24,9 @@ export default function Login(): JSX.Element {
   useEffect(() => {
     const errorParam = searchParams.get('error');
     if (errorParam) {
-      setError('Error al iniciar sesion con Google. Intenta de nuevo.');
+      setError(t('auth.googleError'));
     }
-  }, [searchParams]);
+  }, [searchParams, t]);
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
@@ -36,11 +38,11 @@ export default function Login(): JSX.Element {
       if (result.success) {
         navigate('/');
       } else {
-        setError(result.error || 'Error al iniciar sesion');
+        setError(result.error || t('auth.invalidCredentials'));
       }
     } catch (err) {
       console.error('[LOGIN] exception:', err);
-      setError('Error al iniciar sesion');
+      setError(t('auth.invalidCredentials'));
     } finally {
       setLoading(false);
     }
@@ -56,7 +58,7 @@ export default function Login(): JSX.Element {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Mundalia</CardTitle>
-          <CardDescription>Quiniela Mundial 2026</CardDescription>
+          <CardDescription>{t('home.title')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -67,11 +69,11 @@ export default function Login(): JSX.Element {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('common.email')}</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="tu@email.com"
+                placeholder={t('auth.emailPlaceholder')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -79,7 +81,7 @@ export default function Login(): JSX.Element {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('common.password')}</Label>
               <Input
                 id="password"
                 type="password"
@@ -91,7 +93,7 @@ export default function Login(): JSX.Element {
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Entrando...' : 'Entrar'}
+              {loading ? t('common.loading') : t('auth.login')}
             </Button>
 
             {/* Separador */}
@@ -101,7 +103,7 @@ export default function Login(): JSX.Element {
               </div>
               <div className="relative flex justify-center text-xs uppercase">
                 <span className="bg-background px-2 text-muted-foreground">
-                  o continua con
+                  {t('auth.orContinueWith')}
                 </span>
               </div>
             </div>
@@ -132,14 +134,14 @@ export default function Login(): JSX.Element {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                 />
               </svg>
-              Continuar con Google
+              {t('auth.loginWithGoogle')}
             </Button>
           </form>
 
           <div className="mt-4 text-center text-sm text-muted-foreground">
-            No tienes cuenta?{' '}
+            {t('auth.noAccount')}{' '}
             <Link to="/register" className="text-primary hover:underline">
-              Registrate
+              {t('auth.register')}
             </Link>
           </div>
         </CardContent>

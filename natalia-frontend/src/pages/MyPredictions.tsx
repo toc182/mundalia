@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,8 +15,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { predictionSetsAPI } from '@/services/api';
-import { Plus, Trash2, Eye, Edit2, Trophy } from 'lucide-react';
+import { Plus, Trash2, Eye, Edit2, Trophy, Lock } from 'lucide-react';
 import type { PredictionSet } from '@/types';
+import { usePredictionStatus } from '@/hooks/usePredictionStatus';
 
 interface CompletionStatus {
   label: string;
@@ -23,10 +25,15 @@ interface CompletionStatus {
 }
 
 export default function MyPredictions(): JSX.Element {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [predictionSets, setPredictionSets] = useState<PredictionSet[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Check if predictions are open
+  const { status: predictionStatus } = usePredictionStatus();
+  const predictionsOpen = predictionStatus?.isOpen ?? true;
 
   // Dialog states
   const [showCreateDialog, setShowCreateDialog] = useState<boolean>(false);
@@ -47,7 +54,7 @@ export default function MyPredictions(): JSX.Element {
       const response = await predictionSetsAPI.getAll();
       setPredictionSets(response.data);
     } catch (err) {
-      setError('Error al cargar predicciones');
+      setError(t('errors.loadingFailed'));
       console.error(err);
     } finally {
       setLoading(false);
@@ -65,7 +72,7 @@ export default function MyPredictions(): JSX.Element {
       // Navigate to start making predictions with the new set
       navigate(`/repechajes?setId=${response.data.id}`);
     } catch (err) {
-      setError('Error al crear prediccion');
+      setError(t('errors.savingFailed'));
     } finally {
       setSaving(false);
     }
@@ -80,7 +87,7 @@ export default function MyPredictions(): JSX.Element {
       setSelectedSet(null);
       loadPredictionSets();
     } catch (err) {
-      setError('Error al eliminar prediccion');
+      setError(t('errors.generic'));
     } finally {
       setSaving(false);
     }
@@ -98,22 +105,22 @@ export default function MyPredictions(): JSX.Element {
     const knockoutComplete = parseInt(String(set.knockout_count || 0)) >= 32;
 
     if (groupComplete && playoffComplete && thirdComplete && knockoutComplete) {
-      return { label: 'Completa', variant: 'default' };
+      return { label: t('predictions.complete'), variant: 'default' };
     }
     if (set.group_count || set.playoff_count || set.third_places || set.knockout_count) {
-      return { label: 'En Progreso', variant: 'secondary' };
+      return { label: t('predictions.inProgress'), variant: 'secondary' };
     }
-    return { label: 'Sin Iniciar', variant: 'outline' };
+    return { label: t('predictions.notStarted'), variant: 'outline' };
   };
 
   // Loading state
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6">Mis Predicciones</h1>
+        <h1 className="text-2xl font-bold mb-6">{t('nav.myPredictions')}</h1>
         <div className="text-center py-12">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-solid border-current border-r-transparent"></div>
-          <p className="mt-4 text-muted-foreground">Cargando predicciones...</p>
+          <p className="mt-4 text-muted-foreground">{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -122,12 +129,23 @@ export default function MyPredictions(): JSX.Element {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Mis Predicciones</h1>
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Nueva Prediccion
+        <h1 className="text-2xl font-bold">{t('nav.myPredictions')}</h1>
+        <Button onClick={() => setShowCreateDialog(true)} disabled={!predictionsOpen}>
+          {!predictionsOpen && <Lock className="w-4 h-4 mr-2" />}
+          {predictionsOpen && <Plus className="w-4 h-4 mr-2" />}
+          {t('predictions.newPrediction')}
         </Button>
       </div>
+
+      {/* Predictions Closed Warning */}
+      {!predictionsOpen && (
+        <Alert variant="destructive" className="mb-6">
+          <Lock className="h-4 w-4" />
+          <AlertDescription className="ml-2">
+            <strong>{t('predictions.closed')}.</strong> {t('predictions.closedDesc')}
+          </AlertDescription>
+        </Alert>
+      )}
 
       {error && (
         <Alert variant="destructive" className="mb-6">
@@ -139,13 +157,16 @@ export default function MyPredictions(): JSX.Element {
         <Card>
           <CardContent className="py-12 text-center">
             <Trophy className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-medium mb-2">Sin predicciones</h3>
+            <h3 className="text-lg font-medium mb-2">{t('predictions.noPredictions')}</h3>
             <p className="text-muted-foreground mb-4">
-              Crea tu primera prediccion para el Mundial 2026
+              {predictionsOpen
+                ? t('predictions.createFirst')
+                : t('predictions.closed')}
             </p>
-            <Button onClick={() => setShowCreateDialog(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              Crear Prediccion
+            <Button onClick={() => setShowCreateDialog(true)} disabled={!predictionsOpen}>
+              {!predictionsOpen && <Lock className="w-4 h-4 mr-2" />}
+              {predictionsOpen && <Plus className="w-4 h-4 mr-2" />}
+              {t('predictions.createPrediction')}
             </Button>
           </CardContent>
         </Card>
@@ -160,7 +181,7 @@ export default function MyPredictions(): JSX.Element {
                     <div className="flex-1 min-w-0">
                       <CardTitle className="text-lg truncate">{set.name}</CardTitle>
                       <CardDescription className="text-xs">
-                        Creada: {new Date(set.created_at).toLocaleDateString()}
+                        {t('predictions.created')} {new Date(set.created_at).toLocaleDateString()}
                       </CardDescription>
                     </div>
                     <Badge variant={status.variant}>{status.label}</Badge>
@@ -173,19 +194,19 @@ export default function MyPredictions(): JSX.Element {
                       <span className={parseInt(String(set.playoff_count || 0)) >= 6 ? 'text-green-600' : 'text-gray-400'}>
                         {parseInt(String(set.playoff_count || 0)) >= 6 ? '✓' : '○'}
                       </span>
-                      <span>Repechajes: {set.playoff_count || 0}/6</span>
+                      <span>{t('playoffs.title')}: {set.playoff_count || 0}/6</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <span className={parseInt(String(set.group_count || 0)) >= 48 ? 'text-green-600' : 'text-gray-400'}>
                         {parseInt(String(set.group_count || 0)) >= 48 ? '✓' : '○'}
                       </span>
-                      <span>Grupos: {Math.floor(parseInt(String(set.group_count || 0)) / 4)}/12</span>
+                      <span>{t('nav.groups')}: {Math.floor(parseInt(String(set.group_count || 0)) / 4)}/12</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <span className={set.third_places ? 'text-green-600' : 'text-gray-400'}>
                         {set.third_places ? '✓' : '○'}
                       </span>
-                      <span>Terceros: {set.third_places ? 8 : 0}/8</span>
+                      <span>{t('thirdPlaces.title')}: {set.third_places ? 8 : 0}/8</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <span className={parseInt(String(set.knockout_count || 0)) >= 32 ? 'text-green-600' : 'text-gray-400'}>
@@ -204,19 +225,30 @@ export default function MyPredictions(): JSX.Element {
                     >
                       <Link to={`/prediccion/${set.id}`}>
                         <Eye className="w-4 h-4 mr-1" />
-                        Ver
+                        {t('common.view')}
                       </Link>
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      asChild
-                    >
-                      <Link to={`/repechajes?setId=${set.id}`}>
-                        <Edit2 className="w-4 h-4 mr-1" />
-                        Editar
-                      </Link>
-                    </Button>
+                    {predictionsOpen ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        asChild
+                      >
+                        <Link to={`/repechajes?setId=${set.id}`}>
+                          <Edit2 className="w-4 h-4 mr-1" />
+                          {t('common.edit')}
+                        </Link>
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled
+                      >
+                        <Lock className="w-4 h-4 mr-1" />
+                        {t('common.edit')}
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
@@ -237,14 +269,14 @@ export default function MyPredictions(): JSX.Element {
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nueva Prediccion</DialogTitle>
+            <DialogTitle>{t('predictions.newPrediction')}</DialogTitle>
             <DialogDescription>
-              Dale un nombre a tu prediccion para identificarla facilmente
+              {t('predictions.nameDescription')}
             </DialogDescription>
           </DialogHeader>
           <Input
             autoFocus
-            placeholder="Ej: Mi prediccion optimista"
+            placeholder={t('predictions.namePlaceholder')}
             value={newName}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewName(e.target.value)}
             onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleCreate()}
@@ -252,7 +284,7 @@ export default function MyPredictions(): JSX.Element {
 
           {/* Mode selector */}
           <div className="space-y-3 pt-2">
-            <label className="text-sm font-medium">Modo de prediccion</label>
+            <label className="text-sm font-medium">{t('predictions.modeLabel')}</label>
             <div className="space-y-2">
               <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors">
                 <input
@@ -264,9 +296,9 @@ export default function MyPredictions(): JSX.Element {
                   className="mt-1"
                 />
                 <div>
-                  <div className="font-medium">Escoger Ganadores</div>
+                  <div className="font-medium">{t('predictions.modePositions')}</div>
                   <div className="text-sm text-muted-foreground">
-                    Arrastra equipos para ordenar su posición final de grupo. Escoge ganadores de la fase de eliminación directa.
+                    {t('predictions.modePositionsDesc')}
                   </div>
                 </div>
               </label>
@@ -280,9 +312,9 @@ export default function MyPredictions(): JSX.Element {
                   className="mt-1"
                 />
                 <div>
-                  <div className="font-medium">Marcadores Exactos</div>
+                  <div className="font-medium">{t('predictions.modeScores')}</div>
                   <div className="text-sm text-muted-foreground">
-                    Ingresa el resultado de cada partido (posiciones calculadas automaticamente)
+                    {t('predictions.modeScoresDesc')}
                   </div>
                 </div>
               </label>
@@ -291,10 +323,10 @@ export default function MyPredictions(): JSX.Element {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-              Cancelar
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleCreate} disabled={!newName.trim() || saving}>
-              {saving ? 'Creando...' : 'Crear y Comenzar'}
+              {saving ? t('common.creating') : t('predictions.createAndStart')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -304,17 +336,17 @@ export default function MyPredictions(): JSX.Element {
       <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Eliminar Prediccion</DialogTitle>
+            <DialogTitle>{t('predictions.deletePrediction')}</DialogTitle>
             <DialogDescription>
-              Estas seguro de eliminar "{selectedSet?.name}"? Esta accion no se puede deshacer.
+              {t('predictions.deleteConfirm', { name: selectedSet?.name })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
-              Cancelar
+              {t('common.cancel')}
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={saving}>
-              {saving ? 'Eliminando...' : 'Eliminar'}
+              {saving ? t('common.deleting') : t('common.delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

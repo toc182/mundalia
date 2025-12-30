@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -58,6 +59,7 @@ interface NextButtonProps {
 }
 
 export default function Playoffs(): JSX.Element {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const setId = searchParams.get('setId');
@@ -234,7 +236,7 @@ export default function Playoffs(): JSX.Element {
       navigate(nextUrl);
     } catch (err: any) {
       console.error('[PLAYOFFS] savePlayoffs error:', err.response?.data || err.message);
-      setError('Error al guardar en servidor - Continuando con guardado local');
+      setError(t('errors.savingFailed'));
       if (navTimerRef.current) clearTimeout(navTimerRef.current);
       navTimerRef.current = setTimeout(() => {
         window.scrollTo(0, 0);
@@ -265,7 +267,7 @@ export default function Playoffs(): JSX.Element {
       disabled={!isComplete() || saving}
       size={size}
     >
-      {saving ? 'Guardando...' : 'Siguiente'}
+      {saving ? t('common.loading') : t('common.next')}
       <ChevronRight className="ml-1 h-4 w-4" />
     </Button>
   );
@@ -274,9 +276,9 @@ export default function Playoffs(): JSX.Element {
     <div className="container mx-auto px-4 py-6">
       {/* Header con titulo */}
       <div className="mb-4">
-        <h1 className="text-2xl font-bold">Repechajes Intercontinentales</h1>
+        <h1 className="text-2xl font-bold">{t('playoffs.title')}</h1>
         <div className="flex items-center gap-2 mt-1">
-          <span className="text-sm text-muted-foreground">Marzo 2026</span>
+          <span className="text-sm text-muted-foreground">{t('playoffs.step')}</span>
           <Badge variant={isComplete() ? 'default' : 'secondary'}>
             {completedCount}/{playoffs.length}
           </Badge>
@@ -291,7 +293,7 @@ export default function Playoffs(): JSX.Element {
       {saved && (
         <Alert className="mb-6">
           <AlertDescription>
-            Selecciones guardadas correctamente
+            {t('common.success')}
           </AlertDescription>
         </Alert>
       )}
@@ -305,13 +307,13 @@ export default function Playoffs(): JSX.Element {
       {!isComplete() && (
         <Alert className="mb-6">
           <AlertDescription>
-            Selecciona el ganador de cada repechaje para continuar. El ganador de cada uno ira al grupo indicado.
+            {t('playoffs.description')}
           </AlertDescription>
         </Alert>
       )}
 
       {/* UEFA Playoffs */}
-      <h2 className="text-xl font-semibold mb-4">Repechajes UEFA (Europa)</h2>
+      <h2 className="text-xl font-semibold mb-4">{t('playoffs.uefaPlayoffs')}</h2>
       <div className="grid md:grid-cols-2 gap-6 mb-8">
         {playoffs.filter(p => p.confederation === 'UEFA').map(playoff => (
           <PlayoffBracket
@@ -325,7 +327,7 @@ export default function Playoffs(): JSX.Element {
       </div>
 
       {/* FIFA Playoffs */}
-      <h2 className="text-xl font-semibold mb-4">Repechajes Intercontinentales FIFA</h2>
+      <h2 className="text-xl font-semibold mb-4">{t('playoffs.fifaPlayoffs')}</h2>
       <div className="grid md:grid-cols-2 gap-6">
         {playoffs.filter(p => p.confederation === 'FIFA').map(playoff => (
           <PlayoffBracketFIFA
@@ -347,23 +349,23 @@ export default function Playoffs(): JSX.Element {
       <Dialog open={showResetWarning} onOpenChange={setShowResetWarning}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cambios detectados</DialogTitle>
+            <DialogTitle>{t('playoffs.changesDetected')}</DialogTitle>
             <DialogDescription>
-              Has modificado las selecciones de repechajes. Esto afectará las siguientes fases que ya tienes completadas:
+              {t('playoffs.changesWarning')}
               <ul className="list-disc list-inside mt-2 space-y-1">
-                {subsequentData.hasGroups && <li>Predicciones de grupos</li>}
-                {subsequentData.hasThirds && <li>Selección de terceros lugares</li>}
-                {subsequentData.hasKnockout && <li>Predicciones de eliminatorias</li>}
+                {subsequentData.hasGroups && <li>{t('playoffs.groupPredictions')}</li>}
+                {subsequentData.hasThirds && <li>{t('playoffs.thirdPlaceSelection')}</li>}
+                {subsequentData.hasKnockout && <li>{t('playoffs.knockoutPredictions')}</li>}
               </ul>
-              <p className="mt-3 font-medium">Si continúas, estas selecciones serán borradas y tendrás que completarlas de nuevo.</p>
+              <p className="mt-3 font-medium">{t('playoffs.resetConfirm')}</p>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={handleCancelReset}>
-              Cancelar
+              {t('common.cancel')}
             </Button>
             <Button variant="destructive" onClick={handleConfirmReset} disabled={saving}>
-              {saving ? 'Guardando...' : 'Continuar y borrar'}
+              {saving ? t('common.loading') : t('playoffs.continueAndDelete')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -373,6 +375,7 @@ export default function Playoffs(): JSX.Element {
 }
 
 function PlayoffBracket({ playoff, selections, onSelectWinner, getTeamById }: PlayoffBracketProps): JSX.Element {
+  const { t } = useTranslation();
   const semi1Winner = selections.semi1;
   const semi2Winner = selections.semi2;
   const finalWinner = selections.final;
@@ -393,20 +396,20 @@ function PlayoffBracket({ playoff, selections, onSelectWinner, getTeamById }: Pl
           <div>
             <CardTitle className="text-base">{playoff.name}</CardTitle>
             <CardDescription className="text-xs">
-              Ganador va al Grupo {playoff.destinationGroup}
+              {t('playoffs.winnerGoesTo', { group: playoff.destinationGroup })}
             </CardDescription>
           </div>
           {finalWinner && (
-            <Badge className="bg-green-500 text-xs">Completo</Badge>
+            <Badge className="bg-green-500 text-xs">{t('predictions.complete')}</Badge>
           )}
         </div>
       </CardHeader>
       <CardContent className="pt-0">
         {/* Labels row */}
         <div className="flex mb-1">
-          <div className="flex-1 text-xs text-muted-foreground font-medium">Semifinales</div>
+          <div className="flex-1 text-xs text-muted-foreground font-medium">{t('playoffs.semifinal')}</div>
           <div className="w-5" />
-          <div className="flex-1 text-xs text-muted-foreground font-medium">Final</div>
+          <div className="flex-1 text-xs text-muted-foreground font-medium">{t('playoffs.final')}</div>
         </div>
 
         {/* Bracket visual - constantes igual que Knockout */}
@@ -454,6 +457,7 @@ function PlayoffBracket({ playoff, selections, onSelectWinner, getTeamById }: Pl
 }
 
 function PlayoffBracketFIFA({ playoff, selections, onSelectWinner, getTeamById }: PlayoffBracketFIFAProps): JSX.Element {
+  const { t } = useTranslation();
   const semi1Winner = selections.semi1;
   const finalWinner = selections.final;
   const seededTeam = getTeamById(playoff.bracket.finalTeamA);
@@ -494,20 +498,20 @@ function PlayoffBracketFIFA({ playoff, selections, onSelectWinner, getTeamById }
           <div>
             <CardTitle className="text-base">{playoff.name}</CardTitle>
             <CardDescription className="text-xs">
-              Ganador va al Grupo {playoff.destinationGroup}
+              {t('playoffs.winnerGoesTo', { group: playoff.destinationGroup })}
             </CardDescription>
           </div>
           {finalWinner && (
-            <Badge className="bg-green-500 text-xs">Completo</Badge>
+            <Badge className="bg-green-500 text-xs">{t('predictions.complete')}</Badge>
           )}
         </div>
       </CardHeader>
       <CardContent className="pt-0">
         {/* Labels row - igual que UEFA */}
         <div className="flex mb-1">
-          <div className="flex-1 text-xs text-muted-foreground font-medium">Ronda 1</div>
+          <div className="flex-1 text-xs text-muted-foreground font-medium">{t('playoffs.round1')}</div>
           <div className="w-5" />
-          <div className="flex-1 text-xs text-muted-foreground font-medium">Final</div>
+          <div className="flex-1 text-xs text-muted-foreground font-medium">{t('playoffs.final')}</div>
         </div>
 
         {/* Bracket visual - mismo estilo que UEFA */}

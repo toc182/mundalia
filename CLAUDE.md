@@ -294,8 +294,16 @@ Ver `src/data/playoffsData.js` para detalles.
 8. [x] Pagina de cuenta
 9. [x] Deploy a produccion
 
-### Segunda Etapa (PENDIENTE)
-1. [ ] Leaderboard global funcional
-2. [ ] Grupos privados con codigo de invitacion
-3. [ ] Panel admin para cargar resultados reales
-4. [ ] Calculo automatico de puntuaciones
+### Segunda Etapa (COMPLETADA)
+1. [x] Leaderboard global funcional
+2. [x] Grupos privados con codigo de invitacion
+3. [x] Panel admin para cargar resultados reales
+4. [x] Calculo automatico de puntuaciones
+5. [x] Google OAuth login
+6. [x] Modo Marcadores Exactos
+7. [x] Timer countdown al Mundial
+8. [x] Cierre automatico de predicciones
+
+### Tercera Etapa (PENDIENTE)
+1. [ ] Soporte multi-idioma (ES, EN, PT, FR, DE, ZH)
+2. [ ] Config modos prediccion (admin elige modos disponibles)

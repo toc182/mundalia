@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ChevronLeft, ChevronRight, Trophy, Save } from 'lucide-react';
@@ -10,6 +11,7 @@ import { predictionsAPI } from '@/services/api';
 import type { RoundId, MobileRound, Round } from '@/types/knockout';
 
 export default function Knockout(): React.JSX.Element {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   // Use custom hook for all data management
@@ -101,11 +103,11 @@ export default function Knockout(): React.JSX.Element {
 
   // Rounds for desktop
   const rounds: Round[] = [
-    { id: 'r32', label: 'Round of 32', count: r32Complete, total: 16, next: 'r16' },
-    { id: 'r16', label: 'Round of 16', count: r16Complete, total: 8, next: 'qf' },
-    { id: 'qf', label: 'Cuartos', count: qfComplete, total: 4, next: 'sf' },
-    { id: 'sf', label: 'Semis', count: sfComplete, total: 2, next: 'final' },
-    { id: 'final', label: 'Final', count: thirdPlaceComplete + finalComplete, total: 2, next: null },
+    { id: 'r32', label: t('knockout.roundOf32'), count: r32Complete, total: 16, next: 'r16' },
+    { id: 'r16', label: t('knockout.roundOf16'), count: r16Complete, total: 8, next: 'qf' },
+    { id: 'qf', label: t('knockout.quarterFinals'), count: qfComplete, total: 4, next: 'sf' },
+    { id: 'sf', label: t('knockout.semiFinals'), count: sfComplete, total: 2, next: 'final' },
+    { id: 'final', label: t('knockout.final'), count: thirdPlaceComplete + finalComplete, total: 2, next: null },
   ];
 
   const currentRound = rounds.find(r => r.id === activeRound);
@@ -144,7 +146,7 @@ export default function Knockout(): React.JSX.Element {
       window.scrollTo(0, 0);
       navigate(nextUrl);
     } catch (err) {
-      setError('Error al guardar en servidor - Continuando con guardado local');
+      setError(t('errors.savingFailed'));
       if (navTimerRef.current) clearTimeout(navTimerRef.current);
       navTimerRef.current = setTimeout(() => {
         window.scrollTo(0, 0);
@@ -170,7 +172,7 @@ export default function Knockout(): React.JSX.Element {
     return (
       <Button variant="outline" onClick={handleClick} size={size}>
         <ChevronLeft className="mr-1 h-4 w-4" />
-        Atrás
+        {t('common.back')}
       </Button>
     );
   };
@@ -190,7 +192,7 @@ export default function Knockout(): React.JSX.Element {
 
     return (
       <Button onClick={handleClick} disabled={isDisabled} size={size}>
-        {saving ? 'Guardando...' : isLastRound ? 'Finalizar' : 'Siguiente'}
+        {saving ? t('common.loading') : isLastRound ? t('common.finish') : t('common.next')}
         {isLastRound ? (
           <Trophy className="ml-1 h-4 w-4" />
         ) : (
@@ -206,7 +208,7 @@ export default function Knockout(): React.JSX.Element {
       <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[50vh]">
         <div className="flex flex-col items-center gap-4">
           <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-muted-foreground">Cargando datos...</p>
+          <p className="text-muted-foreground">{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -223,14 +225,14 @@ export default function Knockout(): React.JSX.Element {
       : (missingPredictions ? groupsPageWithSet : tercerosWith);
 
     const redirectLabel = predictionMode === 'scores'
-      ? 'Grupos (Marcadores)'
-      : (missingPredictions ? 'Grupos' : 'Terceros');
+      ? t('knockout.groupsScores')
+      : (missingPredictions ? t('groups.title') : t('thirdPlaces.title'));
 
     const message = predictionMode === 'scores'
-      ? 'Debes completar los marcadores de todos los grupos primero.'
+      ? t('knockout.completeGroupsFirst')
       : (missingPredictions
-          ? 'Debes completar las predicciones de grupos primero.'
-          : 'Debes seleccionar los 8 mejores terceros lugares primero.');
+          ? t('knockout.completeGroupsFirst')
+          : t('knockout.completeThirdPlacesFirst'));
 
     return (
       <div className="container mx-auto px-4 py-8">
@@ -239,7 +241,7 @@ export default function Knockout(): React.JSX.Element {
         </Alert>
         <Button asChild>
           <Link to={redirectTo}>
-            Ir a {redirectLabel}
+            {t('knockout.goTo', { page: redirectLabel })}
           </Link>
         </Button>
       </div>
@@ -253,8 +255,8 @@ export default function Knockout(): React.JSX.Element {
         {predictionSetName && (
           <div className="text-sm text-muted-foreground mb-1">{predictionSetName}</div>
         )}
-        <h1 className="text-2xl font-bold">Eliminatorias</h1>
-        <p className="text-sm text-muted-foreground mt-1">Seleccionar los ganadores de partidos de Eliminatoria</p>
+        <h1 className="text-2xl font-bold">{t('knockout.title')}</h1>
+        <p className="text-sm text-muted-foreground mt-1">{t('knockout.description')}</p>
       </div>
 
       {/* Navigation buttons */}
@@ -266,7 +268,7 @@ export default function Knockout(): React.JSX.Element {
             size="sm"
             onClick={() => setKnockoutPredictions({})}
           >
-            Reset
+            {t('knockout.reset')}
           </Button>
           <Button
             variant="outline"
@@ -275,13 +277,13 @@ export default function Knockout(): React.JSX.Element {
             disabled={saving || Object.keys(knockoutPredictions).length === 0}
           >
             <Save className="w-4 h-4 mr-1" />
-            Guardar
+            {t('common.save')}
           </Button>
         </div>
         {/* Desktop: always show Finalizar */}
         <div className="hidden lg:block">
           <Button onClick={handleFinish} disabled={saving || !isComplete}>
-            {saving ? 'Guardando...' : 'Finalizar'}
+            {saving ? t('common.loading') : t('common.finish')}
             <Trophy className="ml-1 h-4 w-4" />
           </Button>
         </div>
@@ -294,7 +296,7 @@ export default function Knockout(): React.JSX.Element {
       {saved && (
         <Alert className="mb-6">
           <AlertDescription>
-            Predicciones guardadas correctamente. Redirigiendo...
+            {t('common.success')}
           </AlertDescription>
         </Alert>
       )}
@@ -329,7 +331,7 @@ export default function Knockout(): React.JSX.Element {
               variant="outline"
               onClick={() => setKnockoutPredictions({})}
             >
-              Reset
+              {t('knockout.reset')}
             </Button>
             <Button
               variant="outline"
@@ -337,11 +339,11 @@ export default function Knockout(): React.JSX.Element {
               disabled={saving || Object.keys(knockoutPredictions).length === 0}
             >
               <Save className="w-4 h-4 mr-2" />
-              Guardar
+              {t('common.save')}
             </Button>
           </div>
           <Button onClick={handleFinish} disabled={saving || !isComplete} size="lg">
-            {saving ? 'Guardando...' : 'Finalizar'}
+            {saving ? t('common.loading') : t('common.finish')}
             <Trophy className="ml-1 h-4 w-4" />
           </Button>
         </div>
@@ -389,7 +391,7 @@ export default function Knockout(): React.JSX.Element {
               size="sm"
               onClick={() => setKnockoutPredictions({})}
             >
-              Reset
+              {t('knockout.reset')}
             </Button>
             <Button
               variant="outline"

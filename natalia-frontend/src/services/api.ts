@@ -274,4 +274,25 @@ export const adminAPI = {
     api.delete(`/admin/knockout/${matchKey}`),
 };
 
+// ============ SETTINGS ============
+
+export interface PredictionStatus {
+  isOpen: boolean;
+  deadline: string | null;
+  message: string;
+}
+
+export const settingsAPI = {
+  // Public endpoint - no auth required
+  getPredictionStatus: (): Promise<AxiosResponse<PredictionStatus>> =>
+    api.get('/settings/predictions-status'),
+
+  // Admin endpoints
+  getAll: (): Promise<AxiosResponse<Record<string, string>>> =>
+    api.get('/admin/settings'),
+
+  setDeadline: (deadline: string | null): Promise<AxiosResponse<void>> =>
+    api.put('/admin/settings/deadline', { deadline }),
+};
+
 export default api;

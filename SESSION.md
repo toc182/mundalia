@@ -1,6 +1,133 @@
 # SESSION.md - Estado Actual del Proyecto
 
-## Ultima Actualizacion: 2025-12-29 (AUDIT.md COMPLETADO)
+## Ultima Actualizacion: 2025-12-30 (Multi-idioma i18n)
+
+---
+
+## NUEVAS FEATURES - 2025-12-30
+
+### Soporte Multi-idioma (i18n)
+
+Implementado sistema completo de internacionalizacion con 6 idiomas.
+
+**Idiomas soportados:**
+- Espanol (ES) - Idioma base
+- English (EN)
+- Portugues (PT)
+- Francais (FR)
+- Deutsch (DE)
+- 中文 (ZH)
+
+**Archivos de configuracion:**
+- `src/i18n/index.ts` - Configuracion de react-i18next
+- `src/i18n/locales/es.json` - Traducciones espanol
+- `src/i18n/locales/en.json` - Traducciones ingles
+- `src/i18n/locales/pt.json` - Traducciones portugues
+- `src/i18n/locales/fr.json` - Traducciones frances
+- `src/i18n/locales/de.json` - Traducciones aleman
+- `src/i18n/locales/zh.json` - Traducciones chino
+
+**Componentes:**
+- `src/components/LanguageSelector.tsx` - Selector de idioma con banderas
+
+**Paginas traducidas (7):**
+- Account.tsx
+- Playoffs.tsx (+ sub-componentes PlayoffBracket, PlayoffBracketFIFA)
+- Predictions.tsx (grupos)
+- ThirdPlaces.tsx
+- Knockout.tsx
+- Leaderboard.tsx
+- Groups.tsx (grupos privados)
+
+**Paginas ya traducidas previamente (5):**
+- Home.tsx
+- Login.tsx
+- Register.tsx
+- MyPredictions.tsx
+- TopBar.tsx
+
+**Dependencias instaladas:**
+- `i18next` - Libreria base de internacionalizacion
+- `react-i18next` - Integracion con React
+- `i18next-browser-languagedetector` - Deteccion automatica de idioma
+
+**Caracteristicas:**
+- Deteccion automatica del idioma del navegador
+- Persistencia en localStorage
+- Fallback a espanol si idioma no soportado
+- Selector de idioma en TopBar (dropdown con banderas)
+- Soporte para variables en traducciones: `{{name}}`, `{{group}}`
+
+**Secciones de traduccion:**
+- common: textos comunes (guardar, cancelar, cargar, etc.)
+- nav: navegacion
+- home: pagina principal
+- predictions: predicciones
+- playoffs: repechajes
+- groups: fase de grupos
+- thirdPlaces: mejores terceros
+- knockout: eliminatorias
+- leaderboard: ranking global
+- privateGroups: grupos privados
+- account: cuenta de usuario
+- auth: autenticacion
+- admin: panel admin
+- errors: mensajes de error
+- languages: nombres de idiomas
+
+---
+
+### Timer Countdown al Mundial
+
+Implementado contador regresivo en la pagina principal mostrando tiempo restante para el inicio del Mundial 2026.
+
+**Archivos creados:**
+- `src/components/CountdownTimer.tsx` - Componente reutilizable de cuenta regresiva
+
+**Caracteristicas:**
+- Muestra dias, horas, minutos y segundos
+- Actualiza cada segundo en tiempo real
+- Diseño responsive con gradiente azul
+- Fecha objetivo: 11 de junio 2026, 12:00 hora CDMX
+
+### Cierre Automatico de Predicciones
+
+Sistema completo para cerrar predicciones automaticamente segun fecha/hora configurada por admin.
+
+**Backend - Nuevos endpoints:**
+- `GET /api/settings/predictions-status` - Verificar si predicciones estan abiertas (publico)
+- `GET /api/admin/settings` - Obtener configuraciones (admin)
+- `PUT /api/admin/settings/deadline` - Configurar deadline (admin)
+
+**Archivos creados:**
+- `natalia-backend/routes/settings.ts` - Ruta publica para estado de predicciones
+
+**Frontend - Nuevos archivos:**
+- `src/hooks/usePredictionStatus.ts` - Hook para verificar estado de predicciones
+
+**UI Admin (StatsTab.tsx):**
+- Card de "Cierre de Predicciones" con:
+  - Indicador de estado (abierto/cerrado)
+  - Input datetime-local para configurar deadline
+  - Boton "1 hora antes del Mundial" (preset)
+  - Boton "Sin limite" para eliminar deadline
+  - Mensaje de confirmacion con fecha formateada
+
+**Frontend - Cambios en paginas:**
+- `Home.tsx`:
+  - Alerta roja cuando predicciones cerradas
+  - Alerta amarilla de advertencia cuando hay deadline proximo
+  - Boton "Nueva Prediccion" deshabilitado cuando cerrado
+- `MyPredictions.tsx`:
+  - Alerta de predicciones cerradas
+  - Botones "Nueva Prediccion" y "Editar" deshabilitados
+  - Icono de candado en botones deshabilitados
+
+**Flujo:**
+1. Admin configura deadline en Panel Admin > Dashboard
+2. Sistema verifica deadline en cada carga de pagina
+3. Si fecha actual > deadline: predicciones cerradas
+4. Usuarios ven alertas y botones deshabilitados
 
 ---
 
@@ -291,8 +418,8 @@ Nueva auditoría completa del proyecto. Ver `AUDIT.md` para detalles.
 Ver sección "AUDIT.md COMPLETADO" al inicio de este archivo.
 
 **Nuevas Features Pendientes:**
-- [ ] Timer countdown al Mundial - 2-4 horas
-- [ ] Cierre automático de predicciones - 4-8 horas
+- [x] Timer countdown al Mundial - COMPLETADO 2025-12-30
+- [x] Cierre automático de predicciones - COMPLETADO 2025-12-30
 - [ ] Config modos predicción (admin elige: Ganadores/Marcadores/Ambos) - 1 día
 
 ---
@@ -1171,16 +1298,11 @@ Cada cambio de estado recreaba estos componentes como nuevas funciones, causando
 
 ### Prioridad Alta (UX)
 
-| Feature | Descripcion |
-|---------|-------------|
-| Timer cuenta regresiva | Timer en Home mostrando tiempo restante para inicio del Mundial |
-| Cierre de predicciones | Admin puede bloquear entradas. Deadline automático: 1 hora antes del Mundial |
+~~Las tareas de prioridad alta han sido completadas (2025-12-30).~~
 
 ### Prioridad Media (Features)
 
-| Feature | Descripcion |
-|---------|-------------|
-| Soporte multi-idioma | Cambiar idioma de la página: Español, Inglés, Portugués, Francés, Alemán, Chino |
+~~Las tareas de prioridad media han sido completadas (2025-12-30).~~
 
 ### Prioridad Baja (Nice to have)
 
@@ -1194,6 +1316,9 @@ Cada cambio de estado recreaba estos componentes como nuevas funciones, causando
 
 | Fecha | Tarea | Descripcion |
 |-------|-------|-------------|
+| 2025-12-30 | Multi-idioma i18n | Soporte para 6 idiomas (ES, EN, PT, FR, DE, ZH), 12 paginas traducidas |
+| 2025-12-30 | Timer Countdown | Contador regresivo al Mundial 2026 en Home |
+| 2025-12-30 | Cierre Automatico | Admin configura deadline, sistema bloquea predicciones automaticamente |
 | 2025-12-29 | AUDIT.md completado | Todos los 13 problemas resueltos |
 | 2025-12-29 | Frontend 100% TypeScript | Tests migrados a .ts, 68 archivos TS total |
 | 2025-12-29 | Refactoring componentes | Knockout, Admin, PredictionsScores, Predictions reducidos 28-89% |

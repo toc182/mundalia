@@ -287,6 +287,64 @@ router.delete('/playoffs/:playoffId', async (req: Request, res: Response): Promi
 });
 
 // ============================================
+// SETTINGS
+// ============================================
+
+interface SettingsRow {
+  key: string;
+  value: string;
+}
+
+// Get all settings
+router.get('/settings', async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const result = await db.query('SELECT * FROM settings');
+    const settings: Record<string, string> = {};
+    for (const row of result.rows as SettingsRow[]) {
+      settings[row.key] = row.value;
+    }
+    success(res, settings);
+  } catch (err) {
+    console.error('Error getting settings:', err);
+    serverError(res, err as Error);
+  }
+});
+
+interface SetDeadlineBody {
+  deadline: string | null;
+}
+
+// Set predictions deadline
+router.put('/settings/deadline', async (req: Request<unknown, unknown, SetDeadlineBody>, res: Response): Promise<void> => {
+  const { deadline } = req.body;
+
+  try {
+    if (deadline === null || deadline === '') {
+      // Remove deadline (predictions always open)
+      await db.query("DELETE FROM settings WHERE key = 'predictions_deadline'");
+      success(res, null, 'Deadline removed - predictions always open');
+    } else {
+      // Validate date format
+      const deadlineDate = new Date(deadline);
+      if (isNaN(deadlineDate.getTime())) {
+        validationError(res, 'Invalid date format');
+        return;
+      }
+
+      await db.query(`
+        INSERT INTO settings (key, value)
+        VALUES ('predictions_deadline', $1)
+        ON CONFLICT (key) DO UPDATE SET value = $1
+      `, [deadline]);
+      success(res, null, 'Deadline updated');
+    }
+  } catch (err) {
+    console.error('Error setting deadline:', err);
+    serverError(res, err as Error);
+  }
+});
+
+// ============================================
 // STATISTICS
 // ============================================
 

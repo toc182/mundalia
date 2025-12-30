@@ -1,5 +1,6 @@
 import { useState, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 export default function Register(): JSX.Element {
+  const { t } = useTranslation();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,12 +26,12 @@ export default function Register(): JSX.Element {
     setError('');
 
     if (password !== confirmPassword) {
-      setError('Las passwords no coinciden');
+      setError(t('auth.passwordsNoMatch'));
       return;
     }
 
     if (password.length < 6) {
-      setError('La password debe tener al menos 6 caracteres');
+      setError(t('auth.passwordTooShort'));
       return;
     }
 
@@ -40,10 +42,10 @@ export default function Register(): JSX.Element {
       if (result.success) {
         navigate('/');
       } else {
-        setError(result.error || 'Error al registrar');
+        setError(result.error || t('auth.registerError'));
       }
     } catch {
-      setError('Error al registrar');
+      setError(t('auth.registerError'));
     } finally {
       setLoading(false);
     }
@@ -58,8 +60,8 @@ export default function Register(): JSX.Element {
     <div className="min-h-screen flex items-center justify-center px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Crear Cuenta</CardTitle>
-          <CardDescription>Unete a la Quiniela Mundial 2026</CardDescription>
+          <CardTitle className="text-2xl">{t('auth.registerTitle')}</CardTitle>
+          <CardDescription>{t('auth.joinWorldCup')}</CardDescription>
         </CardHeader>
         <CardContent>
           {/* Boton de Google primero */}
@@ -88,7 +90,7 @@ export default function Register(): JSX.Element {
                 d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
               />
             </svg>
-            Registrarse con Google
+            {t('auth.registerWithGoogle')}
           </Button>
 
           {/* Separador */}
@@ -98,7 +100,7 @@ export default function Register(): JSX.Element {
             </div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-background px-2 text-muted-foreground">
-                o registrate con email
+                {t('auth.orRegisterWithEmail')}
               </span>
             </div>
           </div>
@@ -111,11 +113,11 @@ export default function Register(): JSX.Element {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="name">Nombre</Label>
+              <Label htmlFor="name">{t('common.name')}</Label>
               <Input
                 id="name"
                 type="text"
-                placeholder="Tu nombre"
+                placeholder={t('auth.namePlaceholder')}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -123,11 +125,11 @@ export default function Register(): JSX.Element {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('common.email')}</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="tu@email.com"
+                placeholder={t('auth.emailPlaceholder')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -135,7 +137,7 @@ export default function Register(): JSX.Element {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">{t('common.password')}</Label>
               <Input
                 id="password"
                 type="password"
@@ -147,7 +149,7 @@ export default function Register(): JSX.Element {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirmar Password</Label>
+              <Label htmlFor="confirmPassword">{t('account.confirmPassword')}</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -159,14 +161,14 @@ export default function Register(): JSX.Element {
             </div>
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Creando cuenta...' : 'Crear Cuenta'}
+              {loading ? t('common.creating') : t('auth.registerTitle')}
             </Button>
           </form>
 
           <div className="mt-4 text-center text-sm text-muted-foreground">
-            Ya tienes cuenta?{' '}
+            {t('auth.hasAccount')}{' '}
             <Link to="/login" className="text-primary hover:underline">
-              Entra aqui
+              {t('auth.login')}
             </Link>
           </div>
         </CardContent>

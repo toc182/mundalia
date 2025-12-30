@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -41,6 +42,7 @@ interface GroupPrediction {
 }
 
 export default function Predictions(): JSX.Element {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const setId = searchParams.get('setId');
@@ -116,7 +118,7 @@ export default function Predictions(): JSX.Element {
           }
         } catch (err) {
           console.error('Error loading predictions:', err);
-          setError('Error al cargar las predicciones. Por favor recarga la página.');
+          setError(t('errors.loadingFailed'));
           const defaults = getDefaultPredictions();
           setPredictions(defaults);
           originalPredictionsRef.current = JSON.parse(JSON.stringify(defaults));
@@ -273,7 +275,7 @@ export default function Predictions(): JSX.Element {
       window.scrollTo(0, 0);
       navigate(nextUrl);
     } catch (err) {
-      setError('Error al guardar en servidor - Continuando con guardado local');
+      setError(t('errors.savingFailed'));
       setSaving(false);
       if (navTimerRef.current) clearTimeout(navTimerRef.current);
       navTimerRef.current = setTimeout(() => {
@@ -302,7 +304,7 @@ export default function Predictions(): JSX.Element {
       <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[50vh]">
         <div className="flex flex-col items-center gap-4">
           <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-muted-foreground">Cargando datos...</p>
+          <p className="text-muted-foreground">{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -312,9 +314,9 @@ export default function Predictions(): JSX.Element {
     <div className="container mx-auto px-4 py-6">
       {/* Header */}
       <div className="mb-4">
-        <h1 className="text-2xl font-bold">Predicciones de Grupos</h1>
+        <h1 className="text-2xl font-bold">{t('groups.title')}</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Ordena los equipos de cada grupo. Top 2 clasifican, 3ro puede avanzar.
+          {t('groups.description')}
         </p>
       </div>
 
@@ -325,14 +327,14 @@ export default function Predictions(): JSX.Element {
           onNext={handleContinue}
           isComplete={isComplete}
           saving={saving}
-          backLabel="Atrás"
+          backLabel={t('common.back')}
         />
       </div>
 
       {saved && (
         <Alert className="mb-6">
           <AlertDescription>
-            Predicciones guardadas correctamente
+            {t('common.success')}
           </AlertDescription>
         </Alert>
       )}
@@ -368,7 +370,7 @@ export default function Predictions(): JSX.Element {
           isComplete={isComplete}
           saving={saving}
           size="lg"
-          backLabel="Atrás"
+          backLabel={t('common.back')}
         />
       </div>
 
@@ -376,24 +378,24 @@ export default function Predictions(): JSX.Element {
       <Dialog open={showResetWarning} onOpenChange={setShowResetWarning}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cambios detectados</DialogTitle>
+            <DialogTitle>{t('groups.changesDetected')}</DialogTitle>
             <DialogDescription asChild>
               <div>
-                Has modificado el orden de los grupos. Esto afectará las siguientes fases que ya tienes completadas:
+                {t('groups.changesWarning')}
                 <ul className="list-disc list-inside mt-2 space-y-1">
-                  {subsequentData.hasThirds && <li>Selección de terceros lugares</li>}
-                  {subsequentData.hasKnockout && <li>Predicciones de eliminatorias</li>}
+                  {subsequentData.hasThirds && <li>{t('groups.thirdPlaceSelection')}</li>}
+                  {subsequentData.hasKnockout && <li>{t('groups.knockoutPredictions')}</li>}
                 </ul>
-                <p className="mt-3 font-medium">Si continúas, estas selecciones serán borradas y tendrás que completarlas de nuevo.</p>
+                <p className="mt-3 font-medium">{t('groups.resetConfirm')}</p>
               </div>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={handleCancelReset}>
-              Cancelar
+              {t('common.cancel')}
             </Button>
             <Button variant="destructive" onClick={handleConfirmReset} disabled={saving}>
-              {saving ? 'Guardando...' : 'Continuar y borrar'}
+              {saving ? t('common.loading') : t('groups.continueAndDelete')}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +39,7 @@ interface ThirdPlaceTeamInfo {
 }
 
 export default function ThirdPlaces(): JSX.Element {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const setId = searchParams.get('setId');
@@ -228,7 +230,7 @@ export default function ThirdPlaces(): JSX.Element {
       window.scrollTo(0, 0);
       navigate(nextUrl);
     } catch (err) {
-      setError('Error al guardar en servidor - Continuando con guardado local');
+      setError(t('errors.savingFailed'));
       if (navTimerRef.current) clearTimeout(navTimerRef.current);
       navTimerRef.current = setTimeout(() => {
         window.scrollTo(0, 0);
@@ -260,7 +262,7 @@ export default function ThirdPlaces(): JSX.Element {
       <div className="container mx-auto px-4 py-8 flex justify-center items-center min-h-[50vh]">
         <div className="flex flex-col items-center gap-4">
           <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-          <p className="text-muted-foreground">Cargando datos...</p>
+          <p className="text-muted-foreground">{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -270,9 +272,9 @@ export default function ThirdPlaces(): JSX.Element {
     <div className="container mx-auto px-4 py-6">
       {/* Header con titulo */}
       <div className="mb-4">
-        <h1 className="text-2xl font-bold">Mejores Terceros Lugares</h1>
+        <h1 className="text-2xl font-bold">{t('thirdPlaces.title')}</h1>
         <div className="flex items-center gap-2 mt-1">
-          <span className="text-sm text-muted-foreground">Selecciona 8 de 12 terceros</span>
+          <span className="text-sm text-muted-foreground">{t('thirdPlaces.selectGroups')}</span>
           <Badge variant={isComplete ? 'default' : 'secondary'}>
             {bestThirdPlaces.length}/8
           </Badge>
@@ -286,14 +288,14 @@ export default function ThirdPlaces(): JSX.Element {
           onNext={handleFinish}
           isComplete={isComplete}
           saving={saving}
-          backLabel="Atrás"
+          backLabel={t('common.back')}
         />
       </div>
 
       {saved && (
         <Alert className="mb-6">
           <AlertDescription>
-            Seleccion guardada. Continuando a eliminatorias...
+            {t('common.success')}
           </AlertDescription>
         </Alert>
       )}
@@ -307,7 +309,7 @@ export default function ThirdPlaces(): JSX.Element {
       {bestThirdPlaces.length === 8 && !thirdPlaceCombination && (
         <Alert variant="destructive" className="mb-6">
           <AlertDescription>
-            Combinacion no valida - selecciona otra combinacion de terceros lugares
+            {t('thirdPlaces.invalidCombination')}
           </AlertDescription>
         </Alert>
       )}
@@ -334,7 +336,7 @@ export default function ThirdPlaces(): JSX.Element {
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-medium text-muted-foreground">
-                      3ro Grupo {group}
+                      {t('thirdPlaces.thirdGroup', { group })}
                     </span>
                     {isSelected && (
                       <span className="text-green-600 text-xs">✓</span>
@@ -353,7 +355,7 @@ export default function ThirdPlaces(): JSX.Element {
                     </div>
                   ) : (
                     <span className="text-sm text-muted-foreground">
-                      Sin definir
+                      {t('thirdPlaces.undefined')}
                     </span>
                   )}
                 </button>
@@ -371,7 +373,7 @@ export default function ThirdPlaces(): JSX.Element {
           isComplete={isComplete}
           saving={saving}
           size="lg"
-          backLabel="Atrás"
+          backLabel={t('common.back')}
         />
       </div>
 
@@ -379,18 +381,18 @@ export default function ThirdPlaces(): JSX.Element {
       <Dialog open={showResetWarning} onOpenChange={setShowResetWarning}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cambios detectados</DialogTitle>
+            <DialogTitle>{t('thirdPlaces.changesDetected')}</DialogTitle>
             <DialogDescription>
-              Has modificado la selección de terceros lugares. Esto afectará las predicciones de eliminatorias que ya tienes completadas.
-              <p className="mt-3 font-medium">Si continúas, las predicciones de eliminatorias serán borradas y tendrás que completarlas de nuevo.</p>
+              {t('thirdPlaces.changesWarning')}
+              <p className="mt-3 font-medium">{t('thirdPlaces.resetConfirm')}</p>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={handleCancelReset}>
-              Cancelar
+              {t('common.cancel')}
             </Button>
             <Button variant="destructive" onClick={handleConfirmReset} disabled={saving}>
-              {saving ? 'Guardando...' : 'Continuar y borrar'}
+              {saving ? t('common.loading') : t('thirdPlaces.continueAndDelete')}
             </Button>
           </DialogFooter>
         </DialogContent>

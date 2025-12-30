@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   Dialog,
   DialogContent,
@@ -12,10 +14,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Plus } from 'lucide-react';
+import { Plus, Lock, Clock } from 'lucide-react';
 import { predictionSetsAPI } from '@/services/api';
+import CountdownTimer from '@/components/CountdownTimer';
+import { usePredictionStatus } from '@/hooks/usePredictionStatus';
+
+// World Cup 2026 starts June 11, 2026 at 12:00 Mexico City time (UTC-6)
+const WORLD_CUP_START = new Date('2026-06-11T18:00:00Z');
 
 export default function Home(): JSX.Element {
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -24,14 +32,21 @@ export default function Home(): JSX.Element {
   const [newMode, setNewMode] = useState<'positions' | 'scores'>('positions');
   const [saving, setSaving] = useState<boolean>(false);
 
+  // Check if predictions are open
+  const { status: predictionStatus, loading: statusLoading } = usePredictionStatus();
+  const predictionsOpen = predictionStatus?.isOpen ?? true;
+
+  // Get locale for date formatting
+  const dateLocale = i18n.language === 'zh' ? 'zh-CN' : i18n.language;
+
   // Abrir modal si viene de menu con ?newPrediction=true
   useEffect(() => {
-    if (searchParams.get('newPrediction') === 'true') {
+    if (searchParams.get('newPrediction') === 'true' && predictionsOpen) {
       setShowCreateDialog(true);
       // Limpiar el query param
       setSearchParams({});
     }
-  }, [searchParams, setSearchParams]);
+  }, [searchParams, setSearchParams, predictionsOpen]);
 
   const handleCreate = async (): Promise<void> => {
     if (!newName.trim()) return;
@@ -51,121 +66,182 @@ export default function Home(): JSX.Element {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold mb-4">Quiniela Mundial 2026</h1>
+      <div className="text-center mb-8">
+        <h1 className="text-4xl font-bold mb-4">{t('home.title')}</h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-          Predice los resultados del Mundial, compite con tus amigos y demuestra quien sabe mas de futbol.
+          {t('home.subtitle')}
         </p>
       </div>
 
+      {/* Countdown Timer */}
+      <div className="max-w-2xl mx-auto mb-10">
+        <CountdownTimer targetDate={WORLD_CUP_START} title={t('home.countdownTitle')} />
+      </div>
+
+      {/* Predictions Closed Alert */}
+      {!statusLoading && !predictionsOpen && (
+        <div className="max-w-2xl mx-auto mb-6">
+          <Alert variant="destructive">
+            <Lock className="h-4 w-4" />
+            <AlertDescription className="ml-2">
+              <strong>{t('predictions.closed')}.</strong> {t('predictions.closedDesc')}
+              {predictionStatus?.deadline && (
+                <span className="block mt-1 text-sm opacity-90">
+                  {t('predictions.closedOn')} {new Date(predictionStatus.deadline).toLocaleDateString(dateLocale, {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </span>
+              )}
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
+      {/* Deadline Warning */}
+      {!statusLoading && predictionsOpen && predictionStatus?.deadline && (
+        <div className="max-w-2xl mx-auto mb-6">
+          <Alert className="bg-yellow-50 border-yellow-200">
+            <Clock className="h-4 w-4 text-yellow-600" />
+            <AlertDescription className="ml-2 text-yellow-800">
+              <strong>{t('predictions.closingSoon')}</strong>
+              <span className="block mt-1 text-sm">
+                {t('predictions.lastDay')} {new Date(predictionStatus.deadline).toLocaleDateString(dateLocale, {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </span>
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
       <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-        <Card className="hover:shadow-lg transition-shadow">
+        <Card className={`hover:shadow-lg transition-shadow ${!predictionsOpen ? 'opacity-60' : ''}`}>
           <CardHeader>
-            <CardTitle>Hacer Predicciones</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              {!predictionsOpen && <Lock className="h-4 w-4 text-muted-foreground" />}
+              {t('home.makePredictions')}
+            </CardTitle>
             <CardDescription>
-              Completa tus predicciones para el Mundial 2026
+              {predictionsOpen
+                ? t('home.makePredictionsDesc')
+                : t('predictions.closed')}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button className="w-full" size="lg" onClick={() => setShowCreateDialog(true)}>
+            <Button
+              className="w-full"
+              size="lg"
+              onClick={() => setShowCreateDialog(true)}
+              disabled={!predictionsOpen || statusLoading}
+            >
               <Plus className="w-4 h-4 mr-2" />
-              Nueva Prediccion
+              {t('home.newPrediction')}
             </Button>
           </CardContent>
         </Card>
 
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
-            <CardTitle>Ver Mis Predicciones</CardTitle>
+            <CardTitle>{t('home.viewPredictions')}</CardTitle>
             <CardDescription>
-              Revisa las predicciones que has guardado
+              {t('home.viewPredictionsDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild variant="outline" className="w-full" size="lg">
-              <Link to="/mis-predicciones">Ver Predicciones</Link>
+              <Link to="/mis-predicciones">{t('nav.myPredictions')}</Link>
             </Button>
           </CardContent>
         </Card>
 
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
-            <CardTitle>Ver Ranking</CardTitle>
+            <CardTitle>{t('home.viewRanking')}</CardTitle>
             <CardDescription>
-              Mira tu posición en el leaderboard
+              {t('home.viewRankingDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild variant="outline" className="w-full" size="lg">
-              <Link to="/ranking">Ver Ranking</Link>
+              <Link to="/ranking">{t('nav.ranking')}</Link>
             </Button>
           </CardContent>
         </Card>
 
         <Card className="hover:shadow-lg transition-shadow">
           <CardHeader>
-            <CardTitle>Mis Grupos</CardTitle>
+            <CardTitle>{t('home.myGroups')}</CardTitle>
             <CardDescription>
-              Compite con amigos y familia
+              {t('home.myGroupsDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Button asChild variant="outline" className="w-full" size="lg">
-              <Link to="/mis-grupos">Ver Grupos</Link>
+              <Link to="/mis-grupos">{t('nav.groups')}</Link>
             </Button>
           </CardContent>
         </Card>
       </div>
 
       <div className="mt-16 max-w-2xl mx-auto">
-        <h2 className="text-2xl font-bold text-center mb-6">Sistema de Puntos</h2>
+        <h2 className="text-2xl font-bold text-center mb-6">{t('home.pointsSystem')}</h2>
         <Card>
           <CardContent className="pt-6">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b">
-                  <th className="text-left py-2">Prediccion</th>
-                  <th className="text-right py-2">Puntos</th>
+                  <th className="text-left py-2">{t('home.prediction')}</th>
+                  <th className="text-right py-2">{t('common.points')}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr className="border-b bg-muted/30">
-                  <td colSpan={2} className="py-2 font-medium text-muted-foreground">Fase de Grupos</td>
+                  <td colSpan={2} className="py-2 font-medium text-muted-foreground">{t('home.groupPhase')}</td>
                 </tr>
                 <tr className="border-b">
-                  <td className="py-2">Posicion exacta en grupo</td>
-                  <td className="text-right font-semibold">3 pts</td>
+                  <td className="py-2">{t('home.exactPosition')}</td>
+                  <td className="text-right font-semibold">3 {t('common.points')}</td>
                 </tr>
                 <tr className="border-b">
-                  <td className="py-2">Equipo clasifica, posicion incorrecta</td>
+                  <td className="py-2">{t('home.teamQualifies')}</td>
                   <td className="text-right font-semibold">1 pt</td>
                 </tr>
                 <tr className="border-b bg-muted/30">
-                  <td colSpan={2} className="py-2 font-medium text-muted-foreground">Fase Eliminatoria (por partido)</td>
+                  <td colSpan={2} className="py-2 font-medium text-muted-foreground">{t('home.knockoutPhase')}</td>
                 </tr>
                 <tr className="border-b">
-                  <td className="py-2">Ganador Dieciseisavos (x16)</td>
-                  <td className="text-right font-semibold">1 pt c/u</td>
+                  <td className="py-2">{t('home.r32Winner')}</td>
+                  <td className="text-right font-semibold">1 pt {t('home.each')}</td>
                 </tr>
                 <tr className="border-b">
-                  <td className="py-2">Ganador Octavos (x8)</td>
-                  <td className="text-right font-semibold">2 pts c/u</td>
+                  <td className="py-2">{t('home.r16Winner')}</td>
+                  <td className="text-right font-semibold">2 {t('common.points')} {t('home.each')}</td>
                 </tr>
                 <tr className="border-b">
-                  <td className="py-2">Ganador Cuartos (x4)</td>
-                  <td className="text-right font-semibold">4 pts c/u</td>
+                  <td className="py-2">{t('home.qfWinner')}</td>
+                  <td className="text-right font-semibold">4 {t('common.points')} {t('home.each')}</td>
                 </tr>
                 <tr className="border-b">
-                  <td className="py-2">Ganador Semifinal (x2)</td>
-                  <td className="text-right font-semibold">6 pts c/u</td>
+                  <td className="py-2">{t('home.sfWinner')}</td>
+                  <td className="text-right font-semibold">6 {t('common.points')} {t('home.each')}</td>
                 </tr>
                 <tr className="border-b">
-                  <td className="py-2">Ganador 3er Puesto</td>
-                  <td className="text-right font-semibold">8 pts</td>
+                  <td className="py-2">{t('home.thirdPlace')}</td>
+                  <td className="text-right font-semibold">8 {t('common.points')}</td>
                 </tr>
                 <tr>
-                  <td className="py-2">Campeon</td>
-                  <td className="text-right font-semibold">15 pts</td>
+                  <td className="py-2">{t('home.champion')}</td>
+                  <td className="text-right font-semibold">15 {t('common.points')}</td>
                 </tr>
               </tbody>
             </table>
@@ -177,13 +253,13 @@ export default function Home(): JSX.Element {
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Nueva Prediccion</DialogTitle>
+            <DialogTitle>{t('predictions.newPrediction')}</DialogTitle>
             <DialogDescription>
-              Dale un nombre a tu prediccion para identificarla facilmente
+              {t('predictions.nameDescription')}
             </DialogDescription>
           </DialogHeader>
           <Input
-            placeholder="Ej: Mi prediccion optimista"
+            placeholder={t('predictions.namePlaceholder')}
             value={newName}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewName(e.target.value)}
             onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleCreate()}
@@ -191,7 +267,7 @@ export default function Home(): JSX.Element {
 
           {/* Mode selector */}
           <div className="space-y-3 pt-2">
-            <label className="text-sm font-medium">Modo de prediccion</label>
+            <label className="text-sm font-medium">{t('predictions.modeLabel')}</label>
             <div className="space-y-2">
               <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors">
                 <input
@@ -203,9 +279,9 @@ export default function Home(): JSX.Element {
                   className="mt-1"
                 />
                 <div>
-                  <div className="font-medium">Escoger Ganadores</div>
+                  <div className="font-medium">{t('predictions.modePositions')}</div>
                   <div className="text-sm text-muted-foreground">
-                    Arrastra equipos para ordenar su posición final de grupo. Escoge ganadores de la fase de eliminación directa.
+                    {t('predictions.modePositionsDesc')}
                   </div>
                 </div>
               </label>
@@ -219,9 +295,9 @@ export default function Home(): JSX.Element {
                   className="mt-1"
                 />
                 <div>
-                  <div className="font-medium">Marcadores Exactos</div>
+                  <div className="font-medium">{t('predictions.modeScores')}</div>
                   <div className="text-sm text-muted-foreground">
-                    Ingresa el resultado de cada partido (posiciones calculadas automaticamente)
+                    {t('predictions.modeScoresDesc')}
                   </div>
                 </div>
               </label>
@@ -230,10 +306,10 @@ export default function Home(): JSX.Element {
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-              Cancelar
+              {t('common.cancel')}
             </Button>
             <Button onClick={handleCreate} disabled={!newName.trim() || saving}>
-              {saving ? 'Creando...' : 'Crear y Comenzar'}
+              {saving ? t('common.creating') : t('predictions.createAndStart')}
             </Button>
           </DialogFooter>
         </DialogContent>

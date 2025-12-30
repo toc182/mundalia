@@ -1,4 +1,5 @@
 import { useState, useEffect, SyntheticEvent, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +27,7 @@ const getFlagUrl = (countryCode: string | undefined): string | null => {
 };
 
 export default function Leaderboard(): JSX.Element {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
   const [counts, setCounts] = useState({ positions: 0, scores: 0 });
@@ -79,7 +81,7 @@ export default function Leaderboard(): JSX.Element {
         }
         initialLoadDone.current = true;
       } catch {
-        setError('Error al cargar el ranking');
+        setError(t('errors.loadingFailed'));
       } finally {
         setLoading(false);
       }
@@ -103,7 +105,7 @@ export default function Leaderboard(): JSX.Element {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
         <Trophy className="h-6 w-6 text-yellow-500" />
-        Ranking Global
+        {t('leaderboard.title')}
       </h1>
 
       {/* Mode tabs */}
@@ -114,7 +116,7 @@ export default function Leaderboard(): JSX.Element {
           className="flex items-center gap-2"
         >
           <ListOrdered className="h-4 w-4" />
-          Escoger Ganadores
+          {t('leaderboard.positionsMode')}
           {counts.positions > 0 && (
             <Badge variant="secondary" className="ml-1">{counts.positions}</Badge>
           )}
@@ -125,7 +127,7 @@ export default function Leaderboard(): JSX.Element {
           className="flex items-center gap-2"
         >
           <Calculator className="h-4 w-4" />
-          Marcadores
+          {t('leaderboard.scoresMode')}
           {counts.scores > 0 && (
             <Badge variant="secondary" className="ml-1">{counts.scores}</Badge>
           )}
@@ -145,10 +147,10 @@ export default function Leaderboard(): JSX.Element {
           <CardContent className="py-12 text-center">
             <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground">
-              Aún no hay predicciones completas en modo {mode === 'positions' ? 'Escoger Ganadores' : 'Marcadores Exactos'}.
+              {t('leaderboard.noPredictions')}
             </p>
             <p className="text-sm text-muted-foreground mt-2">
-              ¡Completa tu predicción hasta la final para aparecer aquí!
+              {t('leaderboard.completePrediction')}
             </p>
           </CardContent>
         </Card>
@@ -158,7 +160,7 @@ export default function Leaderboard(): JSX.Element {
         {totalPages > 1 && (
           <div className="flex items-center justify-between mb-4">
             <div className="text-sm text-muted-foreground">
-              {total} predicciones · Página {page} de {totalPages}
+              {total} {t('leaderboard.predictions')} · {t('leaderboard.page')} {page} {t('leaderboard.of')} {totalPages}
             </div>
             <div className="flex gap-2">
               <Button
@@ -168,7 +170,7 @@ export default function Leaderboard(): JSX.Element {
                 disabled={page === 1 || loading}
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
-                Anterior
+                {t('leaderboard.previous')}
               </Button>
               {userPage && userPage !== page && (
                 <Button
@@ -177,7 +179,7 @@ export default function Leaderboard(): JSX.Element {
                   onClick={() => setPage(userPage)}
                   disabled={loading}
                 >
-                  Ir a mi posición
+                  {t('leaderboard.goToMyPosition')}
                 </Button>
               )}
               <Button
@@ -186,7 +188,7 @@ export default function Leaderboard(): JSX.Element {
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages || loading}
               >
-                Siguiente
+                {t('leaderboard.next')}
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
@@ -229,7 +231,7 @@ export default function Leaderboard(): JSX.Element {
                       </span>
                       {isCurrentUser && (
                         <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 shrink-0">
-                          Tú
+                          {t('leaderboard.you')}
                         </Badge>
                       )}
                     </div>
@@ -249,7 +251,7 @@ export default function Leaderboard(): JSX.Element {
         {totalPages > 1 && (
           <div className="flex items-center justify-between mt-4">
             <div className="text-sm text-muted-foreground">
-              {total} predicciones · Página {page} de {totalPages}
+              {total} {t('leaderboard.predictions')} · {t('leaderboard.page')} {page} {t('leaderboard.of')} {totalPages}
             </div>
             <div className="flex gap-2">
               <Button
@@ -259,7 +261,7 @@ export default function Leaderboard(): JSX.Element {
                 disabled={page === 1 || loading}
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
-                Anterior
+                {t('leaderboard.previous')}
               </Button>
               {userPage && userPage !== page && (
                 <Button
@@ -268,7 +270,7 @@ export default function Leaderboard(): JSX.Element {
                   onClick={() => setPage(userPage)}
                   disabled={loading}
                 >
-                  Ir a mi posición
+                  {t('leaderboard.goToMyPosition')}
                 </Button>
               )}
               <Button
@@ -277,7 +279,7 @@ export default function Leaderboard(): JSX.Element {
                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages || loading}
               >
-                Siguiente
+                {t('leaderboard.next')}
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
@@ -289,10 +291,10 @@ export default function Leaderboard(): JSX.Element {
           <Card className="mt-4">
             <CardContent className="py-3">
               <div className="flex items-center justify-between">
-                <div className="text-sm text-muted-foreground">Tu mejor posición:</div>
+                <div className="text-sm text-muted-foreground">{t('leaderboard.yourBestPosition')}</div>
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-lg">#{userPosition}</span>
-                  <span className="text-sm text-muted-foreground">de {total}</span>
+                  <span className="text-sm text-muted-foreground">{t('leaderboard.of')} {total}</span>
                   {userPage && userPage !== page && (
                     <Button
                       variant="link"
@@ -300,7 +302,7 @@ export default function Leaderboard(): JSX.Element {
                       className="text-xs p-0 h-auto"
                       onClick={() => setPage(userPage)}
                     >
-                      (ver)
+                      ({t('common.view')})
                     </Button>
                   )}
                 </div>

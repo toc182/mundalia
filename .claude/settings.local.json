@@ -82,7 +82,8 @@
       "Bash(cmd //c:*)",
       "Bash(tasklist:*)",
       "Bash(cmd /c \"taskkill /F /IM node.exe\")",
-      "Bash(cmd /c \"taskkill /F /PID 31144\")"
+      "Bash(cmd /c \"taskkill /F /PID 31144\")",
+      "Bash(dir /b \"C:\\\\Users\\\\ivans\\\\Pinellas, S.A. Dropbox\\\\Ivan Plotnikoff\\\\Paginas\\\\Natalia\\\\*.md\")"
     ],
     "deny": [],
     "ask": []

@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { Menu, User, X, Plus, List, Trophy, Users, LogOut, UserCircle, Home, Shield } from 'lucide-react';
+import LanguageSelector from './LanguageSelector';
 
 // Logo component - solo texto estilizado
 const MundaliaLogo = (): JSX.Element => (
@@ -12,6 +14,7 @@ const MundaliaLogo = (): JSX.Element => (
 );
 
 export default function TopBar(): JSX.Element {
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -28,13 +31,15 @@ export default function TopBar(): JSX.Element {
     setMenuOpen(false);
   };
 
-  // Si no hay usuario, no mostrar menus
+  // Si no hay usuario, mostrar solo logo y selector de idioma
   if (!user) {
     return (
-      <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-background border-b flex items-center justify-center">
+      <header className="fixed top-0 left-0 right-0 z-50 h-14 bg-background border-b flex items-center justify-between px-4">
+        <div className="w-10" /> {/* Spacer */}
         <Link to="/" className="hover:opacity-80 transition-opacity">
           <MundaliaLogo />
         </Link>
+        <LanguageSelector />
       </header>
     );
   }
@@ -57,42 +62,45 @@ export default function TopBar(): JSX.Element {
           <MundaliaLogo />
         </Link>
 
-        {/* Usuario derecha */}
-        <div className="relative">
-          <button
-            onClick={() => setUserMenuOpen(!userMenuOpen)}
-            className="p-2 hover:bg-muted rounded-lg transition-colors"
-            aria-label="Menú de usuario"
-            aria-expanded={userMenuOpen}
-          >
-            <User className="h-6 w-6" aria-hidden="true" />
-          </button>
+        {/* Idioma y Usuario derecha */}
+        <div className="flex items-center gap-1">
+          <LanguageSelector />
+          <div className="relative">
+            <button
+              onClick={() => setUserMenuOpen(!userMenuOpen)}
+              className="p-2 hover:bg-muted rounded-lg transition-colors"
+              aria-label="Menú de usuario"
+              aria-expanded={userMenuOpen}
+            >
+              <User className="h-6 w-6" aria-hidden="true" />
+            </button>
 
-          {/* Dropdown menu usuario */}
-          {userMenuOpen && (
-            <>
-              <div
-                className="fixed inset-0 z-40"
-                onClick={() => setUserMenuOpen(false)}
-              />
-              <div className="absolute right-0 top-full mt-1 w-48 bg-background border rounded-lg shadow-lg z-50">
-                <button
-                  onClick={() => { navigate('/cuenta'); setUserMenuOpen(false); }}
-                  className="w-full flex items-center gap-2 px-4 py-3 hover:bg-muted text-left"
-                >
-                  <UserCircle className="h-4 w-4" />
-                  Cuenta
-                </button>
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-2 px-4 py-3 hover:bg-muted text-left border-t"
-                >
-                  <LogOut className="h-4 w-4" />
-                  Salir
-                </button>
-              </div>
-            </>
-          )}
+            {/* Dropdown menu usuario */}
+            {userMenuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setUserMenuOpen(false)}
+                />
+                <div className="absolute right-0 top-full mt-1 w-48 bg-background border rounded-lg shadow-lg z-50">
+                  <button
+                    onClick={() => { navigate('/cuenta'); setUserMenuOpen(false); }}
+                    className="w-full flex items-center gap-2 px-4 py-3 hover:bg-muted text-left"
+                  >
+                    <UserCircle className="h-4 w-4" />
+                    {t('nav.account')}
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2 px-4 py-3 hover:bg-muted text-left border-t"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    {t('nav.logout')}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
@@ -114,35 +122,35 @@ export default function TopBar(): JSX.Element {
                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted rounded-lg text-left"
               >
                 <Home className="h-5 w-5" />
-                Inicio
+                {t('nav.home')}
               </button>
               <button
                 onClick={() => handleNavigation('/?newPrediction=true')}
                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted rounded-lg text-left"
               >
                 <Plus className="h-5 w-5" />
-                Nueva Prediccion
+                {t('nav.newPrediction')}
               </button>
               <button
                 onClick={() => handleNavigation('/mis-predicciones')}
                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted rounded-lg text-left"
               >
                 <List className="h-5 w-5" />
-                Ver Predicciones
+                {t('nav.myPredictions')}
               </button>
               <button
                 onClick={() => handleNavigation('/ranking')}
                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted rounded-lg text-left"
               >
                 <Trophy className="h-5 w-5" />
-                Ranking
+                {t('nav.ranking')}
               </button>
               <button
                 onClick={() => handleNavigation('/mis-grupos')}
                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted rounded-lg text-left"
               >
                 <Users className="h-5 w-5" />
-                Grupos
+                {t('nav.groups')}
               </button>
 
               {/* Admin link - solo visible para admins */}
@@ -152,7 +160,7 @@ export default function TopBar(): JSX.Element {
                   className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted rounded-lg text-left text-amber-600 dark:text-amber-400"
                 >
                   <Shield className="h-5 w-5" />
-                  Admin
+                  {t('nav.admin')}
                 </button>
               )}
             </div>

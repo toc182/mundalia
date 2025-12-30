@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -231,6 +232,7 @@ const formatDateForInput = (date: string | undefined): string => {
 };
 
 export default function Account(): JSX.Element {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user, updateUser, logout } = useAuth();
   const [name, setName] = useState<string>(user?.name || '');
@@ -304,7 +306,7 @@ export default function Account(): JSX.Element {
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
       savedTimerRef.current = setTimeout(() => setSaved(false), 3000);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Error al guardar cambios');
+      setError(err.response?.data?.error || t('errors.savingFailed'));
     } finally {
       setSaving(false);
     }
@@ -319,7 +321,7 @@ export default function Account(): JSX.Element {
     return (
       <div className="container mx-auto px-4 py-8">
         <Alert variant="destructive">
-          <AlertDescription>Debes iniciar sesion para ver esta pagina</AlertDescription>
+          <AlertDescription>{t('errors.unauthorized')}</AlertDescription>
         </Alert>
       </div>
     );
@@ -327,11 +329,11 @@ export default function Account(): JSX.Element {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <h1 className="text-2xl font-bold mb-6">Mi Cuenta</h1>
+      <h1 className="text-2xl font-bold mb-6">{t('account.title')}</h1>
 
       {saved && (
         <Alert className="mb-6">
-          <AlertDescription>Cambios guardados correctamente</AlertDescription>
+          <AlertDescription>{t('account.saved')}</AlertDescription>
         </Alert>
       )}
 
@@ -343,28 +345,28 @@ export default function Account(): JSX.Element {
 
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-lg">Informacion de la Cuenta</CardTitle>
-          <CardDescription>Edita tu perfil</CardDescription>
+          <CardTitle className="text-lg">{t('account.personalInfo')}</CardTitle>
+          <CardDescription>{t('account.editProfile')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSave} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name" className="flex items-center gap-2">
                 <User className="h-4 w-4" />
-                Nombre
+                {t('common.name')}
               </Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
-                placeholder="Tu nombre"
+                placeholder={t('auth.namePlaceholder')}
               />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="username" className="flex items-center gap-2">
                 <AtSign className="h-4 w-4" />
-                Username
+                {t('account.username')}
               </Label>
               <div className="relative">
                 <Input
@@ -388,16 +390,16 @@ export default function Account(): JSX.Element {
                 )}
               </div>
               <p className={`text-xs ${usernameStatus === 'taken' ? 'text-red-500' : usernameStatus === 'invalid' ? 'text-red-500' : 'text-muted-foreground'}`}>
-                {usernameStatus === 'taken' ? 'Este username ya está en uso' :
-                 usernameStatus === 'invalid' ? '3-20 caracteres (letras, números, _)' :
-                 'Único - se mostrará en el leaderboard'}
+                {usernameStatus === 'taken' ? t('account.usernameTaken') :
+                 usernameStatus === 'invalid' ? t('account.usernameInvalid') :
+                 t('account.usernameHint')}
               </p>
             </div>
 
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <Mail className="h-4 w-4" />
-                Email
+                {t('common.email')}
               </Label>
               <Input
                 value={user.email}
@@ -405,7 +407,7 @@ export default function Account(): JSX.Element {
                 className="bg-muted"
               />
               <p className="text-xs text-muted-foreground">
-                El email no se puede cambiar
+                {t('account.emailNoChange')}
               </p>
             </div>
 
@@ -413,11 +415,11 @@ export default function Account(): JSX.Element {
               <div className="flex items-center gap-4">
                 <Label className="flex items-center gap-2 whitespace-nowrap">
                   <Globe className="h-4 w-4" />
-                  País
+                  {t('account.country')}
                 </Label>
                 <Select value={country} onValueChange={setCountry}>
                   <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Seleccionar país..." />
+                    <SelectValue placeholder={t('account.selectCountry')} />
                   </SelectTrigger>
                   <SelectContent>
                     {COUNTRIES.map((c) => (
@@ -429,14 +431,14 @@ export default function Account(): JSX.Element {
                 </Select>
               </div>
               <p className="text-xs text-muted-foreground">
-                Opcional - se mostrará en el leaderboard
+                {t('account.countryHint')}
               </p>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="birthDate" className="flex items-center gap-2">
                 <Cake className="h-4 w-4" />
-                Fecha de nacimiento
+                {t('account.birthDate')}
               </Label>
               <Input
                 id="birthDate"
@@ -447,28 +449,24 @@ export default function Account(): JSX.Element {
                 max={new Date().toISOString().split('T')[0]}
               />
               <p className="text-xs text-muted-foreground">
-                Opcional - no se mostrará públicamente
+                {t('account.birthDateHint')}
               </p>
             </div>
 
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
-                Miembro desde
+                {t('account.memberSince')}
               </Label>
               <Input
-                value={new Date(user.created_at!).toLocaleDateString('es-ES', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}
+                value={new Date(user.created_at!).toLocaleDateString()}
                 disabled
                 className="bg-muted"
               />
             </div>
 
             <Button type="submit" disabled={saving || !name.trim()}>
-              {saving ? 'Guardando...' : 'Guardar Cambios'}
+              {saving ? t('common.loading') : t('account.saveChanges')}
             </Button>
           </form>
         </CardContent>
@@ -476,15 +474,15 @@ export default function Account(): JSX.Element {
 
       <Card className="border-red-200">
         <CardHeader>
-          <CardTitle className="text-lg text-red-600">Cerrar Sesion</CardTitle>
+          <CardTitle className="text-lg text-red-600">{t('nav.logout')}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            Al cerrar sesion, tendras que volver a iniciar sesion para acceder a tus predicciones.
+            {t('account.logoutWarning')}
           </p>
           <Button variant="destructive" onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
-            Cerrar Sesion
+            {t('nav.logout')}
           </Button>
         </CardContent>
       </Card>
