@@ -70,7 +70,8 @@
     "sfWinner": "Vencedor Semifinal (x2)",
     "thirdPlace": "Vencedor 3o Lugar",
     "champion": "Campeao",
-    "each": "cada"
+    "each": "cada",
+    "predictionsCloseAt": "As previsoes fecham em"
   },
   "predictions": {
     "closed": "As previsoes estao fechadas",
@@ -96,7 +97,11 @@
     "inProgress": "Em andamento",
     "notStarted": "Nao iniciada",
     "deletePrediction": "Excluir Previsao",
-    "deleteConfirm": "Tem certeza que deseja excluir \"{{name}}\"? Esta acao nao pode ser desfeita."
+    "deleteConfirm": "Tem certeza que deseja excluir \"{{name}}\"? Esta acao nao pode ser desfeita.",
+    "duplicate": "Duplicar",
+    "duplicatePrediction": "Duplicar Previsao",
+    "duplicateDesc": "Uma copia desta previsao sera criada com todos os seus dados",
+    "copy": "copia"
   },
   "playoffs": {
     "title": "Repescagens",
@@ -120,7 +125,7 @@
   "groups": {
     "title": "Fase de Grupos",
     "step": "Passo 2 de 4",
-    "description": "Ordene os times de cada grupo de acordo com sua previsao",
+    "description": "Coloque os times em sua posicao final na fase de grupos",
     "dragToReorder": "Arraste para reordenar",
     "group": "Grupo",
     "resetGroup": "Reiniciar grupo",
@@ -287,6 +292,14 @@
     "loadingFailed": "Falha ao carregar",
     "savingFailed": "Falha ao salvar"
   },
+  "stats": {
+    "communityTitle": "Estatisticas da Comunidade",
+    "topChampions": "Favoritos para Campeao",
+    "topFinalists": "Favoritos para a Final",
+    "controversialGroups": "Grupos Mais Disputados",
+    "controversialDesc": "Porcentagem de votos para primeiro lugar do grupo",
+    "basedOn": "Baseado em {{count}} previsoes"
+  },
   "languages": {
     "es": "Espanol",
     "en": "English",
@@ -294,5 +307,9 @@
     "fr": "Francais",
     "de": "Deutsch",
     "zh": "中文"
+  },
+  "export": {
+    "button": "Exportar",
+    "exporting": "Exportando..."
   }
 }

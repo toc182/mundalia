@@ -14,8 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { predictionSetsAPI } from '@/services/api';
-import { Plus, Trash2, Eye, Edit2, Trophy, Lock } from 'lucide-react';
+import { predictionSetsAPI, settingsAPI, type PredictionModes } from '@/services/api';
+import { Plus, Trash2, Eye, Edit2, Trophy, Lock, Copy } from 'lucide-react';
 import type { PredictionSet } from '@/types';
 import { usePredictionStatus } from '@/hooks/usePredictionStatus';
 
@@ -38,14 +38,39 @@ export default function MyPredictions(): JSX.Element {
   // Dialog states
   const [showCreateDialog, setShowCreateDialog] = useState<boolean>(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState<boolean>(false);
+  const [showDuplicateDialog, setShowDuplicateDialog] = useState<boolean>(false);
   const [selectedSet, setSelectedSet] = useState<PredictionSet | null>(null);
   const [newName, setNewName] = useState<string>('');
   const [newMode, setNewMode] = useState<'positions' | 'scores'>('positions');
+  const [duplicateName, setDuplicateName] = useState<string>('');
   const [saving, setSaving] = useState<boolean>(false);
+
+  // Available prediction modes (from admin settings)
+  const [availableModes, setAvailableModes] = useState<PredictionModes>('both');
 
   useEffect(() => {
     loadPredictionSets();
+    loadAvailableModes();
   }, []);
+
+  const loadAvailableModes = async (): Promise<void> => {
+    try {
+      const response = await settingsAPI.getPredictionModes();
+      // Response is {modes: 'positions'|'scores'|'both'} directly (axios interceptor unwraps)
+      const modes = (response.data as any).modes || 'both';
+      setAvailableModes(modes);
+      // Auto-select the only available mode if not 'both'
+      if (modes === 'positions') {
+        setNewMode('positions');
+      } else if (modes === 'scores') {
+        setNewMode('scores');
+      }
+    } catch (err) {
+      console.error('Error loading prediction modes:', err);
+      // Default to both if error
+      setAvailableModes('both');
+    }
+  };
 
   const loadPredictionSets = async (): Promise<void> => {
     setLoading(true);
@@ -96,6 +121,28 @@ export default function MyPredictions(): JSX.Element {
   const openDeleteDialog = (set: PredictionSet): void => {
     setSelectedSet(set);
     setShowDeleteDialog(true);
+  };
+
+  const openDuplicateDialog = (set: PredictionSet): void => {
+    setSelectedSet(set);
+    setDuplicateName(`${set.name} (${t('predictions.copy')})`);
+    setShowDuplicateDialog(true);
+  };
+
+  const handleDuplicate = async (): Promise<void> => {
+    if (!selectedSet || !duplicateName.trim()) return;
+    setSaving(true);
+    try {
+      await predictionSetsAPI.duplicate(selectedSet.id, duplicateName.trim());
+      setShowDuplicateDialog(false);
+      setSelectedSet(null);
+      setDuplicateName('');
+      loadPredictionSets();
+    } catch (err) {
+      setError(t('errors.generic'));
+    } finally {
+      setSaving(false);
+    }
   };
 
   const getCompletionStatus = (set: PredictionSet): CompletionStatus => {
@@ -249,6 +296,16 @@ export default function MyPredictions(): JSX.Element {
                         {t('common.edit')}
                       </Button>
                     )}
+                    {predictionsOpen && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openDuplicateDialog(set)}
+                        title={t('predictions.duplicate')}
+                      >
+                        <Copy className="w-4 h-4" />
+                      </Button>
+                    )}
                     <Button
                       variant="outline"
                       size="sm"
@@ -282,44 +339,55 @@ export default function MyPredictions(): JSX.Element {
             onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleCreate()}
           />
 
-          {/* Mode selector */}
-          <div className="space-y-3 pt-2">
-            <label className="text-sm font-medium">{t('predictions.modeLabel')}</label>
-            <div className="space-y-2">
-              <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors">
-                <input
-                  type="radio"
-                  name="mode"
-                  value="positions"
-                  checked={newMode === 'positions'}
-                  onChange={() => setNewMode('positions')}
-                  className="mt-1"
-                />
-                <div>
-                  <div className="font-medium">{t('predictions.modePositions')}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {t('predictions.modePositionsDesc')}
+          {/* Mode selector - only show if both modes available */}
+          {availableModes === 'both' ? (
+            <div className="space-y-3 pt-2">
+              <label className="text-sm font-medium">{t('predictions.modeLabel')}</label>
+              <div className="space-y-2">
+                <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors">
+                  <input
+                    type="radio"
+                    name="mode"
+                    value="positions"
+                    checked={newMode === 'positions'}
+                    onChange={() => setNewMode('positions')}
+                    className="mt-1"
+                  />
+                  <div>
+                    <div className="font-medium">{t('predictions.modePositions')}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {t('predictions.modePositionsDesc')}
+                    </div>
                   </div>
-                </div>
-              </label>
-              <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors">
-                <input
-                  type="radio"
-                  name="mode"
-                  value="scores"
-                  checked={newMode === 'scores'}
-                  onChange={() => setNewMode('scores')}
-                  className="mt-1"
-                />
-                <div>
-                  <div className="font-medium">{t('predictions.modeScores')}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {t('predictions.modeScoresDesc')}
+                </label>
+                <label className="flex items-start gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors">
+                  <input
+                    type="radio"
+                    name="mode"
+                    value="scores"
+                    checked={newMode === 'scores'}
+                    onChange={() => setNewMode('scores')}
+                    className="mt-1"
+                  />
+                  <div>
+                    <div className="font-medium">{t('predictions.modeScores')}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {t('predictions.modeScoresDesc')}
+                    </div>
                   </div>
-                </div>
-              </label>
+                </label>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="pt-2 p-3 rounded-lg bg-muted/50">
+              <div className="font-medium">
+                {availableModes === 'positions' ? t('predictions.modePositions') : t('predictions.modeScores')}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {availableModes === 'positions' ? t('predictions.modePositionsDesc') : t('predictions.modeScoresDesc')}
+              </div>
+            </div>
+          )}
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
@@ -347,6 +415,33 @@ export default function MyPredictions(): JSX.Element {
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={saving}>
               {saving ? t('common.deleting') : t('common.delete')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Duplicate Dialog */}
+      <Dialog open={showDuplicateDialog} onOpenChange={setShowDuplicateDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('predictions.duplicatePrediction')}</DialogTitle>
+            <DialogDescription>
+              {t('predictions.duplicateDesc')}
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            autoFocus
+            placeholder={t('predictions.namePlaceholder')}
+            value={duplicateName}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDuplicateName(e.target.value)}
+            onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => e.key === 'Enter' && handleDuplicate()}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDuplicateDialog(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button onClick={handleDuplicate} disabled={!duplicateName.trim() || saving}>
+              {saving ? t('common.creating') : t('predictions.duplicate')}
             </Button>
           </DialogFooter>
         </DialogContent>

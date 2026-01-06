@@ -315,7 +315,7 @@ export default function Predictions(): JSX.Element {
       {/* Header */}
       <div className="mb-4">
         <h1 className="text-2xl font-bold">{t('groups.title')}</h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-muted-foreground mt-1">
           {t('groups.description')}
         </p>
       </div>

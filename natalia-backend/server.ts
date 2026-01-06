@@ -27,6 +27,7 @@ import groupsRoutes from './routes/groups';
 import leaderboardRoutes from './routes/leaderboard';
 import adminRoutes from './routes/admin';
 import settingsRoutes from './routes/settings';
+import statsRoutes from './routes/stats';
 
 const app: Application = express();
 const PORT = process.env.PORT || 5000;
@@ -245,6 +246,7 @@ app.use('/api/groups', groupsRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/stats', statsRoutes);
 
 // Health check
 app.get('/api/health', (_req: Request, res: Response) => {

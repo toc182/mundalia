@@ -282,10 +282,22 @@ export interface PredictionStatus {
   message: string;
 }
 
+export type PredictionModes = 'positions' | 'scores' | 'both';
+
+export interface PredictionModesResponse {
+  success: boolean;
+  data: {
+    modes: PredictionModes;
+  };
+}
+
 export const settingsAPI = {
-  // Public endpoint - no auth required
+  // Public endpoints - no auth required
   getPredictionStatus: (): Promise<AxiosResponse<PredictionStatus>> =>
     api.get('/settings/predictions-status'),
+
+  getPredictionModes: (): Promise<AxiosResponse<PredictionModesResponse>> =>
+    api.get('/settings/prediction-modes'),
 
   // Admin endpoints
   getAll: (): Promise<AxiosResponse<Record<string, string>>> =>
@@ -293,6 +305,51 @@ export const settingsAPI = {
 
   setDeadline: (deadline: string | null): Promise<AxiosResponse<void>> =>
     api.put('/admin/settings/deadline', { deadline }),
+
+  setPredictionModes: (modes: PredictionModes, confirmDelete: boolean = false): Promise<AxiosResponse<{ data: { deletedCount: number } }>> =>
+    api.put('/admin/settings/prediction-modes', { modes, confirmDelete }),
+
+  getPredictionCountsByMode: (): Promise<AxiosResponse<{ data: { positions: number; scores: number } }>> =>
+    api.get('/admin/prediction-counts-by-mode'),
+};
+
+// ============ STATS (PUBLIC) ============
+
+interface TeamStat {
+  teamId: number;
+  teamName: string;
+  teamCode: string;
+  flagUrl: string;
+  pickCount: number;
+  percentage: number;
+}
+
+interface GroupTeamStat {
+  teamId: number;
+  teamName: string;
+  teamCode: string;
+  flagUrl: string;
+  pos1: number;
+  pos2: number;
+  pos3: number;
+  pos4: number;
+}
+
+interface ControversialGroup {
+  group: string;
+  teams: GroupTeamStat[];
+}
+
+export interface CommunityStats {
+  totalPredictions: number;
+  topChampions: TeamStat[];
+  topFinalists: TeamStat[];
+  controversialGroups: ControversialGroup[];
+}
+
+export const statsAPI = {
+  getCommunityStats: (): Promise<AxiosResponse<CommunityStats>> =>
+    api.get('/stats/community'),
 };
 
 export default api;

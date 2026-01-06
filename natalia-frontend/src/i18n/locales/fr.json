@@ -70,7 +70,8 @@
     "sfWinner": "Vainqueur Demi-finale (x2)",
     "thirdPlace": "Vainqueur 3eme Place",
     "champion": "Champion",
-    "each": "chacun"
+    "each": "chacun",
+    "predictionsCloseAt": "Les predictions ferment le"
   },
   "predictions": {
     "closed": "Les predictions sont fermees",
@@ -96,7 +97,11 @@
     "inProgress": "En cours",
     "notStarted": "Non commence",
     "deletePrediction": "Supprimer la Prediction",
-    "deleteConfirm": "Etes-vous sur de vouloir supprimer \"{{name}}\"? Cette action ne peut pas etre annulee."
+    "deleteConfirm": "Etes-vous sur de vouloir supprimer \"{{name}}\"? Cette action ne peut pas etre annulee.",
+    "duplicate": "Dupliquer",
+    "duplicatePrediction": "Dupliquer la Prediction",
+    "duplicateDesc": "Une copie de cette prediction sera creee avec toutes ses donnees",
+    "copy": "copie"
   },
   "playoffs": {
     "title": "Barrages",
@@ -120,7 +125,7 @@
   "groups": {
     "title": "Phase de Groupes",
     "step": "Etape 2 sur 4",
-    "description": "Ordonnez les equipes de chaque groupe selon votre prediction",
+    "description": "Placez les equipes a leur position finale dans la phase de groupes",
     "dragToReorder": "Glissez pour reordonner",
     "group": "Groupe",
     "resetGroup": "Reinitialiser le groupe",
@@ -287,6 +292,14 @@
     "loadingFailed": "Echec du chargement",
     "savingFailed": "Echec de l'enregistrement"
   },
+  "stats": {
+    "communityTitle": "Statistiques de la Communaute",
+    "topChampions": "Favoris pour le Titre",
+    "topFinalists": "Favoris pour la Finale",
+    "controversialGroups": "Groupes les Plus Disputes",
+    "controversialDesc": "Pourcentage de votes pour le vainqueur du groupe",
+    "basedOn": "Base sur {{count}} predictions"
+  },
   "languages": {
     "es": "Espanol",
     "en": "English",
@@ -294,5 +307,9 @@
     "fr": "Francais",
     "de": "Deutsch",
     "zh": "中文"
+  },
+  "export": {
+    "button": "Exporter",
+    "exporting": "Exportation..."
   }
 }

@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
-import { Menu, User, X, Plus, List, Trophy, Users, LogOut, UserCircle, Home, Shield } from 'lucide-react';
+import { useTheme } from '@/hooks/useTheme';
+import { Menu, User, X, Plus, List, Trophy, Users, LogOut, UserCircle, Home, Shield, Sun, Moon } from 'lucide-react';
 import LanguageSelector from './LanguageSelector';
 
 // Logo component - solo texto estilizado
@@ -16,6 +17,7 @@ const MundaliaLogo = (): JSX.Element => (
 export default function TopBar(): JSX.Element {
   const { t } = useTranslation();
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
@@ -39,7 +41,20 @@ export default function TopBar(): JSX.Element {
         <Link to="/" className="hover:opacity-80 transition-opacity">
           <MundaliaLogo />
         </Link>
-        <LanguageSelector />
+        <div className="flex items-center gap-1">
+          <button
+            onClick={toggleTheme}
+            className="p-2 hover:bg-muted rounded-lg transition-colors"
+            aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+          >
+            {theme === 'dark' ? (
+              <Sun className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <Moon className="h-5 w-5" aria-hidden="true" />
+            )}
+          </button>
+          <LanguageSelector />
+        </div>
       </header>
     );
   }
@@ -62,8 +77,19 @@ export default function TopBar(): JSX.Element {
           <MundaliaLogo />
         </Link>
 
-        {/* Idioma y Usuario derecha */}
+        {/* Theme, Idioma y Usuario derecha */}
         <div className="flex items-center gap-1">
+          <button
+            onClick={toggleTheme}
+            className="p-2 hover:bg-muted rounded-lg transition-colors"
+            aria-label={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+          >
+            {theme === 'dark' ? (
+              <Sun className="h-5 w-5" aria-hidden="true" />
+            ) : (
+              <Moon className="h-5 w-5" aria-hidden="true" />
+            )}
+          </button>
           <LanguageSelector />
           <div className="relative">
             <button

@@ -70,7 +70,8 @@
     "sfWinner": "半决赛胜者 (x2)",
     "thirdPlace": "季军赛胜者",
     "champion": "冠军",
-    "each": "每个"
+    "each": "每个",
+    "predictionsCloseAt": "预测将于关闭"
   },
   "predictions": {
     "closed": "预测已关闭",
@@ -96,7 +97,11 @@
     "inProgress": "进行中",
     "notStarted": "未开始",
     "deletePrediction": "删除预测",
-    "deleteConfirm": "确定要删除\"{{name}}\"吗？此操作无法撤销。"
+    "deleteConfirm": "确定要删除\"{{name}}\"吗？此操作无法撤销。",
+    "duplicate": "复制",
+    "duplicatePrediction": "复制预测",
+    "duplicateDesc": "将创建此预测的副本及其所有数据",
+    "copy": "副本"
   },
   "playoffs": {
     "title": "附加赛",
@@ -120,7 +125,7 @@
   "groups": {
     "title": "小组赛阶段",
     "step": "第2步，共4步",
-    "description": "根据您的预测排列每组球队",
+    "description": "将球队放置在小组赛的最终位置",
     "dragToReorder": "拖动重新排序",
     "group": "小组",
     "resetGroup": "重置小组",
@@ -287,6 +292,14 @@
     "loadingFailed": "加载失败",
     "savingFailed": "保存失败"
   },
+  "stats": {
+    "communityTitle": "社区统计",
+    "topChampions": "热门冠军预测",
+    "topFinalists": "热门决赛预测",
+    "controversialGroups": "最具争议小组",
+    "controversialDesc": "小组冠军投票百分比",
+    "basedOn": "基于 {{count}} 个预测"
+  },
   "languages": {
     "es": "Espanol",
     "en": "English",
@@ -294,5 +307,9 @@
     "fr": "Francais",
     "de": "Deutsch",
     "zh": "中文"
+  },
+  "export": {
+    "button": "导出",
+    "exporting": "导出中..."
   }
 }

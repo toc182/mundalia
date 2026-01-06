@@ -60,4 +60,25 @@ router.get('/predictions-status', async (_req: Request, res: Response): Promise<
   }
 });
 
+// Public endpoint - get available prediction modes
+router.get('/prediction-modes', async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const result = await db.query(
+      "SELECT value FROM settings WHERE key = 'prediction_modes'"
+    );
+
+    if (result.rows.length === 0) {
+      // No setting - default to both modes available
+      success(res, { modes: 'both' });
+      return;
+    }
+
+    const modes = (result.rows[0] as SettingsRow).value;
+    success(res, { modes });
+  } catch (err) {
+    console.error('Error getting prediction modes:', err);
+    serverError(res, err as Error);
+  }
+});
+
 export default router;

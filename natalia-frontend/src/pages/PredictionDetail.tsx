@@ -1,9 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Download, Loader2 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { exportToCanvas } from '@/utils/exportCanvas';
 import { mockTeams, getAllGroups, type Team } from '@/data/mockData';
 import { playoffs, type Playoff } from '@/data/playoffsData';
 import { getThirdPlaceCombination } from '@/data/thirdPlaceCombinations';
@@ -56,6 +60,8 @@ type KnockoutPredictions = Record<string, number>;
 
 export default function PredictionDetail(): JSX.Element {
   const { id } = useParams<{ id: string }>();
+  const { t } = useTranslation();
+  const { user } = useAuth();
   const [predictionSet, setPredictionSet] = useState<PredictionSetState | null>(null);
   const [predictions, setPredictions] = useState<GroupPredictions>({});
   const [playoffSelections, setPlayoffSelections] = useState<PlayoffSelections>({});
@@ -63,6 +69,7 @@ export default function PredictionDetail(): JSX.Element {
   const [knockoutPredictions, setKnockoutPredictions] = useState<KnockoutPredictions>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<boolean>(false);
 
   useEffect(() => {
     const loadPredictionSet = async (): Promise<void> => {
@@ -124,6 +131,32 @@ export default function PredictionDetail(): JSX.Element {
   const getPlayoffWinner = (playoffId: string): Team | null =>
     getPlayoffWinnerHelper(playoffId, playoffSelections);
 
+  // Export to image using Canvas API
+  const handleExport = async (): Promise<void> => {
+    if (!predictionSet) return;
+
+    setExporting(true);
+    try {
+      const dataUrl = await exportToCanvas({
+        predictionName: predictionSet.name,
+        username: user?.username,
+        predictions,
+        knockoutPredictions,
+        bestThirdPlaces,
+        getTeamById,
+      });
+
+      const link = document.createElement('a');
+      link.download = `${predictionSet.name.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error('Error exporting:', err);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const groups = getAllGroups();
   const completedPlayoffs = playoffs.filter(p => playoffSelections[p.id]?.final).length;
   const completedGroups = groups.filter(g => predictions[g]?.length === 4).length;
@@ -179,12 +212,26 @@ export default function PredictionDetail(): JSX.Element {
         <div>
           <h1 className="text-2xl font-bold">{predictionSet.name}</h1>
           <p className="text-sm text-muted-foreground">
-            Creada: {new Date(predictionSet.created_at).toLocaleDateString()}
+            {t('predictions.created')} {new Date(predictionSet.created_at).toLocaleDateString()}
           </p>
         </div>
-        <Button variant="outline" asChild>
-          <Link to={`/repechajes?setId=${id}`}>Editar Prediccion</Link>
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={handleExport}
+            disabled={exporting}
+          >
+            {exporting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4" />
+            )}
+            <span className="ml-2">{t('export.button')}</span>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link to={`/repechajes?setId=${id}`}>{t('common.edit')}</Link>
+          </Button>
+        </div>
       </div>
 
       {/* Champion Display */}
@@ -485,10 +532,10 @@ export default function PredictionDetail(): JSX.Element {
       {/* Navigation */}
       <div className="flex justify-between pt-6 border-t">
         <Button variant="outline" asChild>
-          <Link to="/mis-predicciones">Volver a Mis Predicciones</Link>
+          <Link to="/mis-predicciones">{t('common.back')}</Link>
         </Button>
         <Button asChild>
-          <Link to={`/repechajes?setId=${id}`}>Editar Prediccion</Link>
+          <Link to={`/repechajes?setId=${id}`}>{t('common.edit')}</Link>
         </Button>
       </div>
     </div>

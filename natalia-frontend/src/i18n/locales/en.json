@@ -70,7 +70,8 @@
     "sfWinner": "Semi-final Winner (x2)",
     "thirdPlace": "Third Place Winner",
     "champion": "Champion",
-    "each": "each"
+    "each": "each",
+    "predictionsCloseAt": "Predictions close on"
   },
   "predictions": {
     "closed": "Predictions are closed",
@@ -96,7 +97,11 @@
     "inProgress": "In progress",
     "notStarted": "Not started",
     "deletePrediction": "Delete Prediction",
-    "deleteConfirm": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone."
+    "deleteConfirm": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
+    "duplicate": "Duplicate",
+    "duplicatePrediction": "Duplicate Prediction",
+    "duplicateDesc": "A copy of this prediction will be created with all its data",
+    "copy": "copy"
   },
   "playoffs": {
     "title": "Playoffs",
@@ -120,7 +125,7 @@
   "groups": {
     "title": "Group Stage",
     "step": "Step 2 of 4",
-    "description": "Order the teams in each group according to your prediction",
+    "description": "Place the teams in their final position in the group stage",
     "dragToReorder": "Drag to reorder",
     "group": "Group",
     "resetGroup": "Reset group",
@@ -287,6 +292,14 @@
     "loadingFailed": "Failed to load",
     "savingFailed": "Failed to save"
   },
+  "stats": {
+    "communityTitle": "Community Statistics",
+    "topChampions": "Top Champion Picks",
+    "topFinalists": "Top Finalist Picks",
+    "controversialGroups": "Most Contested Groups",
+    "controversialDesc": "Percentage of votes for group winner",
+    "basedOn": "Based on {{count}} predictions"
+  },
   "languages": {
     "es": "Espanol",
     "en": "English",
@@ -294,5 +307,9 @@
     "fr": "Francais",
     "de": "Deutsch",
     "zh": "中文"
+  },
+  "export": {
+    "button": "Export",
+    "exporting": "Exporting..."
   }
 }

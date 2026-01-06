@@ -70,7 +70,8 @@
     "sfWinner": "Halbfinale Gewinner (x2)",
     "thirdPlace": "Spiel um Platz 3 Gewinner",
     "champion": "Weltmeister",
-    "each": "je"
+    "each": "je",
+    "predictionsCloseAt": "Vorhersagen schliessen am"
   },
   "predictions": {
     "closed": "Vorhersagen sind geschlossen",
@@ -96,7 +97,11 @@
     "inProgress": "In Bearbeitung",
     "notStarted": "Nicht begonnen",
     "deletePrediction": "Vorhersage loschen",
-    "deleteConfirm": "Sind Sie sicher, dass Sie \"{{name}}\" loschen mochten? Diese Aktion kann nicht ruckgangig gemacht werden."
+    "deleteConfirm": "Sind Sie sicher, dass Sie \"{{name}}\" loschen mochten? Diese Aktion kann nicht ruckgangig gemacht werden.",
+    "duplicate": "Duplizieren",
+    "duplicatePrediction": "Vorhersage duplizieren",
+    "duplicateDesc": "Eine Kopie dieser Vorhersage wird mit allen Daten erstellt",
+    "copy": "Kopie"
   },
   "playoffs": {
     "title": "Playoffs",
@@ -120,7 +125,7 @@
   "groups": {
     "title": "Gruppenphase",
     "step": "Schritt 2 von 4",
-    "description": "Ordnen Sie die Teams in jeder Gruppe nach Ihrer Vorhersage",
+    "description": "Platzieren Sie die Teams auf ihrer Endposition in der Gruppenphase",
     "dragToReorder": "Ziehen zum Neuordnen",
     "group": "Gruppe",
     "resetGroup": "Gruppe zurucksetzen",
@@ -287,6 +292,14 @@
     "loadingFailed": "Laden fehlgeschlagen",
     "savingFailed": "Speichern fehlgeschlagen"
   },
+  "stats": {
+    "communityTitle": "Community-Statistiken",
+    "topChampions": "Favoriten fur den Titel",
+    "topFinalists": "Favoriten fur das Finale",
+    "controversialGroups": "Umstrittenste Gruppen",
+    "controversialDesc": "Prozent der Stimmen fur den Gruppensieger",
+    "basedOn": "Basierend auf {{count}} Vorhersagen"
+  },
   "languages": {
     "es": "Espanol",
     "en": "English",
@@ -294,5 +307,9 @@
     "fr": "Francais",
     "de": "Deutsch",
     "zh": "中文"
+  },
+  "export": {
+    "button": "Exportieren",
+    "exporting": "Exportiere..."
   }
 }

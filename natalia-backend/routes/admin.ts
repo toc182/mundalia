@@ -344,6 +344,66 @@ router.put('/settings/deadline', async (req: Request<unknown, unknown, SetDeadli
   }
 });
 
+interface SetPredictionModesBody {
+  modes: 'positions' | 'scores' | 'both';
+  confirmDelete?: boolean;
+}
+
+// Get count of predictions by mode (for confirmation dialog)
+router.get('/prediction-counts-by-mode', async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const result = await db.query(`
+      SELECT mode, COUNT(*) as count
+      FROM prediction_sets
+      GROUP BY mode
+    `);
+    const counts: Record<string, number> = { positions: 0, scores: 0 };
+    for (const row of result.rows as { mode: string; count: string }[]) {
+      counts[row.mode] = parseInt(row.count);
+    }
+    success(res, counts);
+  } catch (err) {
+    console.error('Error getting prediction counts:', err);
+    serverError(res, err as Error);
+  }
+});
+
+// Set prediction modes (which modes are available for users)
+router.put('/settings/prediction-modes', async (req: Request<unknown, unknown, SetPredictionModesBody>, res: Response): Promise<void> => {
+  const { modes, confirmDelete } = req.body;
+
+  // Validate modes value
+  if (!['positions', 'scores', 'both'].includes(modes)) {
+    validationError(res, 'Invalid modes value. Must be: positions, scores, or both');
+    return;
+  }
+
+  try {
+    let deletedCount = 0;
+
+    // If restricting to a single mode, delete predictions of the other mode
+    if (modes !== 'both' && confirmDelete) {
+      const modeToDelete = modes === 'positions' ? 'scores' : 'positions';
+      const deleteResult = await db.query(
+        'DELETE FROM prediction_sets WHERE mode = $1 RETURNING id',
+        [modeToDelete]
+      );
+      deletedCount = deleteResult.rowCount || 0;
+    }
+
+    await db.query(`
+      INSERT INTO settings (key, value)
+      VALUES ('prediction_modes', $1)
+      ON CONFLICT (key) DO UPDATE SET value = $1
+    `, [modes]);
+
+    success(res, { deletedCount }, 'Prediction modes updated');
+  } catch (err) {
+    console.error('Error setting prediction modes:', err);
+    serverError(res, err as Error);
+  }
+});
+
 // ============================================
 // STATISTICS
 // ============================================
