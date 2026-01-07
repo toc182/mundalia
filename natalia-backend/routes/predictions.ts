@@ -127,7 +127,7 @@ interface GroupPredictionBody {
 
 interface SaveGroupsBody {
   predictions: GroupPredictionBody[];
-  setId?: number;
+  setId?: string | number;
 }
 
 // Save group predictions (order of finish in a group)
@@ -170,7 +170,18 @@ router.post('/groups', auth, async (req: Request<unknown, unknown, SaveGroupsBod
       }
     }
 
-    const setId = requestSetId || await getOrCreateDefaultSet(authReq.user.id);
+    // Resolve public_id to numeric id
+    let setId: number;
+    if (requestSetId) {
+      const resolved = await resolveSetId(requestSetId, authReq.user.id);
+      if (!resolved) {
+        notFound(res, 'Prediction set not found');
+        return;
+      }
+      setId = resolved;
+    } else {
+      setId = await getOrCreateDefaultSet(authReq.user.id);
+    }
 
     // Use dedicated client for transaction (required for BEGIN/COMMIT to work)
     const client = await pool.connect();
@@ -295,7 +306,7 @@ interface PlayoffSelection {
 
 interface SavePlayoffsBody {
   predictions: Record<string, PlayoffSelection>;
-  setId?: number;
+  setId?: string | number;
 }
 
 // Save playoff predictions (all at once)
@@ -331,7 +342,18 @@ router.post('/playoffs', auth, async (req: Request<unknown, unknown, SavePlayoff
   }
 
   try {
-    const setId = requestSetId || await getOrCreateDefaultSet(authReq.user.id);
+    // Resolve public_id to numeric id
+    let setId: number;
+    if (requestSetId) {
+      const resolved = await resolveSetId(requestSetId, authReq.user.id);
+      if (!resolved) {
+        notFound(res, 'Prediction set not found');
+        return;
+      }
+      setId = resolved;
+    } else {
+      setId = await getOrCreateDefaultSet(authReq.user.id);
+    }
 
     // Use dedicated client for transaction
     const client = await pool.connect();
@@ -391,7 +413,7 @@ router.get('/third-places', auth, async (req: Request, res: Response): Promise<v
 
 interface SaveThirdPlacesBody {
   selectedGroups: string;
-  setId?: number;
+  setId?: string | number;
 }
 
 // Save third place predictions
@@ -419,7 +441,18 @@ router.post('/third-places', auth, async (req: Request<unknown, unknown, SaveThi
   }
 
   try {
-    const setId = requestSetId || await getOrCreateDefaultSet(authReq.user.id);
+    // Resolve public_id to numeric id
+    let setId: number;
+    if (requestSetId) {
+      const resolved = await resolveSetId(requestSetId, authReq.user.id);
+      if (!resolved) {
+        notFound(res, 'Prediction set not found');
+        return;
+      }
+      setId = resolved;
+    } else {
+      setId = await getOrCreateDefaultSet(authReq.user.id);
+    }
 
     // Use dedicated client for transaction
     const client = await pool.connect();
@@ -500,7 +533,7 @@ interface KnockoutPredValue {
 
 interface SaveKnockoutBody {
   predictions: Record<string, number | KnockoutPredValue>;
-  setId?: number;
+  setId?: string | number;
 }
 
 // Save knockout predictions (all at once)
@@ -528,7 +561,18 @@ router.post('/knockout', auth, async (req: Request<unknown, unknown, SaveKnockou
   }
 
   try {
-    const setId = requestSetId || await getOrCreateDefaultSet(authReq.user.id);
+    // Resolve public_id to numeric id
+    let setId: number;
+    if (requestSetId) {
+      const resolved = await resolveSetId(requestSetId, authReq.user.id);
+      if (!resolved) {
+        notFound(res, 'Prediction set not found');
+        return;
+      }
+      setId = resolved;
+    } else {
+      setId = await getOrCreateDefaultSet(authReq.user.id);
+    }
 
     // Use dedicated client for transaction
     const client = await pool.connect();
@@ -621,7 +665,7 @@ interface ScoreValue {
 
 interface SaveScoresBody {
   scores: Record<string, Record<string, ScoreValue>>;
-  setId?: number;
+  setId?: string | number;
 }
 
 // Save score predictions
@@ -662,7 +706,18 @@ router.post('/scores', auth, async (req: Request<unknown, unknown, SaveScoresBod
   }
 
   try {
-    const setId = requestSetId || await getOrCreateDefaultSet(authReq.user.id);
+    // Resolve public_id to numeric id
+    let setId: number;
+    if (requestSetId) {
+      const resolved = await resolveSetId(requestSetId, authReq.user.id);
+      if (!resolved) {
+        notFound(res, 'Prediction set not found');
+        return;
+      }
+      setId = resolved;
+    } else {
+      setId = await getOrCreateDefaultSet(authReq.user.id);
+    }
 
     // Verify that the set is in 'scores' mode
     const setCheck = await db.query(
@@ -754,7 +809,7 @@ router.get('/tiebreaker', auth, async (req: Request, res: Response): Promise<voi
 });
 
 interface SaveTiebreakerBody {
-  setId?: number;
+  setId?: string | number;
   group: string;
   tiedTeamIds: number[];
   resolvedOrder: number[];
@@ -796,7 +851,18 @@ router.post('/tiebreaker', auth, async (req: Request<unknown, unknown, SaveTiebr
   }
 
   try {
-    const setId = requestSetId || await getOrCreateDefaultSet(authReq.user.id);
+    // Resolve public_id to numeric id
+    let setId: number;
+    if (requestSetId) {
+      const resolved = await resolveSetId(requestSetId, authReq.user.id);
+      if (!resolved) {
+        notFound(res, 'Prediction set not found');
+        return;
+      }
+      setId = resolved;
+    } else {
+      setId = await getOrCreateDefaultSet(authReq.user.id);
+    }
 
     // Upsert decision
     await db.query(`
