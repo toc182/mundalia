@@ -102,20 +102,20 @@ export const predictionSetsAPI = {
   getAll: (): Promise<AxiosResponse<PredictionSet[]>> =>
     api.get('/prediction-sets'),
 
-  getById: (id: number): Promise<AxiosResponse<PredictionSet>> =>
-    api.get(`/prediction-sets/${id}`),
+  getById: (publicId: string): Promise<AxiosResponse<PredictionSet>> =>
+    api.get(`/prediction-sets/${publicId}`),
 
   create: (name: string, mode: 'positions' | 'scores' = 'positions'): Promise<AxiosResponse<PredictionSet>> =>
     api.post('/prediction-sets', { name, mode }),
 
-  update: (id: number, name: string): Promise<AxiosResponse<PredictionSet>> =>
-    api.put(`/prediction-sets/${id}`, { name }),
+  update: (publicId: string, name: string): Promise<AxiosResponse<PredictionSet>> =>
+    api.put(`/prediction-sets/${publicId}`, { name }),
 
-  delete: (id: number): Promise<AxiosResponse<void>> =>
-    api.delete(`/prediction-sets/${id}`),
+  delete: (publicId: string): Promise<AxiosResponse<void>> =>
+    api.delete(`/prediction-sets/${publicId}`),
 
-  duplicate: (id: number, name: string): Promise<AxiosResponse<PredictionSet>> =>
-    api.post(`/prediction-sets/${id}/duplicate`, { name }),
+  duplicate: (publicId: string, name: string): Promise<AxiosResponse<PredictionSet>> =>
+    api.post(`/prediction-sets/${publicId}/duplicate`, { name }),
 };
 
 // ============ PREDICTIONS ============

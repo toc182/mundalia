@@ -95,7 +95,7 @@ export default function MyPredictions(): JSX.Element {
       setNewName('');
       setNewMode('positions');
       // Navigate to start making predictions with the new set
-      navigate(`/repechajes?setId=${response.data.id}`);
+      navigate(`/repechajes?setId=${response.data.public_id}`);
     } catch (err) {
       setError(t('errors.savingFailed'));
     } finally {
@@ -107,7 +107,7 @@ export default function MyPredictions(): JSX.Element {
     if (!selectedSet) return;
     setSaving(true);
     try {
-      await predictionSetsAPI.delete(selectedSet.id);
+      await predictionSetsAPI.delete(selectedSet.public_id);
       setShowDeleteDialog(false);
       setSelectedSet(null);
       loadPredictionSets();
@@ -133,7 +133,7 @@ export default function MyPredictions(): JSX.Element {
     if (!selectedSet || !duplicateName.trim()) return;
     setSaving(true);
     try {
-      await predictionSetsAPI.duplicate(selectedSet.id, duplicateName.trim());
+      await predictionSetsAPI.duplicate(selectedSet.public_id, duplicateName.trim());
       setShowDuplicateDialog(false);
       setSelectedSet(null);
       setDuplicateName('');
@@ -270,7 +270,7 @@ export default function MyPredictions(): JSX.Element {
                       size="sm"
                       asChild
                     >
-                      <Link to={`/prediccion/${set.id}`}>
+                      <Link to={`/prediccion/${set.public_id}`}>
                         <Eye className="w-4 h-4 mr-1" />
                         {t('common.view')}
                       </Link>
@@ -281,7 +281,7 @@ export default function MyPredictions(): JSX.Element {
                         size="sm"
                         asChild
                       >
-                        <Link to={`/repechajes?setId=${set.id}`}>
+                        <Link to={`/repechajes?setId=${set.public_id}`}>
                           <Edit2 className="w-4 h-4 mr-1" />
                           {t('common.edit')}
                         </Link>

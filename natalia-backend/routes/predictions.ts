@@ -7,6 +7,43 @@ import { AuthenticatedRequest } from '../types';
 
 const router: Router = express.Router();
 
+// Helper to resolve public_id to internal id
+async function resolveSetId(publicIdOrId: string | number | undefined, userId: number): Promise<number | null> {
+  if (!publicIdOrId) return null;
+
+  // Try to find by public_id first (new format - 8 char strings)
+  const result = await db.query(
+    'SELECT id FROM prediction_sets WHERE public_id = $1 AND user_id = $2',
+    [publicIdOrId, userId]
+  );
+
+  if (result.rows.length > 0) {
+    return (result.rows[0] as { id: number }).id;
+  }
+
+  // Fallback: try as numeric id (legacy support)
+  if (!isNaN(Number(publicIdOrId))) {
+    const legacyResult = await db.query(
+      'SELECT id FROM prediction_sets WHERE id = $1 AND user_id = $2',
+      [publicIdOrId, userId]
+    );
+    if (legacyResult.rows.length > 0) {
+      return (legacyResult.rows[0] as { id: number }).id;
+    }
+  }
+
+  return null;
+}
+
+// Helper to get setId from query param or create default
+async function getSetIdFromQuery(querySetId: string | undefined, userId: number): Promise<number> {
+  if (querySetId) {
+    const resolved = await resolveSetId(querySetId, userId);
+    if (resolved) return resolved;
+  }
+  return await getOrCreateDefaultSet(userId);
+}
+
 // Helper to get or create default prediction set
 async function getOrCreateDefaultSet(userId: number): Promise<number> {
   // Check if user has any prediction sets
@@ -30,7 +67,7 @@ async function getOrCreateDefaultSet(userId: number): Promise<number> {
 router.get('/my', auth, async (req: Request, res: Response): Promise<void> => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const setId = req.query.setId || await getOrCreateDefaultSet(authReq.user.id);
+    const setId = await getSetIdFromQuery(req.query.setId as string | undefined, authReq.user.id);
 
     const [matchPredictions, groupPredictions] = await Promise.all([
       db.query(`
@@ -67,7 +104,7 @@ router.get('/my', auth, async (req: Request, res: Response): Promise<void> => {
 router.get('/groups', auth, async (req: Request, res: Response): Promise<void> => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const setId = req.query.setId || await getOrCreateDefaultSet(authReq.user.id);
+    const setId = await getSetIdFromQuery(req.query.setId as string | undefined, authReq.user.id);
 
     const result = await db.query(`
       SELECT group_letter, team_id, predicted_position
@@ -213,7 +250,7 @@ router.post('/match', auth, async (req: Request<unknown, unknown, MatchPredictio
 router.get('/playoffs', auth, async (req: Request, res: Response): Promise<void> => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const setId = req.query.setId || await getOrCreateDefaultSet(authReq.user.id);
+    const setId = await getSetIdFromQuery(req.query.setId as string | undefined, authReq.user.id);
 
     const result = await db.query(
       'SELECT * FROM playoff_predictions WHERE user_id = $1 AND prediction_set_id = $2',
@@ -334,7 +371,7 @@ router.post('/playoffs', auth, async (req: Request<unknown, unknown, SavePlayoff
 router.get('/third-places', auth, async (req: Request, res: Response): Promise<void> => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const setId = req.query.setId || await getOrCreateDefaultSet(authReq.user.id);
+    const setId = await getSetIdFromQuery(req.query.setId as string | undefined, authReq.user.id);
 
     const result = await db.query(
       'SELECT selected_groups FROM third_place_predictions WHERE user_id = $1 AND prediction_set_id = $2',
@@ -422,7 +459,7 @@ interface KnockoutRow {
 router.get('/knockout', auth, async (req: Request, res: Response): Promise<void> => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const setId = req.query.setId || await getOrCreateDefaultSet(authReq.user.id);
+    const setId = await getSetIdFromQuery(req.query.setId as string | undefined, authReq.user.id);
 
     // Check prediction set mode
     const setCheck = await db.query('SELECT mode FROM prediction_sets WHERE id = $1', [setId]);
@@ -549,7 +586,7 @@ interface ScoreRow {
 router.get('/scores', auth, async (req: Request, res: Response): Promise<void> => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const setId = req.query.setId || await getOrCreateDefaultSet(authReq.user.id);
+    const setId = await getSetIdFromQuery(req.query.setId as string | undefined, authReq.user.id);
 
     const result = await db.query(
       `SELECT group_letter, match_number, score_a, score_b
@@ -693,7 +730,7 @@ interface TiebreakerRow {
 router.get('/tiebreaker', auth, async (req: Request, res: Response): Promise<void> => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const setId = req.query.setId || await getOrCreateDefaultSet(authReq.user.id);
+    const setId = await getSetIdFromQuery(req.query.setId as string | undefined, authReq.user.id);
 
     const result = await db.query(
       `SELECT group_letter, tied_team_ids, resolved_order
@@ -784,11 +821,17 @@ router.post('/tiebreaker', auth, async (req: Request<unknown, unknown, SaveTiebr
 router.get('/has-subsequent-data', auth, async (req: Request, res: Response): Promise<void> => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const setId = req.query.setId as string;
+    const querySetId = req.query.setId as string;
     const phase = req.query.phase as string;
 
-    if (!setId) {
+    if (!querySetId) {
       validationError(res, 'setId is required');
+      return;
+    }
+
+    const setId = await resolveSetId(querySetId, authReq.user.id);
+    if (!setId) {
+      notFound(res, 'Prediction set not found');
       return;
     }
 
@@ -830,9 +873,15 @@ router.get('/has-subsequent-data', auth, async (req: Request, res: Response): Pr
 router.delete('/reset-from-playoffs', auth, async (req: Request, res: Response): Promise<void> => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const setId = req.query.setId as string;
-    if (!setId) {
+    const querySetId = req.query.setId as string;
+    if (!querySetId) {
       validationError(res, 'setId is required');
+      return;
+    }
+
+    const setId = await resolveSetId(querySetId, authReq.user.id);
+    if (!setId) {
+      notFound(res, 'Prediction set not found');
       return;
     }
 
@@ -860,9 +909,15 @@ router.delete('/reset-from-playoffs', auth, async (req: Request, res: Response):
 router.delete('/reset-from-groups', auth, async (req: Request, res: Response): Promise<void> => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const setId = req.query.setId as string;
-    if (!setId) {
+    const querySetId = req.query.setId as string;
+    if (!querySetId) {
       validationError(res, 'setId is required');
+      return;
+    }
+
+    const setId = await resolveSetId(querySetId, authReq.user.id);
+    if (!setId) {
+      notFound(res, 'Prediction set not found');
       return;
     }
 
@@ -889,9 +944,15 @@ router.delete('/reset-from-groups', auth, async (req: Request, res: Response): P
 router.delete('/reset-from-thirds', auth, async (req: Request, res: Response): Promise<void> => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const setId = req.query.setId as string;
-    if (!setId) {
+    const querySetId = req.query.setId as string;
+    if (!querySetId) {
       validationError(res, 'setId is required');
+      return;
+    }
+
+    const setId = await resolveSetId(querySetId, authReq.user.id);
+    if (!setId) {
+      notFound(res, 'Prediction set not found');
       return;
     }
 
@@ -921,7 +982,7 @@ interface KnockoutPredRow {
 router.get('/all', auth, async (req: Request, res: Response): Promise<void> => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const setId = req.query.setId || await getOrCreateDefaultSet(authReq.user.id);
+    const setId = await getSetIdFromQuery(req.query.setId as string | undefined, authReq.user.id);
 
     const [groupPredictions, playoffPredictions, thirdPlaces, knockoutPredictions] = await Promise.all([
       db.query(`

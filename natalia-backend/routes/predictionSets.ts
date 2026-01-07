@@ -1,4 +1,5 @@
 import express, { Request, Response, Router } from 'express';
+import crypto from 'crypto';
 import db from '../config/db';
 import { auth } from '../middleware/auth';
 import { success, created, notFound, validationError, serverError } from '../utils/response';
@@ -6,8 +7,20 @@ import { AuthenticatedRequest } from '../types';
 
 const router: Router = express.Router();
 
+// Generate unique 8-character public ID
+const generatePublicId = (): string => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let result = '';
+  const randomBytes = crypto.randomBytes(8);
+  for (let i = 0; i < 8; i++) {
+    result += chars[randomBytes[i] % chars.length];
+  }
+  return result;
+};
+
 interface PredictionSetRow {
   id: number;
+  public_id: string;
   user_id: number;
   name: string;
   mode: 'positions' | 'scores';
@@ -55,22 +68,24 @@ router.get('/', auth, async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// Get single prediction set with all data
-router.get('/:id', auth, async (req: Request, res: Response): Promise<void> => {
+// Get single prediction set with all data (by public_id)
+router.get('/:publicId', auth, async (req: Request, res: Response): Promise<void> => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const setId = req.params.id;
+    const publicId = req.params.publicId;
 
-    // Verify ownership
+    // Verify ownership (lookup by public_id)
     const setResult = await db.query(
-      'SELECT * FROM prediction_sets WHERE id = $1 AND user_id = $2',
-      [setId, authReq.user.id]
+      'SELECT * FROM prediction_sets WHERE public_id = $1 AND user_id = $2',
+      [publicId, authReq.user.id]
     );
 
     if (setResult.rows.length === 0) {
       notFound(res, 'Prediction set not found');
       return;
     }
+
+    const setId = (setResult.rows[0] as PredictionSetRow).id;
 
     // Get all predictions for this set
     const [groupPredictions, playoffPredictions, thirdPlaces, knockoutPredictions] = await Promise.all([
@@ -142,9 +157,19 @@ router.post('/', auth, async (req: Request<unknown, unknown, CreateSetBody>, res
   }
 
   try {
+    // Generate unique public_id
+    let publicId = generatePublicId();
+    let attempts = 0;
+    while (attempts < 10) {
+      const existing = await db.query('SELECT id FROM prediction_sets WHERE public_id = $1', [publicId]);
+      if (existing.rows.length === 0) break;
+      publicId = generatePublicId();
+      attempts++;
+    }
+
     const result = await db.query(
-      'INSERT INTO prediction_sets (user_id, name, mode) VALUES ($1, $2, $3) RETURNING *',
-      [authReq.user.id, name.trim(), mode]
+      'INSERT INTO prediction_sets (user_id, name, mode, public_id) VALUES ($1, $2, $3, $4) RETURNING *',
+      [authReq.user.id, name.trim(), mode, publicId]
     );
 
     created(res, result.rows[0] as PredictionSetRow);
@@ -153,11 +178,11 @@ router.post('/', auth, async (req: Request<unknown, unknown, CreateSetBody>, res
   }
 });
 
-// Update prediction set name
-router.put('/:id', auth, async (req: Request, res: Response): Promise<void> => {
+// Update prediction set name (by public_id)
+router.put('/:publicId', auth, async (req: Request, res: Response): Promise<void> => {
   const authReq = req as unknown as AuthenticatedRequest;
   const { name } = req.body as UpdateSetBody;
-  const setId = req.params.id;
+  const publicId = req.params.publicId;
 
   if (!name || name.trim().length === 0) {
     validationError(res, 'Name is required');
@@ -166,8 +191,8 @@ router.put('/:id', auth, async (req: Request, res: Response): Promise<void> => {
 
   try {
     const result = await db.query(
-      'UPDATE prediction_sets SET name = $1, updated_at = NOW() WHERE id = $2 AND user_id = $3 RETURNING *',
-      [name.trim(), setId, authReq.user.id]
+      'UPDATE prediction_sets SET name = $1, updated_at = NOW() WHERE public_id = $2 AND user_id = $3 RETURNING *',
+      [name.trim(), publicId, authReq.user.id]
     );
 
     if (result.rows.length === 0) {
@@ -181,15 +206,15 @@ router.put('/:id', auth, async (req: Request, res: Response): Promise<void> => {
   }
 });
 
-// Delete prediction set
-router.delete('/:id', auth, async (req: Request, res: Response): Promise<void> => {
+// Delete prediction set (by public_id)
+router.delete('/:publicId', auth, async (req: Request, res: Response): Promise<void> => {
   const authReq = req as AuthenticatedRequest;
-  const setId = req.params.id;
+  const publicId = req.params.publicId;
 
   try {
     const result = await db.query(
-      'DELETE FROM prediction_sets WHERE id = $1 AND user_id = $2 RETURNING id',
-      [setId, authReq.user.id]
+      'DELETE FROM prediction_sets WHERE public_id = $1 AND user_id = $2 RETURNING id',
+      [publicId, authReq.user.id]
     );
 
     if (result.rows.length === 0) {
@@ -204,9 +229,9 @@ router.delete('/:id', auth, async (req: Request, res: Response): Promise<void> =
 });
 
 // Duplicate a prediction set (with transaction for data consistency)
-router.post('/:id/duplicate', auth, async (req: Request, res: Response): Promise<void> => {
+router.post('/:publicId/duplicate', auth, async (req: Request, res: Response): Promise<void> => {
   const authReq = req as unknown as AuthenticatedRequest;
-  const sourceSetId = req.params.id;
+  const sourcePublicId = req.params.publicId;
   const { name } = req.body;
 
   // Use transaction to ensure all-or-nothing duplication
@@ -215,8 +240,8 @@ router.post('/:id/duplicate', auth, async (req: Request, res: Response): Promise
   try {
     // Verify ownership of source (before starting transaction)
     const sourceSet = await client.query(
-      'SELECT * FROM prediction_sets WHERE id = $1 AND user_id = $2',
-      [sourceSetId, authReq.user.id]
+      'SELECT * FROM prediction_sets WHERE public_id = $1 AND user_id = $2',
+      [sourcePublicId, authReq.user.id]
     );
 
     if (sourceSet.rows.length === 0) {
@@ -227,13 +252,24 @@ router.post('/:id/duplicate', auth, async (req: Request, res: Response): Promise
     // Start transaction
     await client.query('BEGIN');
 
+    // Generate unique public_id for new set
+    let newPublicId = generatePublicId();
+    let attempts = 0;
+    while (attempts < 10) {
+      const existing = await client.query('SELECT id FROM prediction_sets WHERE public_id = $1', [newPublicId]);
+      if (existing.rows.length === 0) break;
+      newPublicId = generatePublicId();
+      attempts++;
+    }
+
     // Create new set (preserve mode from source)
     const sourceRow = sourceSet.rows[0] as PredictionSetRow;
+    const sourceSetId = sourceRow.id;
     const newName = name || `${sourceRow.name} (copia)`;
     const sourceMode = sourceRow.mode || 'positions';
     const newSet = await client.query(
-      'INSERT INTO prediction_sets (user_id, name, mode) VALUES ($1, $2, $3) RETURNING *',
-      [authReq.user.id, newName, sourceMode]
+      'INSERT INTO prediction_sets (user_id, name, mode, public_id) VALUES ($1, $2, $3, $4) RETURNING *',
+      [authReq.user.id, newName, sourceMode, newPublicId]
     );
     const newSetId = (newSet.rows[0] as PredictionSetRow).id;
 

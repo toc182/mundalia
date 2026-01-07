@@ -95,7 +95,7 @@ function AppRoutes(): JSX.Element {
         <Route path="/terceros" element={<ProtectedRoute><ThirdPlaces /></ProtectedRoute>} />
         <Route path="/eliminatorias" element={<ProtectedRoute><Knockout /></ProtectedRoute>} />
         <Route path="/mis-predicciones" element={<ProtectedRoute><MyPredictions /></ProtectedRoute>} />
-        <Route path="/prediccion/:id" element={<ProtectedRoute><PredictionDetail /></ProtectedRoute>} />
+        <Route path="/prediccion/:publicId" element={<ProtectedRoute><PredictionDetail /></ProtectedRoute>} />
         <Route path="/mis-grupos" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
         <Route path="/cuenta" element={<ProtectedRoute><Account /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />

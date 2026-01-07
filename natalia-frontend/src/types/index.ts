@@ -43,6 +43,7 @@ export interface Team {
 
 export interface PredictionSet {
   id: number;
+  public_id: string;
   user_id: number;
   name: string;
   mode: 'positions' | 'scores';

@@ -77,7 +77,7 @@ export default function Home(): JSX.Element {
       setShowCreateDialog(false);
       setNewName('');
       setNewMode('positions');
-      navigate(`/repechajes?setId=${response.data.id}`);
+      navigate(`/repechajes?setId=${response.data.public_id}`);
     } catch (err) {
       console.error('Error creating prediction set:', err);
     } finally {

@@ -250,6 +250,24 @@ CREATE INDEX IF NOT EXISTS idx_tiebreaker_decisions_set
   ON tiebreaker_decisions(prediction_set_id);
 
 -- ============================================
+-- MIGRACION 008: Public ID para URLs amigables
+-- Fecha: 2026-01-06
+-- ============================================
+
+-- Agregar columna public_id para URLs sin exponer IDs numericos
+ALTER TABLE prediction_sets
+ADD COLUMN IF NOT EXISTS public_id VARCHAR(8);
+
+-- Indice unico para busquedas rapidas por public_id
+CREATE UNIQUE INDEX IF NOT EXISTS idx_prediction_sets_public_id
+  ON prediction_sets(public_id);
+
+-- Generar public_id para registros existentes que no tengan
+UPDATE prediction_sets
+SET public_id = substr(md5(random()::text || id::text), 1, 8)
+WHERE public_id IS NULL;
+
+-- ============================================
 -- NUEVA MIGRACION: Agregar aqui abajo
 -- Fecha: YYYY-MM-DD
 -- ============================================

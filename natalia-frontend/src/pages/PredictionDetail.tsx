@@ -59,7 +59,7 @@ type GroupPredictions = Record<string, number[]>;
 type KnockoutPredictions = Record<string, number>;
 
 export default function PredictionDetail(): JSX.Element {
-  const { id } = useParams<{ id: string }>();
+  const { publicId } = useParams<{ publicId: string }>();
   const { t } = useTranslation();
   const { user } = useAuth();
   const [predictionSet, setPredictionSet] = useState<PredictionSetState | null>(null);
@@ -77,7 +77,7 @@ export default function PredictionDetail(): JSX.Element {
       setError(null);
 
       try {
-        const response = await predictionSetsAPI.getById(Number(id));
+        const response = await predictionSetsAPI.getById(publicId!);
         const data: PredictionSetResponse = response.data as unknown as PredictionSetResponse;
 
         setPredictionSet({
@@ -121,7 +121,7 @@ export default function PredictionDetail(): JSX.Element {
     };
 
     loadPredictionSet();
-  }, [id]);
+  }, [publicId]);
 
   // Get team by ID using centralized helper
   const getTeamById = (teamId: number | string | null | undefined): PlayoffWinnerTeam | null =>
@@ -229,7 +229,7 @@ export default function PredictionDetail(): JSX.Element {
             <span className="ml-2">{t('export.button')}</span>
           </Button>
           <Button variant="outline" asChild>
-            <Link to={`/repechajes?setId=${id}`}>{t('common.edit')}</Link>
+            <Link to={`/repechajes?setId=${publicId}`}>{t('common.edit')}</Link>
           </Button>
         </div>
       </div>
@@ -535,7 +535,7 @@ export default function PredictionDetail(): JSX.Element {
           <Link to="/mis-predicciones">{t('common.back')}</Link>
         </Button>
         <Button asChild>
-          <Link to={`/repechajes?setId=${id}`}>{t('common.edit')}</Link>
+          <Link to={`/repechajes?setId=${publicId}`}>{t('common.edit')}</Link>
         </Button>
       </div>
     </div>
