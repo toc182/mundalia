@@ -20,9 +20,9 @@ const loginLimiter = rateLimit({
 });
 
 const registerLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hora
-  max: 3, // 3 registros por hora por IP
-  message: { success: false, error: 'Demasiados registros. Intenta de nuevo en 1 hora.', code: 'RATE_LIMIT' },
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 10, // 10 intentos por ventana
+  message: { success: false, error: 'Demasiados intentos. Intenta de nuevo en 15 minutos.', code: 'RATE_LIMIT' },
   standardHeaders: true,
   legacyHeaders: false,
 });
