@@ -80,8 +80,9 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
 
       return { success: true };
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      const message = error.response?.data?.message || 'Error al registrarse';
+      console.error('[AUTH] register error:', err);
+      const error = err as { response?: { data?: { error?: string; message?: string } } };
+      const message = error.response?.data?.error || error.response?.data?.message || 'Error al registrarse';
       setError(message);
       return { success: false, error: message };
     }
