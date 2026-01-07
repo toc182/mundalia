@@ -310,6 +310,7 @@
   },
   "export": {
     "button": "导出",
+    "share": "分享",
     "exporting": "导出中..."
   }
 }

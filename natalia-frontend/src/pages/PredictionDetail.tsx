@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Download, Loader2 } from 'lucide-react';
+import { Download, Loader2, Share } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { exportToCanvas } from '@/utils/exportCanvas';
 import { mockTeams, getAllGroups, type Team } from '@/data/mockData';
@@ -131,6 +131,23 @@ export default function PredictionDetail(): JSX.Element {
   const getPlayoffWinner = (playoffId: string): Team | null =>
     getPlayoffWinnerHelper(playoffId, playoffSelections);
 
+  // Convert data URL to Blob
+  const dataUrlToBlob = (dataUrl: string): Blob => {
+    const parts = dataUrl.split(',');
+    const mime = parts[0].match(/:(.*?);/)?.[1] || 'image/png';
+    const binary = atob(parts[1]);
+    const array = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      array[i] = binary.charCodeAt(i);
+    }
+    return new Blob([array], { type: mime });
+  };
+
+  // Check if Web Share API with files is supported
+  const canShareFiles = (): boolean => {
+    return navigator.share !== undefined && navigator.canShare !== undefined;
+  };
+
   // Export to image using Canvas API
   const handleExport = async (): Promise<void> => {
     if (!predictionSet) return;
@@ -146,8 +163,32 @@ export default function PredictionDetail(): JSX.Element {
         getTeamById,
       });
 
+      const fileName = `${predictionSet.name.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
+
+      // Try Web Share API first (works on iOS to save to Photos)
+      if (canShareFiles()) {
+        try {
+          const blob = dataUrlToBlob(dataUrl);
+          const file = new File([blob], fileName, { type: 'image/png' });
+
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: predictionSet.name,
+            });
+            return;
+          }
+        } catch (shareErr) {
+          // If share was cancelled or failed, fall through to download
+          if ((shareErr as Error).name !== 'AbortError') {
+            console.log('Share failed, falling back to download');
+          }
+        }
+      }
+
+      // Fallback: traditional download
       const link = document.createElement('a');
-      link.download = `${predictionSet.name.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
+      link.download = fileName;
       link.href = dataUrl;
       link.click();
     } catch (err) {
@@ -223,10 +264,12 @@ export default function PredictionDetail(): JSX.Element {
           >
             {exporting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
+            ) : canShareFiles() ? (
+              <Share className="h-4 w-4" />
             ) : (
               <Download className="h-4 w-4" />
             )}
-            <span className="ml-2">{t('export.button')}</span>
+            <span className="ml-2">{canShareFiles() ? t('export.share') : t('export.button')}</span>
           </Button>
           <Button variant="outline" asChild>
             <Link to={`/repechajes?setId=${publicId}`}>{t('common.edit')}</Link>

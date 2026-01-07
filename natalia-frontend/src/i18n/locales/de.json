@@ -310,6 +310,7 @@
   },
   "export": {
     "button": "Exportieren",
+    "share": "Teilen",
     "exporting": "Exportiere..."
   }
 }
