@@ -81,8 +81,12 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
       return { success: true };
     } catch (err: unknown) {
       console.error('[AUTH] register error:', err);
-      const error = err as { response?: { data?: { error?: string; message?: string } } };
-      const message = error.response?.data?.error || error.response?.data?.message || 'Error al registrarse';
+      const error = err as { response?: { data?: { error?: string; errors?: string[]; message?: string } } };
+      // Si hay múltiples errores de validación, mostrarlos todos
+      const errors = error.response?.data?.errors;
+      const message = errors && errors.length > 1
+        ? errors.join('\n')
+        : error.response?.data?.error || error.response?.data?.message || 'Error al registrarse';
       setError(message);
       return { success: false, error: message };
     }
