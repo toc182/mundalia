@@ -141,7 +141,7 @@ export default function Knockout(): React.JSX.Element {
     const nextUrl = setId ? `/prediccion/${setId}` : '/mis-predicciones';
 
     try {
-      await predictionsAPI.saveKnockout(buildSaveData(), parseInt(setId!, 10));
+      await predictionsAPI.saveKnockout(buildSaveData(), setId!);
       setSaved(true);
       window.scrollTo(0, 0);
       navigate(nextUrl);

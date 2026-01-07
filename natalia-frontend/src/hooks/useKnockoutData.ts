@@ -105,7 +105,7 @@ export function useKnockoutData(): UseKnockoutDataReturn {
       if (setId) {
         try {
           // Load prediction set info
-          const setResponse = await predictionSetsAPI.getById(parseInt(setId, 10));
+          const setResponse = await predictionSetsAPI.getById(setId);
           if (setResponse.data?.name) {
             setPredictionSetName(setResponse.data.name);
           }
@@ -114,7 +114,7 @@ export function useKnockoutData(): UseKnockoutDataReturn {
           }
 
           // Load group predictions
-          const groupsResponse = await predictionsAPI.getGroups(parseInt(setId, 10));
+          const groupsResponse = await predictionsAPI.getGroups(setId);
           if (groupsResponse.data && Array.isArray(groupsResponse.data) && groupsResponse.data.length > 0) {
             const grouped: GroupPredictions = {};
             groupsResponse.data.forEach((gp: any) => {
@@ -127,20 +127,20 @@ export function useKnockoutData(): UseKnockoutDataReturn {
           }
 
           // Load playoff predictions
-          const playoffsResponse = await predictionsAPI.getPlayoffs(parseInt(setId, 10));
+          const playoffsResponse = await predictionsAPI.getPlayoffs(setId);
           if (playoffsResponse.data && Object.keys(playoffsResponse.data).length > 0) {
             setPlayoffSelections(playoffsResponse.data as PlayoffSelections);
           }
 
           // Load third places
-          const thirdResponse = await predictionsAPI.getThirdPlaces(parseInt(setId, 10));
+          const thirdResponse = await predictionsAPI.getThirdPlaces(setId);
           if (thirdResponse.data?.selectedGroups) {
             const groups = thirdResponse.data.selectedGroups.split('');
             setBestThirdPlaces(groups);
           }
 
           // Load knockout predictions
-          const knockoutResponse = await predictionsAPI.getKnockout(parseInt(setId, 10));
+          const knockoutResponse = await predictionsAPI.getKnockout(setId);
           if (knockoutResponse.data && Object.keys(knockoutResponse.data).length > 0) {
             const knockoutData = knockoutResponse.data;
             const firstValue = Object.values(knockoutData)[0];
@@ -486,7 +486,7 @@ export function useKnockoutData(): UseKnockoutDataReturn {
     }
 
     try {
-      await predictionsAPI.saveKnockout(buildSaveData(), parseInt(setId!, 10));
+      await predictionsAPI.saveKnockout(buildSaveData(), setId!);
       setSaved(true);
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
       savedTimerRef.current = setTimeout(() => setSaved(false), 2000);

@@ -133,37 +133,37 @@ interface KnockoutPredictionData {
 }
 
 export const predictionsAPI = {
-  getMy: (setId: number): Promise<AxiosResponse<GroupPrediction[]>> =>
+  getMy: (setId: number | string): Promise<AxiosResponse<GroupPrediction[]>> =>
     api.get('/predictions/my', { params: { setId } }),
 
-  getGroups: (setId: number): Promise<AxiosResponse<GroupPrediction[]>> =>
+  getGroups: (setId: number | string): Promise<AxiosResponse<GroupPrediction[]>> =>
     api.get('/predictions/groups', { params: { setId } }),
 
-  saveGroups: (predictions: GroupPrediction[], setId: number): Promise<AxiosResponse<void>> =>
+  saveGroups: (predictions: GroupPrediction[], setId: number | string): Promise<AxiosResponse<void>> =>
     api.post('/predictions/groups', { predictions, setId }),
 
   saveMatch: (matchId: string, predictedWinnerId: number): Promise<AxiosResponse<void>> =>
     api.post('/predictions/match', { matchId, predictedWinnerId }),
 
-  getPlayoffs: (setId: number): Promise<AxiosResponse<PlayoffPredictionData>> =>
+  getPlayoffs: (setId: number | string): Promise<AxiosResponse<PlayoffPredictionData>> =>
     api.get('/predictions/playoffs', { params: { setId } }),
 
-  savePlayoffs: (predictions: PlayoffPredictionData, setId: number): Promise<AxiosResponse<void>> =>
+  savePlayoffs: (predictions: PlayoffPredictionData, setId: number | string): Promise<AxiosResponse<void>> =>
     api.post('/predictions/playoffs', { predictions, setId }),
 
-  getThirdPlaces: (setId: number): Promise<AxiosResponse<{ selectedGroups: string | null }>> =>
+  getThirdPlaces: (setId: number | string): Promise<AxiosResponse<{ selectedGroups: string | null }>> =>
     api.get('/predictions/third-places', { params: { setId } }),
 
-  saveThirdPlaces: (selectedGroups: string, setId: number): Promise<AxiosResponse<void>> =>
+  saveThirdPlaces: (selectedGroups: string, setId: number | string): Promise<AxiosResponse<void>> =>
     api.post('/predictions/third-places', { selectedGroups, setId }),
 
-  getKnockout: (setId: number): Promise<AxiosResponse<KnockoutPredictionData>> =>
+  getKnockout: (setId: number | string): Promise<AxiosResponse<KnockoutPredictionData>> =>
     api.get('/predictions/knockout', { params: { setId } }),
 
-  saveKnockout: (predictions: KnockoutPredictionData, setId: number): Promise<AxiosResponse<void>> =>
+  saveKnockout: (predictions: KnockoutPredictionData, setId: number | string): Promise<AxiosResponse<void>> =>
     api.post('/predictions/knockout', { predictions, setId }),
 
-  getAll: (setId: number): Promise<AxiosResponse<{
+  getAll: (setId: number | string): Promise<AxiosResponse<{
     setId: number;
     groupPredictions: GroupPrediction[];
     playoffPredictions: PlayoffPredictionData;
@@ -184,16 +184,16 @@ export const predictionsAPI = {
   saveTiebreaker: (data: { setId: number | string; group: string; tiedTeamIds: number[]; resolvedOrder: number[] }): Promise<AxiosResponse<void>> =>
     api.post('/predictions/tiebreaker', data),
 
-  hasSubsequentData: (setId: number, phase: string): Promise<AxiosResponse<{ hasGroups: boolean; hasThirds: boolean; hasKnockout: boolean }>> =>
+  hasSubsequentData: (setId: number | string, phase: string): Promise<AxiosResponse<{ hasGroups: boolean; hasThirds: boolean; hasKnockout: boolean }>> =>
     api.get('/predictions/has-subsequent-data', { params: { setId, phase } }),
 
-  resetFromPlayoffs: (setId: number): Promise<AxiosResponse<void>> =>
+  resetFromPlayoffs: (setId: number | string): Promise<AxiosResponse<void>> =>
     api.delete('/predictions/reset-from-playoffs', { params: { setId } }),
 
-  resetFromGroups: (setId: number): Promise<AxiosResponse<void>> =>
+  resetFromGroups: (setId: number | string): Promise<AxiosResponse<void>> =>
     api.delete('/predictions/reset-from-groups', { params: { setId } }),
 
-  resetFromThirds: (setId: number): Promise<AxiosResponse<void>> =>
+  resetFromThirds: (setId: number | string): Promise<AxiosResponse<void>> =>
     api.delete('/predictions/reset-from-thirds', { params: { setId } }),
 };
 
