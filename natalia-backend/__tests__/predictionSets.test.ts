@@ -9,7 +9,8 @@ import db from '../config/db';
 
 // Test user and token
 let authToken;
-let testSetId;
+let testSetId; // numeric id for internal use
+let testSetPublicId; // public_id for URL routes
 const uniqueEmail = `sets_test_${Date.now()}@example.com`;
 const testUser = {
   name: 'Sets Test User',
@@ -61,9 +62,11 @@ describe('PredictionSets Routes', () => {
       expect(res.body.success).toBe(true);
       const data = getData(res);
       expect(data).toHaveProperty('id');
+      expect(data).toHaveProperty('public_id');
       expect(data).toHaveProperty('name', 'Mi Primera Predicción');
       expect(data).toHaveProperty('mode', 'positions');
       testSetId = data.id;
+      testSetPublicId = data.public_id;
     });
 
     it('should create a set with scores mode', async () => {
@@ -128,16 +131,16 @@ describe('PredictionSets Routes', () => {
     });
   });
 
-  describe('GET /api/prediction-sets/:id', () => {
+  describe('GET /api/prediction-sets/:publicId', () => {
     it('should return a single prediction set with all data', async () => {
       const res = await request(app)
-        .get(`/api/prediction-sets/${testSetId}`)
+        .get(`/api/prediction-sets/${testSetPublicId}`)
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(res.statusCode).toBe(200);
       expect(res.body.success).toBe(true);
       const data = getData(res);
-      expect(data).toHaveProperty('id', testSetId);
+      expect(data).toHaveProperty('public_id', testSetPublicId);
       expect(data).toHaveProperty('name');
       expect(data).toHaveProperty('groupPredictions');
       expect(data).toHaveProperty('playoffPredictions');
@@ -146,7 +149,7 @@ describe('PredictionSets Routes', () => {
 
     it('should return 404 for non-existent set', async () => {
       const res = await request(app)
-        .get('/api/prediction-sets/999999')
+        .get('/api/prediction-sets/nonexist')
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(res.statusCode).toBe(404);
@@ -154,7 +157,7 @@ describe('PredictionSets Routes', () => {
 
     it('should require authentication', async () => {
       const res = await request(app)
-        .get(`/api/prediction-sets/${testSetId}`);
+        .get(`/api/prediction-sets/${testSetPublicId}`);
 
       expect(res.statusCode).toBe(401);
     });
@@ -163,10 +166,10 @@ describe('PredictionSets Routes', () => {
   // ============================================
   // UPDATE Tests
   // ============================================
-  describe('PUT /api/prediction-sets/:id', () => {
+  describe('PUT /api/prediction-sets/:publicId', () => {
     it('should update prediction set name', async () => {
       const res = await request(app)
-        .put(`/api/prediction-sets/${testSetId}`)
+        .put(`/api/prediction-sets/${testSetPublicId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({ name: 'Nombre Actualizado' });
 
@@ -177,7 +180,7 @@ describe('PredictionSets Routes', () => {
 
     it('should reject empty name', async () => {
       const res = await request(app)
-        .put(`/api/prediction-sets/${testSetId}`)
+        .put(`/api/prediction-sets/${testSetPublicId}`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({ name: '' });
 
@@ -186,7 +189,7 @@ describe('PredictionSets Routes', () => {
 
     it('should return 404 for non-existent set', async () => {
       const res = await request(app)
-        .put('/api/prediction-sets/999999')
+        .put('/api/prediction-sets/nonexist')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ name: 'Test' });
 
@@ -197,10 +200,10 @@ describe('PredictionSets Routes', () => {
   // ============================================
   // DUPLICATE Tests
   // ============================================
-  describe('POST /api/prediction-sets/:id/duplicate', () => {
+  describe('POST /api/prediction-sets/:publicId/duplicate', () => {
     it('should duplicate a prediction set', async () => {
       const res = await request(app)
-        .post(`/api/prediction-sets/${testSetId}/duplicate`)
+        .post(`/api/prediction-sets/${testSetPublicId}/duplicate`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({ name: 'Copia de Predicción' });
 
@@ -208,13 +211,14 @@ describe('PredictionSets Routes', () => {
       expect(res.body.success).toBe(true);
       const data = getData(res);
       expect(data).toHaveProperty('id');
-      expect(data.id).not.toBe(testSetId);
+      expect(data).toHaveProperty('public_id');
+      expect(data.public_id).not.toBe(testSetPublicId);
       expect(data).toHaveProperty('name', 'Copia de Predicción');
     });
 
     it('should duplicate with default name if not provided', async () => {
       const res = await request(app)
-        .post(`/api/prediction-sets/${testSetId}/duplicate`)
+        .post(`/api/prediction-sets/${testSetPublicId}/duplicate`)
         .set('Authorization', `Bearer ${authToken}`)
         .send({});
 
@@ -224,7 +228,7 @@ describe('PredictionSets Routes', () => {
 
     it('should return 404 for non-existent source set', async () => {
       const res = await request(app)
-        .post('/api/prediction-sets/999999/duplicate')
+        .post('/api/prediction-sets/nonexist/duplicate')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ name: 'Test' });
 
@@ -235,8 +239,8 @@ describe('PredictionSets Routes', () => {
   // ============================================
   // DELETE Tests
   // ============================================
-  describe('DELETE /api/prediction-sets/:id', () => {
-    let setToDelete;
+  describe('DELETE /api/prediction-sets/:publicId', () => {
+    let setToDeletePublicId;
 
     beforeAll(async () => {
       // Create a set to delete
@@ -244,12 +248,12 @@ describe('PredictionSets Routes', () => {
         .post('/api/prediction-sets')
         .set('Authorization', `Bearer ${authToken}`)
         .send({ name: 'Para Borrar', mode: 'positions' });
-      setToDelete = getData(res).id;
+      setToDeletePublicId = getData(res).public_id;
     });
 
     it('should delete a prediction set', async () => {
       const res = await request(app)
-        .delete(`/api/prediction-sets/${setToDelete}`)
+        .delete(`/api/prediction-sets/${setToDeletePublicId}`)
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(res.statusCode).toBe(200);
@@ -257,14 +261,14 @@ describe('PredictionSets Routes', () => {
 
       // Verify it's deleted
       const getRes = await request(app)
-        .get(`/api/prediction-sets/${setToDelete}`)
+        .get(`/api/prediction-sets/${setToDeletePublicId}`)
         .set('Authorization', `Bearer ${authToken}`);
       expect(getRes.statusCode).toBe(404);
     });
 
     it('should return 404 for non-existent set', async () => {
       const res = await request(app)
-        .delete('/api/prediction-sets/999999')
+        .delete('/api/prediction-sets/nonexist')
         .set('Authorization', `Bearer ${authToken}`);
 
       expect(res.statusCode).toBe(404);
