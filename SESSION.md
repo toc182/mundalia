@@ -1,6 +1,6 @@
 # SESSION.md - Estado Actual del Proyecto Mundalia
 
-## Ultima Actualizacion: 2026-01-06
+## Ultima Actualizacion: 2026-04-10
 
 ---
 
@@ -11,6 +11,21 @@ El proyecto Mundalia está 100% funcional en producción con todas las features 
 ### URLs de Producción
 - **Frontend:** https://mundalia.vercel.app
 - **Backend:** https://mundalia-production.up.railway.app
+
+---
+
+## Cambios - 2026-04-10
+
+### Eliminacion de Repechajes
+
+Los repechajes (playoffs de clasificacion pre-torneo) fueron eliminados del flujo de prediccion. Los 6 equipos placeholder fueron reemplazados por los ganadores reales del Mundial 2026: Bosnia, Suecia, Turquia, Chequia, DR Congo, Iraq.
+
+**Cambios principales:**
+- Flujo reducido de 4 pasos a 3: Grupos → Terceros → Eliminatorias
+- Eliminados: `Playoffs.tsx`, `playoffsData.ts`, `PlayoffsTab.tsx`
+- Eliminadas tablas BD: `playoff_predictions`, `real_playoff_results`
+- Eliminada ruta frontend: `/repechajes`
+- Eliminados endpoints: GET/POST `/predictions/playoffs`, DELETE `/reset-from-playoffs`, GET/POST/DELETE `/admin/playoffs`
 
 ---
 
@@ -89,10 +104,10 @@ Al cambiar a un solo modo, se eliminan las predicciones del modo deshabilitado (
 
 ### Core
 - [x] Registro/Login (JWT + bcrypt + Google OAuth)
-- [x] Predicción de Repechajes (6 playoffs)
-- [x] Predicción de Grupos (12 grupos, drag & drop)
-- [x] Predicción de Terceros (495 combinaciones FIFA)
-- [x] Predicción de Eliminatorias (bracket completo)
+- ~~[x] Predicción de Repechajes (6 playoffs)~~ (eliminado - equipos reales integrados directamente)
+- [x] Predicción de Grupos (12 grupos, drag & drop) — Paso 1
+- [x] Predicción de Terceros (495 combinaciones FIFA) — Paso 2
+- [x] Predicción de Eliminatorias (bracket completo) — Paso 3
 - [x] Múltiples predicciones por usuario
 - [x] Ver/Editar/Eliminar predicciones
 
@@ -108,7 +123,6 @@ Al cambiar a un solo modo, se eliminan las predicciones del modo deshabilitado (
 
 ### Admin
 - [x] Panel admin completo
-- [x] Cargar resultados de repechajes
 - [x] Cargar resultados de grupos (con FIFA tiebreaker)
 - [x] Cargar resultados de eliminatorias
 - [x] Configurar deadline de predicciones

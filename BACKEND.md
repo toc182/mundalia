@@ -55,19 +55,6 @@ Conectar el frontend con el backend real de PostgreSQL, restaurando autenticacio
 ### 3.1 Nuevas Tablas en PostgreSQL
 
 ```sql
--- Predicciones de repechajes
-CREATE TABLE playoff_predictions (
-    id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
-    playoff_id VARCHAR(20) NOT NULL,
-    semifinal_winner_1 VARCHAR(50),
-    semifinal_winner_2 VARCHAR(50),
-    final_winner VARCHAR(50),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(user_id, playoff_id)
-);
-
 -- Predicciones de terceros lugares
 CREATE TABLE third_place_predictions (
     id SERIAL PRIMARY KEY,
@@ -99,8 +86,6 @@ CREATE TABLE knockout_predictions (
 | GET | `/predictions/my` | Predicciones de grupos y partidos (legacy) |
 | POST | `/predictions/groups` | Guardar prediccion de grupos |
 | POST | `/predictions/match` | Guardar prediccion de partido (legacy) |
-| GET | `/predictions/playoffs` | Obtener predicciones de repechajes |
-| POST | `/predictions/playoffs` | Guardar predicciones de repechajes |
 | GET | `/predictions/third-places` | Obtener predicciones de terceros |
 | POST | `/predictions/third-places` | Guardar predicciones de terceros |
 | GET | `/predictions/knockout` | Obtener predicciones de eliminatorias |
@@ -112,7 +97,6 @@ CREATE TABLE knockout_predictions (
 | Pagina | Endpoint GET | Endpoint POST | Estado |
 |--------|--------------|---------------|--------|
 | Predictions.jsx | /predictions/my | /predictions/groups | COMPLETADO |
-| Playoffs.jsx | /predictions/playoffs | /predictions/playoffs | COMPLETADO |
 | ThirdPlaces.jsx | /predictions/third-places | /predictions/third-places | COMPLETADO |
 | Knockout.jsx | /predictions/knockout | /predictions/knockout | COMPLETADO |
 | MyPredictions.jsx | /predictions/all | - | COMPLETADO |
@@ -142,7 +126,6 @@ CREATE TABLE prediction_sets (
 
 -- Columnas agregadas a tablas existentes
 ALTER TABLE group_predictions ADD COLUMN prediction_set_id INTEGER REFERENCES prediction_sets(id);
-ALTER TABLE playoff_predictions ADD COLUMN prediction_set_id INTEGER REFERENCES prediction_sets(id);
 ALTER TABLE third_place_predictions ADD COLUMN prediction_set_id INTEGER REFERENCES prediction_sets(id);
 ALTER TABLE knockout_predictions ADD COLUMN prediction_set_id INTEGER REFERENCES prediction_sets(id);
 ```
@@ -182,7 +165,7 @@ Si no se pasa `setId`, se usa/crea un set por defecto (backward compatibility).
      |
      +-> "Nueva Prediccion" -> Dialog nombre
      |         |
-     |         +-> "Crear y Comenzar" -> /repechajes?setId=X
+     |         +-> "Crear y Comenzar" -> /grupos?setId=X
      |
      +-> Card de prediccion existente
              |
@@ -208,7 +191,6 @@ Si no se pasa `setId`, se usa/crea un set por defecto (backward compatibility).
 | src/services/api.js | Agregado predictionSetsAPI + setId en predictionsAPI |
 | src/pages/MyPredictions.jsx | REESCRITO - Lista y gestion de sets |
 | src/pages/PredictionDetail.jsx | NUEVO - Vista detalle de prediccion |
-| src/pages/Playoffs.jsx | Lee/guarda con setId desde URL |
 | src/pages/Predictions.jsx | Lee/guarda con setId desde URL |
 | src/pages/ThirdPlaces.jsx | Lee/guarda con setId desde URL |
 | src/pages/Knockout.jsx | Lee/guarda con setId desde URL |
@@ -254,8 +236,6 @@ Si no se pasa `setId`, se usa/crea un set por defecto (backward compatibility).
 - GET /api/predictions/my
 - POST /api/predictions/groups
 - POST /api/predictions/match
-- GET /api/predictions/playoffs
-- POST /api/predictions/playoffs
 - GET /api/predictions/third-places
 - POST /api/predictions/third-places
 - GET /api/predictions/knockout
@@ -296,7 +276,6 @@ Si no se pasa `setId`, se usa/crea un set por defecto (backward compatibility).
 | src/pages/Register.jsx | Conectado API |
 | src/pages/Home.jsx | Header + logout |
 | src/pages/Predictions.jsx | Conectado API |
-| src/pages/Playoffs.jsx | Conectado API |
 | src/pages/ThirdPlaces.jsx | Conectado API |
 | src/pages/Knockout.jsx | Conectado API |
 | src/pages/MyPredictions.jsx | Conectado API |
@@ -313,7 +292,6 @@ Si no se pasa `setId`, se usa/crea un set por defecto (backward compatibility).
 ### Base de Datos
 | Cambio | Estado |
 |--------|--------|
-| Tabla playoff_predictions | CREADA + prediction_set_id |
 | Tabla third_place_predictions | CREADA + prediction_set_id |
 | Tabla knockout_predictions | CREADA + prediction_set_id |
 | Tabla prediction_sets | CREADA |

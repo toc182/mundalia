@@ -26,17 +26,15 @@ Natalia/
 │   │   │   └── AuthContext.jsx    # JWT auth + user state
 │   │   ├── data/
 │   │   │   ├── mockData.js        # 48 equipos en 12 grupos
-│   │   │   ├── playoffsData.js    # 6 playoffs (4 UEFA + 2 FIFA)
 │   │   │   ├── knockoutBracket.js # Estructura eliminatorias
 │   │   │   └── thirdPlaceCombinations.js # 495 combinaciones FIFA
 │   │   ├── pages/
 │   │   │   ├── Home.jsx
 │   │   │   ├── Login.jsx
 │   │   │   ├── Register.jsx
-│   │   │   ├── Playoffs.jsx       # Paso 1: Repechajes
-│   │   │   ├── Predictions.jsx    # Paso 2: Grupos
-│   │   │   ├── ThirdPlaces.jsx    # Paso 3: Terceros lugares
-│   │   │   ├── Knockout.jsx       # Paso 4: Eliminatorias
+│   │   │   ├── Predictions.jsx    # Paso 1: Grupos
+│   │   │   ├── ThirdPlaces.jsx    # Paso 2: Terceros lugares
+│   │   │   ├── Knockout.jsx       # Paso 3: Eliminatorias
 │   │   │   ├── MyPredictions.jsx  # Lista de predicciones
 │   │   │   ├── PredictionDetail.jsx # Ver prediccion completa
 │   │   │   └── Account.jsx        # Pagina de cuenta
@@ -55,7 +53,7 @@ Natalia/
     ├── routes/
     │   ├── auth.js                # login, register
     │   ├── users.js               # me, update profile
-    │   ├── predictions.js         # groups, playoffs, thirds, knockout
+    │   ├── predictions.js         # groups, thirds, knockout
     │   └── predictionSets.js      # CRUD prediction sets
     ├── .env
     ├── package.json
@@ -171,7 +169,6 @@ npm start        # Produccion
 - **users**: id, name, email, password_hash, created_at
 - **teams**: id, name, code, group_letter, flag_url, is_playoff
 - **prediction_sets**: id, user_id, name, is_active, created_at
-- **playoff_predictions**: id, user_id, prediction_set_id, playoff_id, winner_team_id
 - **group_predictions**: id, user_id, prediction_set_id, group_letter, team_id, predicted_position
 - **third_place_predictions**: id, user_id, prediction_set_id, selected_groups, combination_key
 - **knockout_predictions**: id, user_id, prediction_set_id, match_key, winner_team_id
@@ -197,10 +194,9 @@ npm start        # Produccion
 | `/` | Home | No | Info del torneo y acciones principales |
 | `/login` | Login | No | Formulario de inicio de sesion |
 | `/register` | Register | No | Formulario de registro |
-| `/repechajes` | Playoffs | Si | Paso 1: Predecir ganadores repechajes |
-| `/grupos` | Predictions | Si | Paso 2: Ordenar equipos por grupo |
-| `/terceros` | ThirdPlaces | Si | Paso 3: Seleccionar 8 mejores terceros |
-| `/eliminatorias` | Knockout | Si | Paso 4: Bracket completo R32 a Final |
+| `/grupos` | Predictions | Si | Paso 1: Ordenar equipos por grupo |
+| `/terceros` | ThirdPlaces | Si | Paso 2: Seleccionar 8 mejores terceros |
+| `/eliminatorias` | Knockout | Si | Paso 3: Bracket completo R32 a Final |
 | `/mis-predicciones` | MyPredictions | Si | Lista de predicciones del usuario |
 | `/prediccion/:id` | PredictionDetail | Si | Ver prediccion completa |
 | `/cuenta` | Account | Si | Editar perfil de usuario |
@@ -229,8 +225,6 @@ npm start        # Produccion
 ### Predicciones (todas requieren auth y ?setId=X)
 | Metodo | Ruta | Descripcion |
 |--------|------|-------------|
-| GET | `/api/predictions/playoffs` | Obtener predicciones repechajes |
-| POST | `/api/predictions/playoffs` | Guardar predicciones repechajes |
 | GET | `/api/predictions/groups` | Obtener predicciones grupos |
 | POST | `/api/predictions/groups` | Guardar predicciones grupos |
 | GET | `/api/predictions/third-places` | Obtener prediccion terceros |
@@ -264,11 +258,6 @@ DB_PASSWORD=<TU_PASSWORD_LOCAL>
 Datos actualizados con sorteo oficial del 5 de diciembre 2025.
 Ver `src/data/mockData.js` para lista completa.
 
-### Playoffs/Repechajes (6 total)
-- **UEFA A-D**: 4 playoffs europeos (4 equipos cada uno, semifinal + final)
-- **FIFA 1-2**: 2 playoffs intercontinentales (3 equipos cada uno)
-Ver `src/data/playoffsData.js` para detalles.
-
 ### Terceros Lugares
 - 495 combinaciones validas segun reglas FIFA
 - Ver `src/data/thirdPlaceCombinations.js`
@@ -285,14 +274,13 @@ Ver `src/data/playoffsData.js` para detalles.
 
 ### Primera Etapa (COMPLETADA)
 1. [x] Registro/Login de usuarios
-2. [x] Prediccion de repechajes (6 playoffs)
-3. [x] Prediccion de grupos (12 grupos, drag & drop)
-4. [x] Prediccion de terceros lugares (495 combinaciones)
-5. [x] Prediccion de eliminatorias (bracket completo)
-6. [x] Multiples predicciones por usuario
-7. [x] Ver/Editar predicciones
-8. [x] Pagina de cuenta
-9. [x] Deploy a produccion
+2. [x] Prediccion de grupos (12 grupos, drag & drop)
+3. [x] Prediccion de terceros lugares (495 combinaciones)
+4. [x] Prediccion de eliminatorias (bracket completo)
+5. [x] Multiples predicciones por usuario
+6. [x] Ver/Editar predicciones
+7. [x] Pagina de cuenta
+8. [x] Deploy a produccion
 
 ### Segunda Etapa (COMPLETADA)
 1. [x] Leaderboard global funcional
