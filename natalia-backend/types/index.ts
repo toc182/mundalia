@@ -89,16 +89,6 @@ export interface GroupPrediction {
   predicted_position: number;
 }
 
-export interface PlayoffPrediction {
-  id: number;
-  user_id: number;
-  prediction_set_id: number;
-  playoff_id: string;
-  semifinal_winner_1?: number;
-  semifinal_winner_2?: number;
-  final_winner?: number;
-}
-
 export interface ThirdPlacePrediction {
   id: number;
   user_id: number;
@@ -207,8 +197,6 @@ export type AsyncHandler = (
 // ============================================
 
 export type GroupLetter = 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J' | 'K' | 'L';
-
-export type PlayoffId = 'uefa_a' | 'uefa_b' | 'uefa_c' | 'uefa_d' | 'fifa_1' | 'fifa_2';
 
 export type MatchKey = `M${number}`;
 

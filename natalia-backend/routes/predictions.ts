@@ -1,7 +1,7 @@
 import express, { Request, Response, Router } from 'express';
 import db, { pool } from '../config/db';
 import { auth } from '../middleware/auth';
-import { isValidGroupLetter, isValidPosition, isValidTeamId, isValidMatchKey, isValidPlayoffId } from '../utils/validators';
+import { isValidGroupLetter, isValidPosition, isValidTeamId, isValidMatchKey } from '../utils/validators';
 import { success, error, notFound, validationError, serverError } from '../utils/response';
 import { AuthenticatedRequest } from '../types';
 
@@ -251,138 +251,6 @@ router.post('/match', auth, async (req: Request<unknown, unknown, MatchPredictio
 
     success(res, null, 'Prediction saved successfully');
   } catch (err) {
-    serverError(res, err as Error);
-  }
-});
-
-// ============ PLAYOFFS (REPECHAJES) ============
-
-// Get user's playoff predictions
-router.get('/playoffs', auth, async (req: Request, res: Response): Promise<void> => {
-  try {
-    const authReq = req as AuthenticatedRequest;
-    const setId = await getSetIdFromQuery(req.query.setId as string | undefined, authReq.user.id);
-
-    const result = await db.query(
-      'SELECT * FROM playoff_predictions WHERE user_id = $1 AND prediction_set_id = $2',
-      [authReq.user.id, setId]
-    );
-
-    // Helper to convert to number if it's a numeric string
-    const toNumberIfPossible = (val: unknown): number | null => {
-      if (val === null || val === undefined) return null;
-      const num = Number(val);
-      return !isNaN(num) ? num : null;
-    };
-
-    interface PlayoffRow {
-      playoff_id: string;
-      semifinal_winner_1: unknown;
-      semifinal_winner_2: unknown;
-      final_winner: unknown;
-    }
-
-    // Convert to object format { playoff_id: { semifinal_winner_1, semifinal_winner_2, final_winner } }
-    const predictions: Record<string, { semi1: number | null; semi2: number | null; final: number | null }> = {};
-    (result.rows as PlayoffRow[]).forEach(row => {
-      predictions[row.playoff_id] = {
-        semi1: toNumberIfPossible(row.semifinal_winner_1),
-        semi2: toNumberIfPossible(row.semifinal_winner_2),
-        final: toNumberIfPossible(row.final_winner)
-      };
-    });
-
-    success(res, predictions);
-  } catch (err) {
-    serverError(res, err as Error);
-  }
-});
-
-interface PlayoffSelection {
-  semi1?: number;
-  semi2?: number;
-  final?: number;
-}
-
-interface SavePlayoffsBody {
-  predictions: Record<string, PlayoffSelection>;
-  setId?: string | number;
-}
-
-// Save playoff predictions (all at once)
-router.post('/playoffs', auth, async (req: Request<unknown, unknown, SavePlayoffsBody>, res: Response): Promise<void> => {
-  const authReq = req as AuthenticatedRequest;
-  const { predictions, setId: requestSetId } = req.body;
-
-  // Validacion de entrada
-  if (!predictions || typeof predictions !== 'object') {
-    validationError(res, 'predictions must be an object');
-    return;
-  }
-
-  for (const [playoffId, selection] of Object.entries(predictions)) {
-    if (!isValidPlayoffId(playoffId)) {
-      validationError(res, `Invalid playoff_id: ${playoffId}`);
-      return;
-    }
-    if (selection) {
-      if (selection.semi1 && !isValidTeamId(selection.semi1)) {
-        validationError(res, `Invalid semi1 team_id for ${playoffId}`);
-        return;
-      }
-      if (selection.semi2 && !isValidTeamId(selection.semi2)) {
-        validationError(res, `Invalid semi2 team_id for ${playoffId}`);
-        return;
-      }
-      if (selection.final && !isValidTeamId(selection.final)) {
-        validationError(res, `Invalid final team_id for ${playoffId}`);
-        return;
-      }
-    }
-  }
-
-  try {
-    // Resolve public_id to numeric id
-    let setId: number;
-    if (requestSetId) {
-      const resolved = await resolveSetId(requestSetId, authReq.user.id);
-      if (!resolved) {
-        notFound(res, 'Prediction set not found');
-        return;
-      }
-      setId = resolved;
-    } else {
-      setId = await getOrCreateDefaultSet(authReq.user.id);
-    }
-
-    // Use dedicated client for transaction
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-
-      // Delete existing predictions for this set
-      await client.query('DELETE FROM playoff_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]);
-
-      // Insert new predictions sequentially within transaction
-      for (const [playoffId, selection] of Object.entries(predictions)) {
-        if (selection && (selection.semi1 || selection.semi2 || selection.final)) {
-          await client.query(`
-            INSERT INTO playoff_predictions (user_id, playoff_id, semifinal_winner_1, semifinal_winner_2, final_winner, prediction_set_id)
-            VALUES ($1, $2, $3, $4, $5, $6)
-          `, [authReq.user.id, playoffId, selection.semi1 || null, selection.semi2 || null, selection.final || null, setId]);
-        }
-      }
-
-      await client.query('COMMIT');
-      success(res, { setId }, 'Playoff predictions saved successfully');
-    } catch (txErr) {
-      await client.query('ROLLBACK');
-      throw txErr;
-    } finally {
-      client.release();
-    }
-  } catch (err) {
-    console.error('[PLAYOFFS POST] error:', err);
     serverError(res, err as Error);
   }
 });
@@ -901,11 +769,10 @@ router.get('/has-subsequent-data', auth, async (req: Request, res: Response): Pr
       return;
     }
 
-    let hasGroups = false;
     let hasThirds = false;
     let hasKnockout = false;
 
-    if (phase === 'playoffs' || phase === 'groups' || phase === 'thirds') {
+    if (phase === 'groups' || phase === 'thirds') {
       const knockoutResult = await db.query(
         'SELECT COUNT(*) as count FROM knockout_predictions WHERE user_id = $1 AND prediction_set_id = $2',
         [authReq.user.id, setId]
@@ -913,7 +780,7 @@ router.get('/has-subsequent-data', auth, async (req: Request, res: Response): Pr
       hasKnockout = parseInt((knockoutResult.rows[0] as { count: string }).count, 10) > 0;
     }
 
-    if (phase === 'playoffs' || phase === 'groups') {
+    if (phase === 'groups') {
       const thirdsResult = await db.query(
         'SELECT COUNT(*) as count FROM third_place_predictions WHERE user_id = $1 AND prediction_set_id = $2',
         [authReq.user.id, setId]
@@ -921,51 +788,7 @@ router.get('/has-subsequent-data', auth, async (req: Request, res: Response): Pr
       hasThirds = parseInt((thirdsResult.rows[0] as { count: string }).count, 10) > 0;
     }
 
-    if (phase === 'playoffs') {
-      const groupsResult = await db.query(
-        'SELECT COUNT(*) as count FROM group_predictions WHERE user_id = $1 AND prediction_set_id = $2',
-        [authReq.user.id, setId]
-      );
-      hasGroups = parseInt((groupsResult.rows[0] as { count: string }).count, 10) > 0;
-    }
-
-    success(res, { hasGroups, hasThirds, hasKnockout });
-  } catch (err) {
-    serverError(res, err as Error);
-  }
-});
-
-// Reset from playoffs: delete groups + thirds + knockout
-router.delete('/reset-from-playoffs', auth, async (req: Request, res: Response): Promise<void> => {
-  try {
-    const authReq = req as AuthenticatedRequest;
-    const querySetId = req.query.setId as string;
-    if (!querySetId) {
-      validationError(res, 'setId is required');
-      return;
-    }
-
-    const setId = await resolveSetId(querySetId, authReq.user.id);
-    if (!setId) {
-      notFound(res, 'Prediction set not found');
-      return;
-    }
-
-    // Use dedicated client for transaction
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-      await client.query('DELETE FROM knockout_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]);
-      await client.query('DELETE FROM third_place_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]);
-      await client.query('DELETE FROM group_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]);
-      await client.query('COMMIT');
-      success(res, null, 'Reset from playoffs successful');
-    } catch (txErr) {
-      await client.query('ROLLBACK');
-      throw txErr;
-    } finally {
-      client.release();
-    }
+    success(res, { hasThirds, hasKnockout });
   } catch (err) {
     serverError(res, err as Error);
   }
@@ -1032,13 +855,6 @@ router.delete('/reset-from-thirds', auth, async (req: Request, res: Response): P
 
 // ============ ALL PREDICTIONS (for MyPredictions page) ============
 
-interface PlayoffPredRow {
-  playoff_id: string;
-  semifinal_winner_1?: number;
-  semifinal_winner_2?: number;
-  final_winner?: number;
-}
-
 interface KnockoutPredRow {
   match_key: string;
   winner_team_id: number;
@@ -1050,7 +866,7 @@ router.get('/all', auth, async (req: Request, res: Response): Promise<void> => {
     const authReq = req as AuthenticatedRequest;
     const setId = await getSetIdFromQuery(req.query.setId as string | undefined, authReq.user.id);
 
-    const [groupPredictions, playoffPredictions, thirdPlaces, knockoutPredictions] = await Promise.all([
+    const [groupPredictions, thirdPlaces, knockoutPredictions] = await Promise.all([
       db.query(`
         SELECT gp.*, t.name as team_name, t.code as team_code, t.flag_url
         FROM group_predictions gp
@@ -1058,20 +874,9 @@ router.get('/all', auth, async (req: Request, res: Response): Promise<void> => {
         WHERE gp.user_id = $1 AND gp.prediction_set_id = $2
         ORDER BY gp.group_letter, gp.predicted_position
       `, [authReq.user.id, setId]),
-      db.query('SELECT * FROM playoff_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]),
       db.query('SELECT selected_groups FROM third_place_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId]),
       db.query('SELECT match_key, winner_team_id FROM knockout_predictions WHERE user_id = $1 AND prediction_set_id = $2', [authReq.user.id, setId])
     ]);
-
-    // Format playoff predictions
-    const playoffs: Record<string, { semi1?: number; semi2?: number; final?: number }> = {};
-    (playoffPredictions.rows as PlayoffPredRow[]).forEach(row => {
-      playoffs[row.playoff_id] = {
-        semi1: row.semifinal_winner_1,
-        semi2: row.semifinal_winner_2,
-        final: row.final_winner
-      };
-    });
 
     // Format knockout predictions
     const knockout: Record<string, number> = {};
@@ -1082,7 +887,6 @@ router.get('/all', auth, async (req: Request, res: Response): Promise<void> => {
     success(res, {
       setId,
       groupPredictions: groupPredictions.rows,
-      playoffPredictions: playoffs,
       thirdPlaces: (thirdPlaces.rows[0] as { selected_groups?: string })?.selected_groups || null,
       knockoutPredictions: knockout
     });

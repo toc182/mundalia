@@ -28,7 +28,6 @@ interface PredictionSetRow {
   created_at: Date;
   updated_at?: Date;
   group_count?: number;
-  playoff_count?: number;
   knockout_count?: number;
   third_places?: string[];
 }
@@ -53,7 +52,6 @@ router.get('/', auth, async (req: Request, res: Response): Promise<void> => {
     const result = await db.query(
       `SELECT ps.*,
         (SELECT COUNT(*) FROM group_predictions WHERE prediction_set_id = ps.id) as group_count,
-        (SELECT COUNT(*) FROM playoff_predictions WHERE prediction_set_id = ps.id) as playoff_count,
         (SELECT COUNT(*) FROM knockout_predictions WHERE prediction_set_id = ps.id) as knockout_count,
         (SELECT selected_groups FROM third_place_predictions WHERE prediction_set_id = ps.id) as third_places
       FROM prediction_sets ps
@@ -88,7 +86,7 @@ router.get('/:publicId', auth, async (req: Request, res: Response): Promise<void
     const setId = (setResult.rows[0] as PredictionSetRow).id;
 
     // Get all predictions for this set
-    const [groupPredictions, playoffPredictions, thirdPlaces, knockoutPredictions] = await Promise.all([
+    const [groupPredictions, thirdPlaces, knockoutPredictions] = await Promise.all([
       db.query(`
         SELECT gp.*, t.name as team_name, t.code as team_code, t.flag_url
         FROM group_predictions gp
@@ -96,27 +94,9 @@ router.get('/:publicId', auth, async (req: Request, res: Response): Promise<void
         WHERE gp.prediction_set_id = $1
         ORDER BY gp.group_letter, gp.predicted_position
       `, [setId]),
-      db.query('SELECT * FROM playoff_predictions WHERE prediction_set_id = $1', [setId]),
       db.query('SELECT selected_groups FROM third_place_predictions WHERE prediction_set_id = $1', [setId]),
       db.query('SELECT match_key, winner_team_id FROM knockout_predictions WHERE prediction_set_id = $1', [setId])
     ]);
-
-    // Format playoff predictions
-    interface PlayoffPredRow {
-      playoff_id: string;
-      semifinal_winner_1?: number;
-      semifinal_winner_2?: number;
-      final_winner?: number;
-    }
-
-    const playoffs: Record<string, { semi1?: number; semi2?: number; final?: number }> = {};
-    (playoffPredictions.rows as PlayoffPredRow[]).forEach(row => {
-      playoffs[row.playoff_id] = {
-        semi1: row.semifinal_winner_1,
-        semi2: row.semifinal_winner_2,
-        final: row.final_winner
-      };
-    });
 
     // Format knockout predictions
     interface KnockoutPredRow {
@@ -132,7 +112,6 @@ router.get('/:publicId', auth, async (req: Request, res: Response): Promise<void
     success(res, {
       ...setResult.rows[0],
       groupPredictions: groupPredictions.rows,
-      playoffPredictions: playoffs,
       thirdPlaces: (thirdPlaces.rows[0] as { selected_groups?: string[] })?.selected_groups || null,
       knockoutPredictions: knockout
     });
@@ -278,13 +257,6 @@ router.post('/:publicId/duplicate', auth, async (req: Request, res: Response): P
       INSERT INTO group_predictions (user_id, group_letter, team_id, predicted_position, prediction_set_id)
       SELECT user_id, group_letter, team_id, predicted_position, $1
       FROM group_predictions WHERE prediction_set_id = $2
-    `, [newSetId, sourceSetId]);
-
-    // Copy playoff predictions
-    await client.query(`
-      INSERT INTO playoff_predictions (user_id, playoff_id, semifinal_winner_1, semifinal_winner_2, final_winner, prediction_set_id)
-      SELECT user_id, playoff_id, semifinal_winner_1, semifinal_winner_2, final_winner, $1
-      FROM playoff_predictions WHERE prediction_set_id = $2
     `, [newSetId, sourceSetId]);
 
     // Copy third place predictions

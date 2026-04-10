@@ -30,16 +30,6 @@ const teamsPerGroup = {
   'L': [45, 46, 47, 48]
 };
 
-// Playoffs structure - stores team IDs as strings
-const playoffTeams = {
-  'UEFA_A': { semi1: [101, 103], semi2: [102, 104] }, // Italia vs NIR, Gales vs Bosnia
-  'UEFA_B': { semi1: [107, 106], semi2: [105, 108] }, // Ucrania vs Suecia, Polonia vs Albania
-  'UEFA_C': { semi1: [109, 110], semi2: [111, 112] }, // Turquia vs Rumania, Eslovaquia vs Kosovo
-  'UEFA_D': { semi1: [113, 115], semi2: [114, 116] }, // Dinamarca vs Macedonia, Rep.Checa vs Irlanda
-  'FIFA_1': { semi1: [119, 117], finalA: 118 },       // Nueva Caledonia vs Jamaica, RD Congo espera
-  'FIFA_2': { semi1: [120, 122], finalA: 121 }        // Bolivia vs Surinam, Irak espera
-};
-
 // Knockout matches structure
 const r32Matches = ['M73', 'M74', 'M75', 'M76', 'M77', 'M78', 'M79', 'M80', 'M81', 'M82', 'M83', 'M84', 'M85', 'M86', 'M87', 'M88'];
 const r16Matches = ['M89', 'M90', 'M91', 'M92', 'M93', 'M94', 'M95', 'M96'];
@@ -105,37 +95,6 @@ function generateGroupPredictions(setId, userId) {
         team_id: teamId,
         predicted_position: position + 1
       });
-    });
-  }
-  return predictions;
-}
-
-// Generar predicciones de playoffs
-// Estructura de tabla: playoff_id, semifinal_winner_1, semifinal_winner_2, final_winner (all varchar)
-function generatePlayoffPredictions(setId, userId) {
-  const predictions = [];
-
-  for (const [playoffId, structure] of Object.entries(playoffTeams)) {
-    const semi1Winner = pickRandom(structure.semi1);
-    let semi2Winner = null;
-    let finalWinner;
-
-    if (structure.semi2) {
-      // UEFA style: 2 semis -> final
-      semi2Winner = pickRandom(structure.semi2);
-      finalWinner = pickRandom([semi1Winner, semi2Winner]);
-    } else {
-      // FIFA style: 1 semi + seeded team -> final
-      finalWinner = pickRandom([semi1Winner, structure.finalA]);
-    }
-
-    predictions.push({
-      user_id: userId,
-      prediction_set_id: setId,
-      playoff_id: playoffId,
-      semifinal_winner_1: String(semi1Winner),
-      semifinal_winner_2: semi2Winner ? String(semi2Winner) : null,
-      final_winner: String(finalWinner)
     });
   }
   return predictions;
@@ -275,7 +234,6 @@ async function seed() {
       DELETE FROM knockout_predictions WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@test.com');
       DELETE FROM third_place_predictions WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@test.com');
       DELETE FROM group_predictions WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@test.com');
-      DELETE FROM playoff_predictions WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@test.com');
       DELETE FROM prediction_sets WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@test.com');
       DELETE FROM private_group_members WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@test.com');
       DELETE FROM users WHERE email LIKE '%@test.com';
@@ -329,16 +287,6 @@ async function seed() {
 
         // 95% de probabilidad de completar la prediccion (para testing de paginacion)
         const shouldComplete = Math.random() > 0.05;
-
-        // Playoffs
-        const playoffPreds = generatePlayoffPredictions(setId, user.id);
-        for (const pred of playoffPreds) {
-          await client.query(
-            `INSERT INTO playoff_predictions (user_id, prediction_set_id, playoff_id, semifinal_winner_1, semifinal_winner_2, final_winner)
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            [pred.user_id, pred.prediction_set_id, pred.playoff_id, pred.semifinal_winner_1, pred.semifinal_winner_2, pred.final_winner]
-          );
-        }
 
         // Groups
         const groupPreds = generateGroupPredictions(setId, user.id);

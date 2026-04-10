@@ -139,18 +139,6 @@ const runMigrations = async (): Promise<void> => {
     `);
     console.log('[MIGRATIONS] ✓ users.username');
 
-    // Migration 008: Create real_playoff_results table
-    await db.query(`
-      CREATE TABLE IF NOT EXISTS real_playoff_results (
-        id SERIAL PRIMARY KEY,
-        playoff_id VARCHAR(20) NOT NULL UNIQUE,
-        winner_team_id INTEGER NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    console.log('[MIGRATIONS] ✓ real_playoff_results table');
-
     // Migration 009: Create real_group_standings table
     await db.query(`
       CREATE TABLE IF NOT EXISTS real_group_standings (

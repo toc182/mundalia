@@ -10,60 +10,6 @@ const router: Router = express.Router();
 router.use(adminAuth);
 
 // ============================================
-// PLAYOFF RESULTS
-// ============================================
-
-interface PlayoffResultRow {
-  playoff_id: string;
-  winner_team_id: number;
-  created_at: Date;
-  updated_at: Date;
-}
-
-// Get all real playoff results
-router.get('/playoffs', async (_req: Request, res: Response): Promise<void> => {
-  try {
-    const result = await db.query(`
-      SELECT * FROM real_playoff_results ORDER BY playoff_id
-    `);
-    success(res, result.rows as PlayoffResultRow[]);
-  } catch (err) {
-    console.error('Error getting playoff results:', err);
-    serverError(res, err as Error);
-  }
-});
-
-interface SavePlayoffBody {
-  playoff_id: string;
-  winner_team_id: number;
-}
-
-// Save real playoff result
-router.post('/playoffs', async (req: Request<unknown, unknown, SavePlayoffBody>, res: Response): Promise<void> => {
-  const { playoff_id, winner_team_id } = req.body;
-
-  if (!playoff_id || !winner_team_id) {
-    validationError(res, 'Missing required fields');
-    return;
-  }
-
-  try {
-    await db.query(`
-      INSERT INTO real_playoff_results (playoff_id, winner_team_id)
-      VALUES ($1, $2)
-      ON CONFLICT (playoff_id) DO UPDATE SET
-        winner_team_id = $2,
-        updated_at = CURRENT_TIMESTAMP
-    `, [playoff_id, winner_team_id]);
-
-    success(res, null, 'Playoff result saved');
-  } catch (err) {
-    console.error('Error saving playoff result:', err);
-    serverError(res, err as Error);
-  }
-});
-
-// ============================================
 // GROUP MATCHES (Real scores)
 // ============================================
 
@@ -275,17 +221,6 @@ router.delete('/knockout/:matchKey', async (req: Request, res: Response): Promis
   }
 });
 
-// Delete a playoff result
-router.delete('/playoffs/:playoffId', async (req: Request, res: Response): Promise<void> => {
-  try {
-    await db.query('DELETE FROM real_playoff_results WHERE playoff_id = $1', [req.params.playoffId]);
-    success(res, null, 'Playoff result deleted');
-  } catch (err) {
-    console.error('Error deleting playoff result:', err);
-    serverError(res, err as Error);
-  }
-});
-
 // ============================================
 // SETTINGS
 // ============================================
@@ -411,7 +346,6 @@ router.put('/settings/prediction-modes', async (req: Request<unknown, unknown, S
 interface StatsResult {
   total_users: number;
   total_predictions: number;
-  playoffs_entered: number;
   groups_entered: number;
   knockout_entered: number;
 }
@@ -419,10 +353,9 @@ interface StatsResult {
 // Get admin dashboard stats
 router.get('/stats', async (_req: Request, res: Response): Promise<void> => {
   try {
-    const [users, predictions, playoffResults, groupResults, knockoutResults] = await Promise.all([
+    const [users, predictions, groupResults, knockoutResults] = await Promise.all([
       db.query('SELECT COUNT(*) FROM users'),
       db.query('SELECT COUNT(*) FROM prediction_sets'),
-      db.query('SELECT COUNT(*) FROM real_playoff_results'),
       db.query('SELECT COUNT(DISTINCT group_letter) FROM real_group_standings'),
       db.query('SELECT COUNT(*) FROM real_knockout_results')
     ]);
@@ -430,7 +363,6 @@ router.get('/stats', async (_req: Request, res: Response): Promise<void> => {
     const stats: StatsResult = {
       total_users: parseInt((users.rows[0] as { count: string }).count, 10),
       total_predictions: parseInt((predictions.rows[0] as { count: string }).count, 10),
-      playoffs_entered: parseInt((playoffResults.rows[0] as { count: string }).count, 10),
       groups_entered: parseInt((groupResults.rows[0] as { count: string }).count, 10),
       knockout_entered: parseInt((knockoutResults.rows[0] as { count: string }).count, 10)
     };
