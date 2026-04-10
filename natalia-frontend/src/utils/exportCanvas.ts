@@ -7,7 +7,7 @@ import {
   thirdPlaceMatch,
   finalMatch,
 } from '@/data/knockoutBracket';
-import type { PlayoffWinnerTeam } from '@/utils/predictionHelpers';
+import type { MockTeam as PlayoffWinnerTeam } from '@/data/mockData';
 
 // Colors
 const colors = {
