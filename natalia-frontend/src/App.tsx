@@ -21,6 +21,8 @@ const MyPredictions = lazy(() => import('@/pages/MyPredictions'));
 const PredictionDetail = lazy(() => import('@/pages/PredictionDetail'));
 const Account = lazy(() => import('@/pages/Account'));
 const Admin = lazy(() => import('@/pages/Admin'));
+const Play = lazy(() => import('@/pages/Play'));
+const GuestComplete = lazy(() => import('@/pages/GuestComplete'));
 
 // Loading spinner for lazy loaded components
 function PageLoader(): JSX.Element {
@@ -50,7 +52,9 @@ function ProtectedRoute({ children }: RouteProps): JSX.Element {
     );
   }
 
-  if (!isAuthenticated) {
+  // Allow guest mode access to prediction pages
+  const isGuestMode = localStorage.getItem('guest_mode') === 'true';
+  if (!isAuthenticated && !isGuestMode) {
     return <Navigate to="/login" replace />;
   }
 
@@ -85,6 +89,10 @@ function AppRoutes(): JSX.Element {
         <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/ranking" element={<Leaderboard />} />
+
+        {/* Guest flow routes */}
+        <Route path="/play" element={<Play />} />
+        <Route path="/guest-complete" element={<GuestComplete />} />
 
         {/* Rutas protegidas */}
         <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
