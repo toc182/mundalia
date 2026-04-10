@@ -32,12 +32,16 @@ Natalia/
 │   │   │   ├── Home.jsx
 │   │   │   ├── Login.jsx
 │   │   │   ├── Register.jsx
+│   │   │   ├── Play.jsx            # Guest entry (/play)
+│   │   │   ├── GuestComplete.jsx   # Guest completion page
 │   │   │   ├── Predictions.jsx    # Paso 1: Grupos
 │   │   │   ├── ThirdPlaces.jsx    # Paso 2: Terceros lugares
 │   │   │   ├── Knockout.jsx       # Paso 3: Eliminatorias
 │   │   │   ├── MyPredictions.jsx  # Lista de predicciones
 │   │   │   ├── PredictionDetail.jsx # Ver prediccion completa
 │   │   │   └── Account.jsx        # Pagina de cuenta
+│   │   ├── utils/
+│   │   │   └── guestClaim.ts       # Claim guest predictions after registration
 │   │   ├── services/
 │   │   │   └── api.js             # Axios config + endpoints
 │   │   ├── App.jsx
@@ -194,6 +198,8 @@ npm start        # Produccion
 | `/` | Home | No | Info del torneo y acciones principales |
 | `/login` | Login | No | Formulario de inicio de sesion |
 | `/register` | Register | No | Formulario de registro |
+| `/play` | Play | No | Guest entry point (sets guest_mode, redirects to /grupos) |
+| `/guest-complete` | GuestComplete | No | Guest completion with export + register |
 | `/grupos` | Predictions | Si | Paso 1: Ordenar equipos por grupo |
 | `/terceros` | ThirdPlaces | Si | Paso 2: Seleccionar 8 mejores terceros |
 | `/eliminatorias` | Knockout | Si | Paso 3: Bracket completo R32 a Final |

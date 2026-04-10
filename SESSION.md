@@ -16,6 +16,15 @@ El proyecto Mundalia está 100% funcional en producción con todas las features 
 
 ## Cambios - 2026-04-10
 
+### Guest Prediction Flow (Flujo de Invitado)
+
+New shareable link for WhatsApp: /play (optionally /play?group=XXXX)
+- Guests complete full 3-step prediction without registering
+- Predictions stored in localStorage
+- Export to image available without account
+- Auto-claim predictions on registration (email or Google OAuth)
+- Group invite codes supported
+
 ### Eliminacion de Repechajes
 
 Los repechajes (playoffs de clasificacion pre-torneo) fueron eliminados del flujo de prediccion. Los 6 equipos placeholder fueron reemplazados por los ganadores reales del Mundial 2026: Bosnia, Suecia, Turquia, Chequia, DR Congo, Iraq.
