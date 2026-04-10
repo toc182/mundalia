@@ -24,14 +24,6 @@ interface GroupPredictions {
   [group: string]: number[];
 }
 
-interface PlayoffSelections {
-  [playoffId: string]: {
-    semi1?: number;
-    semi2?: number;
-    final?: number;
-  };
-}
-
 interface ThirdPlaceTeamInfo {
   group: string;
   team: Team | null;
@@ -45,7 +37,6 @@ export default function ThirdPlaces(): JSX.Element {
   const setId = searchParams.get('setId');
 
   const [predictions, setPredictions] = useState<GroupPredictions>({});
-  const [playoffSelections, setPlayoffSelections] = useState<PlayoffSelections>({});
   const [bestThirdPlaces, setBestThirdPlaces] = useState<string[]>([]);
   const [saved, setSaved] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
@@ -86,12 +77,6 @@ export default function ThirdPlaces(): JSX.Element {
             setPredictions(grouped);
           }
 
-          // Cargar playoffs del servidor
-          const playoffsResponse = await predictionsAPI.getPlayoffs(setId);
-          if (playoffsResponse.data && Object.keys(playoffsResponse.data).length > 0) {
-            setPlayoffSelections(playoffsResponse.data);
-          }
-
           // Cargar terceros del servidor
           const thirdResponse = await predictionsAPI.getThirdPlaces(setId);
           if (thirdResponse.data?.selectedGroups) {
@@ -116,11 +101,6 @@ export default function ThirdPlaces(): JSX.Element {
           setPredictions(JSON.parse(savedPredictions));
         }
 
-        const savedPlayoffs = localStorage.getItem('natalia_playoffs');
-        if (savedPlayoffs) {
-          setPlayoffSelections(JSON.parse(savedPlayoffs));
-        }
-
         const savedThirdPlaces = localStorage.getItem('natalia_best_third_places');
         if (savedThirdPlaces) {
           const parsed = JSON.parse(savedThirdPlaces);
@@ -143,7 +123,7 @@ export default function ThirdPlaces(): JSX.Element {
   }, []);
 
   // Get team by ID using centralized helper
-  const getTeamById = (id: number): Team | null => getTeamByIdHelper(id, playoffSelections);
+  const getTeamById = (id: number): Team | null => getTeamByIdHelper(id);
 
   // Get the third place team for each group
   const getThirdPlaceTeams = (): ThirdPlaceTeamInfo[] => {
@@ -212,6 +192,17 @@ export default function ThirdPlaces(): JSX.Element {
     localStorage.setItem('natalia_best_third_places', JSON.stringify(bestThirdPlaces));
 
     const nextUrl = setId ? `/eliminatorias?setId=${setId}` : '/eliminatorias';
+
+    // Guest mode or no setId: skip API, just navigate
+    const isGuestMode = localStorage.getItem('guest_mode') === 'true';
+    if (isGuestMode || !setId) {
+      originalThirdPlacesRef.current = [...bestThirdPlaces];
+      setSaved(true);
+      setSaving(false);
+      window.scrollTo(0, 0);
+      navigate(nextUrl);
+      return;
+    }
 
     try {
       // If we need to reset subsequent data first
