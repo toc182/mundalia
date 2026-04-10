@@ -95,7 +95,7 @@ export default function MyPredictions(): JSX.Element {
       setNewName('');
       setNewMode('positions');
       // Navigate to start making predictions with the new set
-      navigate(`/repechajes?setId=${response.data.public_id}`);
+      navigate(`/grupos?setId=${response.data.public_id}`);
     } catch (err) {
       setError(t('errors.savingFailed'));
     } finally {
@@ -236,13 +236,7 @@ export default function MyPredictions(): JSX.Element {
                 </CardHeader>
                 <CardContent>
                   {/* Progress indicators */}
-                  <div className="grid grid-cols-2 gap-2 text-xs mb-4">
-                    <div className="flex items-center gap-1">
-                      <span className={parseInt(String(set.playoff_count || 0)) >= 6 ? 'text-green-600' : 'text-gray-400'}>
-                        {parseInt(String(set.playoff_count || 0)) >= 6 ? '✓' : '○'}
-                      </span>
-                      <span>{t('playoffs.title')}: {set.playoff_count || 0}/6</span>
-                    </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs mb-4">
                     <div className="flex items-center gap-1">
                       <span className={parseInt(String(set.group_count || 0)) >= 48 ? 'text-green-600' : 'text-gray-400'}>
                         {parseInt(String(set.group_count || 0)) >= 48 ? '✓' : '○'}
@@ -281,7 +275,7 @@ export default function MyPredictions(): JSX.Element {
                         size="sm"
                         asChild
                       >
-                        <Link to={`/repechajes?setId=${set.public_id}`}>
+                        <Link to={`/grupos?setId=${set.public_id}`}>
                           <Edit2 className="w-4 h-4 mr-1" />
                           {t('common.edit')}
                         </Link>

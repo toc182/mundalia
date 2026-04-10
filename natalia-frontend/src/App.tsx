@@ -11,7 +11,6 @@ import Register from '@/pages/Register';
 
 // Lazy loaded pages (code splitting)
 const AuthCallback = lazy(() => import('@/pages/AuthCallback'));
-const Playoffs = lazy(() => import('@/pages/Playoffs'));
 const Predictions = lazy(() => import('@/pages/Predictions'));
 const ThirdPlaces = lazy(() => import('@/pages/ThirdPlaces'));
 const Knockout = lazy(() => import('@/pages/Knockout'));
@@ -89,7 +88,6 @@ function AppRoutes(): JSX.Element {
 
         {/* Rutas protegidas */}
         <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-        <Route path="/repechajes" element={<ProtectedRoute><Playoffs /></ProtectedRoute>} />
         <Route path="/grupos" element={<ProtectedRoute><Predictions /></ProtectedRoute>} />
         <Route path="/grupos-marcadores" element={<ProtectedRoute><PredictionsScores /></ProtectedRoute>} />
         <Route path="/terceros" element={<ProtectedRoute><ThirdPlaces /></ProtectedRoute>} />
