@@ -3,8 +3,6 @@ import type { RefObject } from 'react';
 
 // Extended team type with thirdPlaceFrom property
 export interface PlayoffWinnerTeam extends MockTeam {
-  originalPlayoffId?: string;
-  isPlayoffWinner?: boolean;
   thirdPlaceFrom?: string;
 }
 

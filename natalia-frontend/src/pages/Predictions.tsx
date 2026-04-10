@@ -22,14 +22,6 @@ interface GroupPredictions {
   [group: string]: number[];
 }
 
-interface PlayoffSelections {
-  [playoffId: string]: {
-    semi1?: number;
-    semi2?: number;
-    final?: number;
-  };
-}
-
 interface SubsequentData {
   hasThirds: boolean;
   hasKnockout: boolean;
@@ -48,7 +40,6 @@ export default function Predictions(): JSX.Element {
   const setId = searchParams.get('setId');
 
   const [predictions, setPredictions] = useState<GroupPredictions>({});
-  const [playoffSelections, setPlayoffSelections] = useState<PlayoffSelections>({});
   const [saved, setSaved] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -124,14 +115,6 @@ export default function Predictions(): JSX.Element {
           originalPredictionsRef.current = JSON.parse(JSON.stringify(defaults));
         }
 
-        try {
-          const playoffsResponse = await predictionsAPI.getPlayoffs(setId);
-          if (playoffsResponse.data && Object.keys(playoffsResponse.data).length > 0) {
-            setPlayoffSelections(playoffsResponse.data);
-          }
-        } catch (err) {
-          console.error('Error loading playoffs:', err);
-        }
         setLoading(false);
       } else {
         const savedPredictions = localStorage.getItem('natalia_predictions');
@@ -145,10 +128,6 @@ export default function Predictions(): JSX.Element {
           originalPredictionsRef.current = JSON.parse(JSON.stringify(defaults));
         }
 
-        const savedPlayoffs = localStorage.getItem('natalia_playoffs');
-        if (savedPlayoffs) {
-          setPlayoffSelections(JSON.parse(savedPlayoffs));
-        }
         setLoading(false);
       }
     };
@@ -163,7 +142,7 @@ export default function Predictions(): JSX.Element {
     };
   }, []);
 
-  const getTeamById = (id: number): Team | null => getTeamByIdHelper(id, playoffSelections);
+  const getTeamById = (id: number): Team | null => getTeamByIdHelper(id);
 
   // Drag & drop handlers
   const handleDragStart = (e: React.DragEvent<HTMLDivElement>, teamId: number): void => {
@@ -294,7 +273,7 @@ export default function Predictions(): JSX.Element {
   };
 
   const handleBack = (): void => {
-    const backUrl = setId ? `/repechajes?setId=${setId}` : '/repechajes';
+    const backUrl = setId ? `/mis-predicciones` : '/mis-predicciones';
     window.scrollTo(0, 0);
     navigate(backUrl);
   };

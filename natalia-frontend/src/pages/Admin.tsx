@@ -5,9 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { adminAPI } from '@/services/api';
 import { Shield, Trophy, ListOrdered } from 'lucide-react';
-import { StatsTab, PlayoffsTab, GroupsTab, KnockoutTab } from '@/components/admin';
+import { StatsTab, GroupsTab, KnockoutTab } from '@/components/admin';
 import type { AdminStats } from '@/types';
-import type { TabItem, RealPlayoffResult, RealGroupMatch, RealGroupStanding, RealKnockoutResult } from '@/types/admin';
+import type { TabItem, RealGroupMatch, RealGroupStanding, RealKnockoutResult } from '@/types/admin';
 
 export default function Admin(): JSX.Element {
   const { user } = useAuth();
@@ -18,7 +18,6 @@ export default function Admin(): JSX.Element {
   const [success, setSuccess] = useState<string | null>(null);
 
   // Real results from database
-  const [realPlayoffs, setRealPlayoffs] = useState<RealPlayoffResult[]>([]);
   const [realGroupMatches, setRealGroupMatches] = useState<RealGroupMatch[]>([]);
   const [realGroupStandings, setRealGroupStandings] = useState<RealGroupStanding[]>([]);
   const [realKnockout, setRealKnockout] = useState<RealKnockoutResult[]>([]);
@@ -30,15 +29,13 @@ export default function Admin(): JSX.Element {
     if (!user || user.role !== 'admin') return;
     setLoading(true);
     try {
-      const [statsRes, playoffsRes, matchesRes, standingsRes, knockoutRes] = await Promise.all([
+      const [statsRes, matchesRes, standingsRes, knockoutRes] = await Promise.all([
         adminAPI.getStats(),
-        adminAPI.getPlayoffs(),
         adminAPI.getGroupMatches(),
         adminAPI.getGroupStandings(),
         adminAPI.getKnockout()
       ]);
       setStats(statsRes.data);
-      setRealPlayoffs(playoffsRes.data);
       setRealGroupMatches(matchesRes.data);
       setRealGroupStandings(standingsRes.data);
       setRealKnockout(knockoutRes.data);
@@ -68,7 +65,6 @@ export default function Admin(): JSX.Element {
 
   const tabs: TabItem[] = [
     { id: 'stats', label: 'Dashboard', icon: Shield },
-    { id: 'playoffs', label: 'Repechajes', icon: Trophy },
     { id: 'groups', label: 'Grupos', icon: ListOrdered },
     { id: 'knockout', label: 'Eliminatorias', icon: Trophy },
   ];
@@ -137,18 +133,8 @@ export default function Admin(): JSX.Element {
         <StatsTab stats={stats} />
       )}
 
-      {activeTab === 'playoffs' && (
-        <PlayoffsTab
-          realPlayoffs={realPlayoffs}
-          onSave={loadData}
-          showSuccess={showSuccess}
-          setError={setError}
-        />
-      )}
-
       {activeTab === 'groups' && (
         <GroupsTab
-          realPlayoffs={realPlayoffs}
           realGroupMatches={realGroupMatches}
           showSuccess={showSuccess}
           setError={setError}
@@ -157,7 +143,6 @@ export default function Admin(): JSX.Element {
 
       {activeTab === 'knockout' && (
         <KnockoutTab
-          realPlayoffs={realPlayoffs}
           realGroupStandings={realGroupStandings}
           realKnockout={realKnockout}
           onSave={loadData}

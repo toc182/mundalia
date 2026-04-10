@@ -1,10 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { predictionsAPI, predictionSetsAPI } from '@/services/api';
-import {
-  getTeamById as getTeamByIdHelper,
-  type PlayoffSelections,
-} from '@/utils/predictionHelpers';
+import { getTeamById as getTeamByIdHelper } from '@/utils/predictionHelpers';
 import {
   roundOf32Structure,
   roundOf16Structure,
@@ -30,7 +27,6 @@ import type {
 interface UseKnockoutDataReturn {
   // State
   predictions: GroupPredictions;
-  playoffSelections: PlayoffSelections;
   bestThirdPlaces: string[];
   knockoutPredictions: KnockoutPredictions;
   setKnockoutPredictions: React.Dispatch<React.SetStateAction<KnockoutPredictions>>;
@@ -85,7 +81,6 @@ export function useKnockoutData(): UseKnockoutDataReturn {
   const setId = searchParams.get('setId');
 
   const [predictions, setPredictions] = useState<GroupPredictions>({});
-  const [playoffSelections, setPlayoffSelections] = useState<PlayoffSelections>({});
   const [bestThirdPlaces, setBestThirdPlaces] = useState<string[]>([]);
   const [knockoutPredictions, setKnockoutPredictions] = useState<KnockoutPredictions>({});
   const [knockoutScores, setKnockoutScores] = useState<KnockoutScores>({});
@@ -124,12 +119,6 @@ export function useKnockoutData(): UseKnockoutDataReturn {
               grouped[gp.group_letter][gp.predicted_position - 1] = gp.team_id;
             });
             setPredictions(grouped);
-          }
-
-          // Load playoff predictions
-          const playoffsResponse = await predictionsAPI.getPlayoffs(setId);
-          if (playoffsResponse.data && Object.keys(playoffsResponse.data).length > 0) {
-            setPlayoffSelections(playoffsResponse.data as PlayoffSelections);
           }
 
           // Load third places
@@ -176,11 +165,6 @@ export function useKnockoutData(): UseKnockoutDataReturn {
           setPredictions(JSON.parse(savedPredictions));
         }
 
-        const savedPlayoffs = localStorage.getItem('natalia_playoffs');
-        if (savedPlayoffs) {
-          setPlayoffSelections(JSON.parse(savedPlayoffs));
-        }
-
         const savedThirdPlaces = localStorage.getItem('natalia_best_third_places');
         if (savedThirdPlaces) {
           setBestThirdPlaces(JSON.parse(savedThirdPlaces));
@@ -206,8 +190,8 @@ export function useKnockoutData(): UseKnockoutDataReturn {
 
   // Get team by ID
   const getTeamById = useCallback((id: number): PlayoffWinnerTeam | null => {
-    return getTeamByIdHelper(id, playoffSelections) as PlayoffWinnerTeam | null;
-  }, [playoffSelections]);
+    return getTeamByIdHelper(id) as PlayoffWinnerTeam | null;
+  }, []);
 
   // Get team by position (1A, 2B, 3C, etc.)
   const getTeamByPosition = useCallback((position: string, group: string): PlayoffWinnerTeam | null => {
@@ -276,7 +260,7 @@ export function useKnockoutData(): UseKnockoutDataReturn {
         selectedWinner: knockoutPredictions[match.matchId] || null,
       };
     });
-  }, [predictions, playoffSelections, bestThirdPlaces, knockoutPredictions, thirdPlaceAssignments, getTeamByPosition]);
+  }, [predictions, bestThirdPlaces, knockoutPredictions, thirdPlaceAssignments, getTeamByPosition]);
 
   const r16Matches = useMemo((): BuildKnockoutMatch[] => {
     return roundOf16Structure.map(match => ({
@@ -512,7 +496,6 @@ export function useKnockoutData(): UseKnockoutDataReturn {
 
   return {
     predictions,
-    playoffSelections,
     bestThirdPlaces,
     knockoutPredictions,
     setKnockoutPredictions,

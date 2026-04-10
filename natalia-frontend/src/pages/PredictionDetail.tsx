@@ -8,8 +8,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Download, Loader2, Share } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { exportToCanvas } from '@/utils/exportCanvas';
-import { mockTeams, getAllGroups, type Team } from '@/data/mockData';
-import { playoffs, type Playoff } from '@/data/playoffsData';
+import { mockTeams, getAllGroups } from '@/data/mockData';
 import { getThirdPlaceCombination } from '@/data/thirdPlaceCombinations';
 import {
   roundOf32Structure,
@@ -27,9 +26,7 @@ import {
 import { predictionSetsAPI } from '@/services/api';
 import {
   getTeamById as getTeamByIdHelper,
-  getPlayoffWinner as getPlayoffWinnerHelper,
   type PlayoffWinnerTeam,
-  type PlayoffSelections,
 } from '@/utils/predictionHelpers';
 import MatchBox from '@/components/MatchBox';
 
@@ -43,7 +40,6 @@ interface PredictionSetResponse {
     team_id: number;
     predicted_position: number;
   }>;
-  playoffPredictions?: PlayoffSelections;
   thirdPlaces?: string;
   knockoutPredictions?: Record<string, number>;
 }
@@ -64,7 +60,6 @@ export default function PredictionDetail(): JSX.Element {
   const { user } = useAuth();
   const [predictionSet, setPredictionSet] = useState<PredictionSetState | null>(null);
   const [predictions, setPredictions] = useState<GroupPredictions>({});
-  const [playoffSelections, setPlayoffSelections] = useState<PlayoffSelections>({});
   const [bestThirdPlaces, setBestThirdPlaces] = useState<string[]>([]);
   const [knockoutPredictions, setKnockoutPredictions] = useState<KnockoutPredictions>({});
   const [loading, setLoading] = useState<boolean>(true);
@@ -98,11 +93,6 @@ export default function PredictionDetail(): JSX.Element {
           setPredictions(grouped);
         }
 
-        // Playoff predictions
-        if (data.playoffPredictions) {
-          setPlayoffSelections(data.playoffPredictions);
-        }
-
         // Third places
         if (data.thirdPlaces) {
           setBestThirdPlaces(data.thirdPlaces.split(''));
@@ -125,11 +115,7 @@ export default function PredictionDetail(): JSX.Element {
 
   // Get team by ID using centralized helper
   const getTeamById = (teamId: number | string | null | undefined): PlayoffWinnerTeam | null =>
-    getTeamByIdHelper(teamId, playoffSelections);
-
-  // Get playoff winner using centralized helper
-  const getPlayoffWinner = (playoffId: string): Team | null =>
-    getPlayoffWinnerHelper(playoffId, playoffSelections);
+    getTeamByIdHelper(teamId);
 
   // Convert data URL to Blob
   const dataUrlToBlob = (dataUrl: string): Blob => {
@@ -199,7 +185,6 @@ export default function PredictionDetail(): JSX.Element {
   };
 
   const groups = getAllGroups();
-  const completedPlayoffs = playoffs.filter(p => playoffSelections[p.id]?.final).length;
   const completedGroups = groups.filter(g => predictions[g]?.length === 4).length;
   const thirdPlaceCombination = bestThirdPlaces.length === 8
     ? getThirdPlaceCombination(bestThirdPlaces)
@@ -272,7 +257,7 @@ export default function PredictionDetail(): JSX.Element {
             <span className="ml-2">{canShareFiles() ? t('export.share') : t('export.button')}</span>
           </Button>
           <Button variant="outline" asChild>
-            <Link to={`/repechajes?setId=${publicId}`}>{t('common.edit')}</Link>
+            <Link to={`/grupos?setId=${publicId}`}>{t('common.edit')}</Link>
           </Button>
         </div>
       </div>
@@ -302,9 +287,6 @@ export default function PredictionDetail(): JSX.Element {
 
       {/* Progress Summary */}
       <div className="flex flex-wrap gap-2 mb-6">
-        <Badge variant={completedPlayoffs === 6 ? 'default' : 'secondary'}>
-          Repechajes: {completedPlayoffs}/6
-        </Badge>
         <Badge variant={completedGroups === 12 ? 'default' : 'secondary'}>
           Grupos: {completedGroups}/12
         </Badge>
@@ -315,43 +297,6 @@ export default function PredictionDetail(): JSX.Element {
           Eliminatorias: {totalKnockout}/32
         </Badge>
       </div>
-
-      {/* Repechajes Section */}
-      <Card className="mb-6">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg">Repechajes Intercontinentales</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {playoffs.map((playoff: Playoff) => {
-              const winner = getPlayoffWinner(playoff.id);
-              return (
-                <div
-                  key={playoff.id}
-                  className={`p-3 rounded-lg border ${winner ? 'bg-green-50 border-green-200' : 'bg-muted'}`}
-                >
-                  <p className="text-xs text-muted-foreground mb-1">{playoff.name}</p>
-                  {winner ? (
-                    <div className="flex items-center gap-2">
-                      <img
-                        src={winner.flag_url}
-                        alt={winner.name}
-                        className="w-6 h-4 object-cover rounded"
-                      />
-                      <span className="text-sm font-medium">{winner.name}</span>
-                    </div>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">Sin seleccionar</span>
-                  )}
-                  <p className="text-xs text-muted-foreground mt-1">
-                    → Grupo {playoff.destinationGroup}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Groups Section */}
       <Card className="mb-6">
@@ -578,7 +523,7 @@ export default function PredictionDetail(): JSX.Element {
           <Link to="/mis-predicciones">{t('common.back')}</Link>
         </Button>
         <Button asChild>
-          <Link to={`/repechajes?setId=${publicId}`}>{t('common.edit')}</Link>
+          <Link to={`/grupos?setId=${publicId}`}>{t('common.edit')}</Link>
         </Button>
       </div>
     </div>
