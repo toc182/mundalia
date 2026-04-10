@@ -4,8 +4,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Save } from 'lucide-react';
 import { adminAPI } from '@/services/api';
 import { mockTeams } from '@/data/mockData';
-import { playoffs } from '@/data/playoffsData';
-import { PLAYOFF_TO_TEAM_ID } from '@/utils/predictionHelpers';
 import {
   roundOf32Structure,
   roundOf16Structure,
@@ -16,7 +14,6 @@ import {
 } from '@/data/knockoutBracket';
 import { getThirdPlaceAssignments, type ThirdPlaceAssignments } from '@/data/thirdPlaceCombinations';
 import { AdminBracket } from './AdminBracket';
-import type { MockTeam } from '@/data/mockData';
 import type {
   KnockoutTabProps,
   LocalKnockoutResults,
@@ -24,7 +21,7 @@ import type {
   AdminBracketMatchData,
 } from '@/types/admin';
 
-export function KnockoutTab({ realPlayoffs, realGroupStandings, realKnockout, onSave, showSuccess, setError }: KnockoutTabProps): JSX.Element {
+export function KnockoutTab({ realGroupStandings, realKnockout, onSave, showSuccess, setError }: KnockoutTabProps): JSX.Element {
   const [saving, setSaving] = useState<boolean>(false);
   const [localResults, setLocalResults] = useState<LocalKnockoutResults>({});
 
@@ -43,46 +40,11 @@ export function KnockoutTab({ realPlayoffs, realGroupStandings, realKnockout, on
     }
   }, [realKnockout]);
 
-  // Get all teams including playoff winners
-  const getAllTeams = useCallback((): MockTeam[] => {
-    const teams = [...mockTeams];
-    playoffs.forEach(p => {
-      p.teams.forEach(t => {
-        if (!teams.find(at => at.id === t.id)) {
-          teams.push(t as MockTeam);
-        }
-      });
-    });
-    return teams;
-  }, []);
-
-  const allTeams = getAllTeams();
-
-  // Get playoff winner team
-  const getPlayoffWinner = useCallback((playoffId: string): MockTeam | null => {
-    const result = realPlayoffs.find(r => r.playoff_id === playoffId);
-    if (!result) return null;
-    const playoff = playoffs.find(p => p.id === playoffId);
-    return playoff?.teams.find(t => t.id === result.winner_team_id) as MockTeam || null;
-  }, [realPlayoffs]);
-
-  // Get team by ID, substituting playoff winners
+  // Get team by ID
   const getTeamById = useCallback((id: number | null): ExtendedMockTeam | null => {
     if (!id) return null;
-    const team = allTeams.find(t => t.id === id);
-    if (!team) return null;
-
-    if (team.is_playoff) {
-      const playoffEntry = Object.entries(PLAYOFF_TO_TEAM_ID).find(([, teamId]) => teamId === id);
-      if (playoffEntry) {
-        const winner = getPlayoffWinner(playoffEntry[0]);
-        if (winner) {
-          return { ...winner, id: team.id, isPlayoffWinner: true };
-        }
-      }
-    }
-    return team;
-  }, [allTeams, getPlayoffWinner]);
+    return mockTeams.find(t => t.id === id) || null;
+  }, []);
 
   // Get team from group standings by position
   const getTeamByGroupPosition = useCallback((group: string, position: number): ExtendedMockTeam | null => {

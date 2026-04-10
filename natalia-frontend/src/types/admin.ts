@@ -106,7 +106,6 @@ export interface GroupsTabProps extends AdminTabBaseProps {
 }
 
 export interface KnockoutTabProps extends AdminTabBaseProps {
-  realPlayoffs: RealPlayoffResult[];
   realGroupStandings: RealGroupStanding[];
   realKnockout: RealKnockoutResult[];
   onSave: () => Promise<void>;

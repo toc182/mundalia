@@ -324,10 +324,6 @@ export function StatsTab({ stats }: StatsTabProps): JSX.Element {
           <CardContent>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
-                <span>Repechajes:</span>
-                <span className="font-medium">{stats?.playoffs_entered || 0}/6</span>
-              </div>
-              <div className="flex justify-between">
                 <span>Grupos:</span>
                 <span className="font-medium">{stats?.groups_entered || 0}/12</span>
               </div>

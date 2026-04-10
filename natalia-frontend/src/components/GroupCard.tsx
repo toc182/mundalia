@@ -99,9 +99,7 @@ function SortableTeamItem({ team, index, group, onMove }: SortableTeamItemProps)
       {/* Team name */}
       <div className="flex-1 min-w-0">
         <span className="font-medium text-sm truncate block">{team.name}</span>
-        {team.is_playoff && !team.isPlayoffWinner && (
-          <p className="text-xs text-muted-foreground truncate">{team.playoff_teams}</p>
-        )}
+
       </div>
 
       {/* Arrow buttons */}
