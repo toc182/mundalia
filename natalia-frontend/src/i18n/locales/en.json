@@ -292,5 +292,13 @@
     "button": "Export",
     "share": "Share",
     "exporting": "Exporting..."
+  },
+  "guest": {
+    "predictionName": "My Prediction",
+    "completeTitle": "Your prediction is ready!",
+    "completeSubtitle": "Export it as an image or create an account to save it permanently.",
+    "yourChampion": "Your Champion",
+    "createAccount": "Create Account to Save",
+    "browserWarning": "Without an account, your prediction is only saved in this browser."
   }
 }

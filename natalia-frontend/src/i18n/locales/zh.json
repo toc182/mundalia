@@ -292,5 +292,13 @@
     "button": "导出",
     "share": "分享",
     "exporting": "导出中..."
+  },
+  "guest": {
+    "predictionName": "我的预测",
+    "completeTitle": "你的预测已完成！",
+    "completeSubtitle": "导出为图片或创建账户保存。",
+    "yourChampion": "你的冠军",
+    "createAccount": "创建账户保存",
+    "browserWarning": "没有账户，你的预测只保存在此浏览器中。"
   }
 }

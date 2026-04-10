@@ -292,5 +292,13 @@
     "button": "Exportieren",
     "share": "Teilen",
     "exporting": "Exportiere..."
+  },
+  "guest": {
+    "predictionName": "Meine Vorhersage",
+    "completeTitle": "Deine Vorhersage ist fertig!",
+    "completeSubtitle": "Exportiere sie als Bild oder erstelle ein Konto, um sie zu speichern.",
+    "yourChampion": "Dein Champion",
+    "createAccount": "Konto erstellen zum Speichern",
+    "browserWarning": "Ohne Konto ist deine Vorhersage nur in diesem Browser gespeichert."
   }
 }

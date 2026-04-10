@@ -292,5 +292,13 @@
     "button": "Exporter",
     "share": "Partager",
     "exporting": "Exportation..."
+  },
+  "guest": {
+    "predictionName": "Ma Prediction",
+    "completeTitle": "Votre prediction est prete !",
+    "completeSubtitle": "Exportez-la en image ou creez un compte pour la sauvegarder.",
+    "yourChampion": "Votre Champion",
+    "createAccount": "Creer un compte pour sauvegarder",
+    "browserWarning": "Sans compte, votre prediction n'est sauvegardee que dans ce navigateur."
   }
 }
