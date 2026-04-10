@@ -7,20 +7,18 @@ export interface MockTeam {
   code: string;
   group_letter: string;
   flag_url: string;
-  is_playoff?: boolean;
-  playoff_teams?: string;
 }
 
 export const mockTeams: MockTeam[] = [
-  // Group A: Mexico, South Africa, Korea Republic, European Play-Off D
+  // Group A: Mexico, South Africa, Korea Republic, Czechia
   { id: 1, name: 'Mexico', code: 'MEX', group_letter: 'A', flag_url: 'https://flagcdn.com/w80/mx.png' },
   { id: 2, name: 'Sudafrica', code: 'RSA', group_letter: 'A', flag_url: 'https://flagcdn.com/w80/za.png' },
   { id: 3, name: 'Corea del Sur', code: 'KOR', group_letter: 'A', flag_url: 'https://flagcdn.com/w80/kr.png' },
-  { id: 4, name: 'Playoff Europa D', code: 'PED', group_letter: 'A', flag_url: 'https://flagcdn.com/w80/eu.png', is_playoff: true, playoff_teams: 'Dinamarca / Rep. Checa / Macedonia del Norte / Irlanda' },
+  { id: 4, name: 'Rep. Checa', code: 'CZE', group_letter: 'A', flag_url: 'https://flagcdn.com/w80/cz.png' },
 
-  // Group B: Canada, European Play-Off A, Qatar, Switzerland
+  // Group B: Canada, Bosnia, Qatar, Switzerland
   { id: 5, name: 'Canada', code: 'CAN', group_letter: 'B', flag_url: 'https://flagcdn.com/w80/ca.png' },
-  { id: 6, name: 'Playoff Europa A', code: 'PEA', group_letter: 'B', flag_url: 'https://flagcdn.com/w80/eu.png', is_playoff: true, playoff_teams: 'Italia / Gales / Irlanda del Norte / Bosnia' },
+  { id: 6, name: 'Bosnia', code: 'BIH', group_letter: 'B', flag_url: 'https://flagcdn.com/w80/ba.png' },
   { id: 7, name: 'Catar', code: 'QAT', group_letter: 'B', flag_url: 'https://flagcdn.com/w80/qa.png' },
   { id: 8, name: 'Suiza', code: 'SUI', group_letter: 'B', flag_url: 'https://flagcdn.com/w80/ch.png' },
 
@@ -30,11 +28,11 @@ export const mockTeams: MockTeam[] = [
   { id: 11, name: 'Haiti', code: 'HAI', group_letter: 'C', flag_url: 'https://flagcdn.com/w80/ht.png' },
   { id: 12, name: 'Escocia', code: 'SCO', group_letter: 'C', flag_url: 'https://flagcdn.com/w80/gb-sct.png' },
 
-  // Group D: United States, Paraguay, Australia, European Play-Off C
+  // Group D: United States, Paraguay, Australia, Turkey
   { id: 13, name: 'Estados Unidos', code: 'USA', group_letter: 'D', flag_url: 'https://flagcdn.com/w80/us.png' },
   { id: 14, name: 'Paraguay', code: 'PAR', group_letter: 'D', flag_url: 'https://flagcdn.com/w80/py.png' },
   { id: 15, name: 'Australia', code: 'AUS', group_letter: 'D', flag_url: 'https://flagcdn.com/w80/au.png' },
-  { id: 16, name: 'Playoff Europa C', code: 'PEC', group_letter: 'D', flag_url: 'https://flagcdn.com/w80/eu.png', is_playoff: true, playoff_teams: 'Turquia / Rumania / Eslovaquia / Kosovo' },
+  { id: 16, name: 'Turquia', code: 'TUR', group_letter: 'D', flag_url: 'https://flagcdn.com/w80/tr.png' },
 
   // Group E: Germany, Curaçao, Côte d'Ivoire, Ecuador
   { id: 17, name: 'Alemania', code: 'GER', group_letter: 'E', flag_url: 'https://flagcdn.com/w80/de.png' },
@@ -42,10 +40,10 @@ export const mockTeams: MockTeam[] = [
   { id: 19, name: 'Costa de Marfil', code: 'CIV', group_letter: 'E', flag_url: 'https://flagcdn.com/w80/ci.png' },
   { id: 20, name: 'Ecuador', code: 'ECU', group_letter: 'E', flag_url: 'https://flagcdn.com/w80/ec.png' },
 
-  // Group F: Netherlands, Japan, European Play-Off B, Tunisia
+  // Group F: Netherlands, Japan, Sweden, Tunisia
   { id: 21, name: 'Paises Bajos', code: 'NED', group_letter: 'F', flag_url: 'https://flagcdn.com/w80/nl.png' },
   { id: 22, name: 'Japon', code: 'JPN', group_letter: 'F', flag_url: 'https://flagcdn.com/w80/jp.png' },
-  { id: 23, name: 'Playoff Europa B', code: 'PEB', group_letter: 'F', flag_url: 'https://flagcdn.com/w80/eu.png', is_playoff: true, playoff_teams: 'Polonia / Suecia / Ucrania / Albania' },
+  { id: 23, name: 'Suecia', code: 'SWE', group_letter: 'F', flag_url: 'https://flagcdn.com/w80/se.png' },
   { id: 24, name: 'Tunez', code: 'TUN', group_letter: 'F', flag_url: 'https://flagcdn.com/w80/tn.png' },
 
   // Group G: Belgium, Egypt, IR Iran, New Zealand
@@ -60,10 +58,10 @@ export const mockTeams: MockTeam[] = [
   { id: 31, name: 'Arabia Saudita', code: 'KSA', group_letter: 'H', flag_url: 'https://flagcdn.com/w80/sa.png' },
   { id: 32, name: 'Uruguay', code: 'URU', group_letter: 'H', flag_url: 'https://flagcdn.com/w80/uy.png' },
 
-  // Group I: France, Senegal, FIFA Play-Off 2, Norway
+  // Group I: France, Senegal, Iraq, Norway
   { id: 33, name: 'Francia', code: 'FRA', group_letter: 'I', flag_url: 'https://flagcdn.com/w80/fr.png' },
   { id: 34, name: 'Senegal', code: 'SEN', group_letter: 'I', flag_url: 'https://flagcdn.com/w80/sn.png' },
-  { id: 35, name: 'Playoff FIFA 2', code: 'PF2', group_letter: 'I', flag_url: 'https://flagcdn.com/w80/un.png', is_playoff: true, playoff_teams: 'Bolivia / Irak / Surinam' },
+  { id: 35, name: 'Irak', code: 'IRQ', group_letter: 'I', flag_url: 'https://flagcdn.com/w80/iq.png' },
   { id: 36, name: 'Noruega', code: 'NOR', group_letter: 'I', flag_url: 'https://flagcdn.com/w80/no.png' },
 
   // Group J: Argentina, Algeria, Austria, Jordan
@@ -72,9 +70,9 @@ export const mockTeams: MockTeam[] = [
   { id: 39, name: 'Austria', code: 'AUT', group_letter: 'J', flag_url: 'https://flagcdn.com/w80/at.png' },
   { id: 40, name: 'Jordania', code: 'JOR', group_letter: 'J', flag_url: 'https://flagcdn.com/w80/jo.png' },
 
-  // Group K: Portugal, FIFA Play-Off 1, Uzbekistan, Colombia
+  // Group K: Portugal, RD Congo, Uzbekistan, Colombia
   { id: 41, name: 'Portugal', code: 'POR', group_letter: 'K', flag_url: 'https://flagcdn.com/w80/pt.png' },
-  { id: 42, name: 'Playoff FIFA 1', code: 'PF1', group_letter: 'K', flag_url: 'https://flagcdn.com/w80/un.png', is_playoff: true, playoff_teams: 'Jamaica / RD Congo / Nueva Caledonia' },
+  { id: 42, name: 'RD Congo', code: 'COD', group_letter: 'K', flag_url: 'https://flagcdn.com/w80/cd.png' },
   { id: 43, name: 'Uzbekistan', code: 'UZB', group_letter: 'K', flag_url: 'https://flagcdn.com/w80/uz.png' },
   { id: 44, name: 'Colombia', code: 'COL', group_letter: 'K', flag_url: 'https://flagcdn.com/w80/co.png' },
 

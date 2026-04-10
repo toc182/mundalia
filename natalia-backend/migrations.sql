@@ -268,6 +268,27 @@ SET public_id = substr(md5(random()::text || id::text), 1, 8)
 WHERE public_id IS NULL;
 
 -- ============================================
+-- MIGRACION 009: Eliminar repechajes - equipos finales confirmados
+-- Fecha: 2026-04-10
+-- ============================================
+
+-- Eliminar datos de predicciones de repechajes
+DELETE FROM playoff_predictions;
+DELETE FROM real_playoff_results;
+
+-- Eliminar tablas de repechajes
+DROP TABLE IF EXISTS playoff_predictions;
+DROP TABLE IF EXISTS real_playoff_results;
+
+-- Actualizar equipos placeholder con ganadores reales
+UPDATE teams SET name = 'Rep. Checa', code = 'CZE', flag_url = 'https://flagcdn.com/w80/cz.png', is_playoff = false WHERE id = 4;
+UPDATE teams SET name = 'Bosnia', code = 'BIH', flag_url = 'https://flagcdn.com/w80/ba.png', is_playoff = false WHERE id = 6;
+UPDATE teams SET name = 'Turquia', code = 'TUR', flag_url = 'https://flagcdn.com/w80/tr.png', is_playoff = false WHERE id = 16;
+UPDATE teams SET name = 'Suecia', code = 'SWE', flag_url = 'https://flagcdn.com/w80/se.png', is_playoff = false WHERE id = 23;
+UPDATE teams SET name = 'Irak', code = 'IRQ', flag_url = 'https://flagcdn.com/w80/iq.png', is_playoff = false WHERE id = 35;
+UPDATE teams SET name = 'RD Congo', code = 'COD', flag_url = 'https://flagcdn.com/w80/cd.png', is_playoff = false WHERE id = 42;
+
+-- ============================================
 -- NUEVA MIGRACION: Agregar aqui abajo
 -- Fecha: YYYY-MM-DD
 -- ============================================
