@@ -102,7 +102,6 @@ export interface PlayoffsTabProps extends AdminTabBaseProps {
 }
 
 export interface GroupsTabProps extends AdminTabBaseProps {
-  realPlayoffs: RealPlayoffResult[];
   realGroupMatches: RealGroupMatch[];
 }
 

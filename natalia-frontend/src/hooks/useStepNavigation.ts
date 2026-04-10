@@ -30,7 +30,6 @@ interface UseStepNavigationReturn {
  *
  * @example
  * const steps = [
- *   { path: '/repechajes', label: 'Repechajes' },
  *   { path: '/grupos', label: 'Grupos' },
  *   { path: '/terceros', label: 'Terceros' },
  *   { path: '/eliminatorias', label: 'Eliminatorias' },

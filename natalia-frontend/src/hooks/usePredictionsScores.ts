@@ -14,11 +14,6 @@ import {
 } from '../utils/fifaTiebreaker';
 import { getThirdPlaceCombination } from '../data/thirdPlaceCombinations';
 import { predictionsAPI } from '../services/api';
-import {
-  PLAYOFF_TO_TEAM_ID,
-  getPlayoffWinner,
-  type PlayoffSelections
-} from '../utils/predictionHelpers';
 import type { Team, GroupPrediction } from '@/types';
 import type {
   ScoresState,
@@ -70,7 +65,6 @@ export function usePredictionsScores(setId: string | null): UsePredictionsScores
   // State
   const [scores, setScores] = useState<ScoresState>({});
   const [tiebreakerDecisions, setTiebreakerDecisions] = useState<TiebreakerDecisionsState>({});
-  const [playoffSelections, setPlayoffSelections] = useState<PlayoffSelections>({});
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
@@ -81,33 +75,10 @@ export function usePredictionsScores(setId: string | null): UsePredictionsScores
   const [showConfirmModal, setShowConfirmModal] = useState<boolean>(false);
   const [incompleteGroups, setIncompleteGroups] = useState<string[]>([]);
 
-  // Get teams for each group (with playoff winners substituted)
+  // Get teams for each group
   const getGroupTeams = useCallback((groupLetter: string): Team[] => {
-    const teams = getTeamsByGroup(groupLetter);
-
-    return teams.map(team => {
-      if (team.is_playoff) {
-        const playoffId = Object.keys(PLAYOFF_TO_TEAM_ID).find(
-          key => PLAYOFF_TO_TEAM_ID[key] === team.id
-        );
-
-        if (playoffId) {
-          const winnerTeam = getPlayoffWinner(playoffId, playoffSelections);
-
-          if (winnerTeam) {
-            return {
-              ...team,
-              name: winnerTeam.name,
-              code: winnerTeam.code,
-              flag_url: winnerTeam.flag_url,
-              selectedWinner: playoffSelections[playoffId].final,
-            } as Team & { selectedWinner?: number | string };
-          }
-        }
-      }
-      return team;
-    });
-  }, [playoffSelections]);
+    return getTeamsByGroup(groupLetter);
+  }, []);
 
   // Calculate standings for all groups
   const groupStandings = useMemo((): GroupStandingsState => {
@@ -205,15 +176,13 @@ export function usePredictionsScores(setId: string | null): UsePredictionsScores
       }
 
       try {
-        const [scoresRes, playoffsRes, knockoutRes, groupsRes] = await Promise.all([
+        const [scoresRes, knockoutRes, groupsRes] = await Promise.all([
           predictionsAPI.getScores(setId),
-          predictionsAPI.getPlayoffs(setId),
           predictionsAPI.getKnockout(setId),
           predictionsAPI.getGroups(setId),
         ]);
 
         setScores(scoresRes.data || {});
-        setPlayoffSelections(playoffsRes.data || {});
 
         const knockoutData = knockoutRes.data || {};
         const hasKnockoutData = Object.keys(knockoutData).length > 0;
@@ -458,7 +427,7 @@ export function usePredictionsScores(setId: string | null): UsePredictionsScores
 
   // Handle go back
   const handleBack = (): void => {
-    navigate(`/repechajes?setId=${setId}`);
+    navigate(`/mis-predicciones`);
   };
 
   return {

@@ -4,8 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Check, RotateCcw, Save, AlertTriangle } from 'lucide-react';
 import { adminAPI } from '@/services/api';
 import { getAllGroups, getTeamsByGroup } from '@/data/mockData';
-import { playoffs } from '@/data/playoffsData';
-import { PLAYOFF_TO_TEAM_ID } from '@/utils/predictionHelpers';
 import { GROUP_MATCH_STRUCTURE, getMatchTeams } from '@/data/groupMatches';
 import { calculateGroupStandings, type Team, type MatchScore, type GroupStandingsResult } from '@/utils/fifaTiebreaker';
 import GroupStandingsTable from '@/components/GroupStandingsTable';
@@ -18,7 +16,7 @@ import type {
   ExtendedMockTeam,
 } from '@/types/admin';
 
-export function GroupsTab({ realPlayoffs, realGroupMatches, showSuccess, setError }: GroupsTabProps): JSX.Element {
+export function GroupsTab({ realGroupMatches, showSuccess, setError }: GroupsTabProps): JSX.Element {
   const groups = getAllGroups();
   const [savingAll, setSavingAll] = useState<boolean>(false);
   const [localScores, setLocalScores] = useState<LocalScores>({});
@@ -44,35 +42,10 @@ export function GroupsTab({ realPlayoffs, realGroupMatches, showSuccess, setErro
     }
   }, [realGroupMatches]);
 
-  // Get teams for a group, substituting playoff winners
+  // Get teams for a group
   const getGroupTeams = useCallback((groupLetter: string): ExtendedMockTeam[] => {
-    const teams = getTeamsByGroup(groupLetter);
-
-    return teams.map(team => {
-      if (team.is_playoff) {
-        const playoffId = Object.keys(PLAYOFF_TO_TEAM_ID).find(
-          key => PLAYOFF_TO_TEAM_ID[key] === team.id
-        );
-        if (playoffId) {
-          const playoffResult = realPlayoffs.find(r => r.playoff_id === playoffId);
-          if (playoffResult) {
-            const playoff = playoffs.find(p => p.id === playoffId);
-            const winnerTeam = playoff?.teams.find(t => t.id === playoffResult.winner_team_id);
-            if (winnerTeam) {
-              return {
-                ...team,
-                name: winnerTeam.name,
-                code: winnerTeam.code,
-                flag_url: winnerTeam.flag_url,
-                actualTeamId: playoffResult.winner_team_id
-              };
-            }
-          }
-        }
-      }
-      return team;
-    });
-  }, [realPlayoffs]);
+    return getTeamsByGroup(groupLetter) as ExtendedMockTeam[];
+  }, []);
 
   // Calculate standings dynamically using FIFA tiebreaker rules
   const groupStandings = useMemo<Record<string, GroupStandingsResult>>(() => {
