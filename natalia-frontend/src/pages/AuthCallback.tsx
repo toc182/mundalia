@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { authAPI } from '@/services/api';
+import { claimGuestPredictions } from '@/utils/guestClaim';
 
 export default function AuthCallback(): JSX.Element {
   const [searchParams] = useSearchParams();
@@ -30,6 +31,14 @@ export default function AuthCallback(): JSX.Element {
           localStorage.setItem('natalia_user', JSON.stringify(user));
           updateUser(user);
 
+          const guestPendingClaim = localStorage.getItem('guest_pending_claim');
+          if (guestPendingClaim) {
+            const publicId = await claimGuestPredictions();
+            if (publicId) {
+              navigate(`/prediccion/${publicId}`);
+              return;
+            }
+          }
           navigate('/');
         } catch {
           localStorage.removeItem('natalia_token');

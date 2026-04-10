@@ -1,5 +1,6 @@
 import { useState, FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { claimGuestPredictions } from '@/utils/guestClaim';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -20,6 +21,8 @@ export default function Register(): JSX.Element {
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isFromGuest = searchParams.get('from') === 'guest';
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
@@ -40,7 +43,16 @@ export default function Register(): JSX.Element {
     try {
       const result = await register(name, email, password);
       if (result.success) {
-        navigate('/');
+        if (isFromGuest) {
+          const publicId = await claimGuestPredictions();
+          if (publicId) {
+            navigate(`/prediccion/${publicId}`);
+          } else {
+            navigate('/');
+          }
+        } else {
+          navigate('/');
+        }
       } else {
         setError(result.error || t('auth.registerError'));
       }
@@ -52,7 +64,9 @@ export default function Register(): JSX.Element {
   };
 
   const handleGoogleLogin = (): void => {
-    // Redirect to backend OAuth endpoint - no client-side Google library needed
+    if (isFromGuest) {
+      localStorage.setItem('guest_pending_claim', 'true');
+    }
     window.location.href = `${API_URL}/auth/google/redirect`;
   };
 
