@@ -241,6 +241,17 @@ export default function Predictions(): JSX.Element {
 
     const nextUrl = setId ? `/terceros?setId=${setId}` : '/terceros';
 
+    // Guest mode: skip API call, just navigate
+    const isGuestMode = localStorage.getItem('guest_mode') === 'true';
+    if (isGuestMode || !setId) {
+      originalPredictionsRef.current = JSON.parse(JSON.stringify(predictions));
+      setSaved(true);
+      setSaving(false);
+      window.scrollTo(0, 0);
+      navigate(nextUrl);
+      return;
+    }
+
     try {
       if (resetFirst && setId) {
         await predictionsAPI.resetFromGroups(setId);
@@ -273,9 +284,17 @@ export default function Predictions(): JSX.Element {
   };
 
   const handleBack = (): void => {
-    const backUrl = setId ? `/mis-predicciones` : '/mis-predicciones';
-    window.scrollTo(0, 0);
-    navigate(backUrl);
+    if (setId) {
+      window.scrollTo(0, 0);
+      navigate('/mis-predicciones');
+    } else if (localStorage.getItem('guest_mode') === 'true') {
+      localStorage.removeItem('guest_mode');
+      window.scrollTo(0, 0);
+      navigate('/');
+    } else {
+      window.scrollTo(0, 0);
+      navigate('/mis-predicciones');
+    }
   };
 
   if (loading) {

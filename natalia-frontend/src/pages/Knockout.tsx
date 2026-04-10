@@ -138,7 +138,17 @@ export default function Knockout(): React.JSX.Element {
       localStorage.setItem('natalia_knockout_scores', JSON.stringify(knockoutScores));
     }
 
-    const nextUrl = setId ? `/prediccion/${setId}` : '/mis-predicciones';
+    // Guest mode: redirect to guest completion page
+    const isGuestMode = localStorage.getItem('guest_mode') === 'true';
+    if (isGuestMode || !setId) {
+      setSaving(false);
+      setSaved(true);
+      window.scrollTo(0, 0);
+      navigate('/guest-complete');
+      return;
+    }
+
+    const nextUrl = `/prediccion/${setId}`;
 
     try {
       await predictionsAPI.saveKnockout(buildSaveData(), setId!);
