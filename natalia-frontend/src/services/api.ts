@@ -120,14 +120,6 @@ export const predictionSetsAPI = {
 
 // ============ PREDICTIONS ============
 
-interface PlayoffPredictionData {
-  [playoffId: string]: {
-    semi1?: number | null;
-    semi2?: number | null;
-    final?: number | null;
-  };
-}
-
 interface KnockoutPredictionData {
   [matchKey: string]: number | { winner: number; scoreA?: number; scoreB?: number };
 }
@@ -145,12 +137,6 @@ export const predictionsAPI = {
   saveMatch: (matchId: string, predictedWinnerId: number): Promise<AxiosResponse<void>> =>
     api.post('/predictions/match', { matchId, predictedWinnerId }),
 
-  getPlayoffs: (setId: number | string): Promise<AxiosResponse<PlayoffPredictionData>> =>
-    api.get('/predictions/playoffs', { params: { setId } }),
-
-  savePlayoffs: (predictions: PlayoffPredictionData, setId: number | string): Promise<AxiosResponse<void>> =>
-    api.post('/predictions/playoffs', { predictions, setId }),
-
   getThirdPlaces: (setId: number | string): Promise<AxiosResponse<{ selectedGroups: string | null }>> =>
     api.get('/predictions/third-places', { params: { setId } }),
 
@@ -166,7 +152,6 @@ export const predictionsAPI = {
   getAll: (setId: number | string): Promise<AxiosResponse<{
     setId: number;
     groupPredictions: GroupPrediction[];
-    playoffPredictions: PlayoffPredictionData;
     thirdPlaces: string | null;
     knockoutPredictions: Record<string, number>;
   }>> =>
@@ -186,9 +171,6 @@ export const predictionsAPI = {
 
   hasSubsequentData: (setId: number | string, phase: string): Promise<AxiosResponse<{ hasGroups: boolean; hasThirds: boolean; hasKnockout: boolean }>> =>
     api.get('/predictions/has-subsequent-data', { params: { setId, phase } }),
-
-  resetFromPlayoffs: (setId: number | string): Promise<AxiosResponse<void>> =>
-    api.delete('/predictions/reset-from-playoffs', { params: { setId } }),
 
   resetFromGroups: (setId: number | string): Promise<AxiosResponse<void>> =>
     api.delete('/predictions/reset-from-groups', { params: { setId } }),
@@ -245,15 +227,6 @@ interface AdminGroupMatch {
 export const adminAPI = {
   getStats: (): Promise<AxiosResponse<AdminStats>> =>
     api.get('/admin/stats'),
-
-  getPlayoffs: (): Promise<AxiosResponse<Record<string, number>>> =>
-    api.get('/admin/playoffs'),
-
-  savePlayoff: (playoff_id: string, winner_team_id: number): Promise<AxiosResponse<void>> =>
-    api.post('/admin/playoffs', { playoff_id, winner_team_id }),
-
-  deletePlayoff: (playoffId: string): Promise<AxiosResponse<void>> =>
-    api.delete(`/admin/playoffs/${playoffId}`),
 
   getGroupMatches: (): Promise<AxiosResponse<Record<string, AdminGroupMatch[]>>> =>
     api.get('/admin/groups'),

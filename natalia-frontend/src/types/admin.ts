@@ -8,11 +8,6 @@ export interface TabItem {
   icon: LucideIcon;
 }
 
-export interface RealPlayoffResult {
-  playoff_id: string;
-  winner_team_id: number;
-}
-
 export interface RealGroupMatch {
   group_letter: string;
   match_index: number;

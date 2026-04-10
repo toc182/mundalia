@@ -103,28 +103,9 @@
     "duplicateDesc": "Se creara una copia de esta prediccion con todos sus datos",
     "copy": "copia"
   },
-  "playoffs": {
-    "title": "Repechajes",
-    "step": "Paso 1 de 4",
-    "description": "Selecciona los ganadores de cada repechaje",
-    "uefaPlayoffs": "Repechajes UEFA",
-    "fifaPlayoffs": "Repechajes FIFA",
-    "semifinal": "Semifinal",
-    "final": "Final",
-    "round1": "Ronda 1",
-    "seeded": "Cabeza de serie",
-    "winnerGoesTo": "El ganador va al Grupo {{group}}",
-    "changesDetected": "Cambios detectados",
-    "changesWarning": "Has modificado las predicciones de repechajes. Esto afectara tus predicciones de grupos y eliminatorias existentes.",
-    "groupPredictions": "predicciones de grupos",
-    "thirdPlaceSelection": "seleccion de terceros",
-    "knockoutPredictions": "predicciones de eliminatorias",
-    "resetConfirm": "¿Deseas continuar y reiniciar las predicciones afectadas?",
-    "continueAndDelete": "Continuar y reiniciar"
-  },
   "groups": {
     "title": "Fase de Grupos",
-    "step": "Paso 2 de 4",
+    "step": "Paso 1 de 3",
     "description": "Coloca los equipos en su posicion final en la fase de grupos",
     "dragToReorder": "Arrastra para reordenar",
     "group": "Grupo",
@@ -140,7 +121,7 @@
   },
   "thirdPlaces": {
     "title": "Mejores Terceros",
-    "step": "Paso 3 de 4",
+    "step": "Paso 2 de 3",
     "description": "Selecciona los 8 grupos cuyos terceros clasifican",
     "selectGroups": "Selecciona 8 grupos",
     "selected": "seleccionados",
@@ -155,7 +136,7 @@
   },
   "knockout": {
     "title": "Eliminatorias",
-    "step": "Paso 4 de 4",
+    "step": "Paso 3 de 3",
     "description": "Selecciona los ganadores de cada partido",
     "roundOf32": "Dieciseisavos",
     "roundOf16": "Octavos",
@@ -266,7 +247,6 @@
   "admin": {
     "title": "Panel de Administracion",
     "dashboard": "Dashboard",
-    "playoffs": "Repechajes",
     "groups": "Grupos",
     "knockout": "Eliminatorias",
     "settings": "Configuracion",

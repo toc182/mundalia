@@ -52,7 +52,6 @@ export interface PredictionSet {
   updated_at?: string;
   // Contadores (nombres del backend)
   group_count?: number;
-  playoff_count?: number;
   knockout_count?: number;
   third_places?: string | null;
 }
@@ -63,13 +62,6 @@ export interface GroupPrediction {
   group_letter: string;
   team_id: number;
   predicted_position: number;
-}
-
-export interface PlayoffPrediction {
-  playoff_id: string;
-  semi1?: number | null;
-  semi2?: number | null;
-  final?: number | null;
 }
 
 export interface KnockoutPrediction {
@@ -200,7 +192,6 @@ export interface PrivateGroup {
 export interface AdminStats {
   total_users: number;
   total_predictions: number;
-  playoffs_entered: number;
   groups_entered: number;
   knockout_entered: number;
 }

@@ -103,28 +103,9 @@
     "duplicateDesc": "Eine Kopie dieser Vorhersage wird mit allen Daten erstellt",
     "copy": "Kopie"
   },
-  "playoffs": {
-    "title": "Playoffs",
-    "step": "Schritt 1 von 4",
-    "description": "Wahlen Sie die Gewinner jedes Playoffs",
-    "uefaPlayoffs": "UEFA Playoffs",
-    "fifaPlayoffs": "FIFA Playoffs",
-    "semifinal": "Halbfinale",
-    "final": "Finale",
-    "round1": "Runde 1",
-    "seeded": "Gesetzt",
-    "winnerGoesTo": "Gewinner geht zu Gruppe {{group}}",
-    "changesDetected": "Anderungen erkannt",
-    "changesWarning": "Sie haben die Playoff-Vorhersagen geandert. Dies wird Ihre bestehenden Gruppen- und K.o.-Vorhersagen beeinflussen.",
-    "groupPredictions": "Gruppenvorhersagen",
-    "thirdPlaceSelection": "Drittplatzierten-Auswahl",
-    "knockoutPredictions": "K.o.-Vorhersagen",
-    "resetConfirm": "Mochten Sie fortfahren und die betroffenen Vorhersagen zurucksetzen?",
-    "continueAndDelete": "Fortfahren und zurucksetzen"
-  },
   "groups": {
     "title": "Gruppenphase",
-    "step": "Schritt 2 von 4",
+    "step": "Schritt 1 von 3",
     "description": "Platzieren Sie die Teams auf ihrer Endposition in der Gruppenphase",
     "dragToReorder": "Ziehen zum Neuordnen",
     "group": "Gruppe",
@@ -140,7 +121,7 @@
   },
   "thirdPlaces": {
     "title": "Beste Gruppendritte",
-    "step": "Schritt 3 von 4",
+    "step": "Schritt 2 von 3",
     "description": "Wahlen Sie die 8 Gruppen, deren Drittplatzierte sich qualifizieren",
     "selectGroups": "Wahlen Sie 8 Gruppen",
     "selected": "ausgewahlt",
@@ -155,7 +136,7 @@
   },
   "knockout": {
     "title": "K.o.-Phase",
-    "step": "Schritt 4 von 4",
+    "step": "Schritt 3 von 3",
     "description": "Wahlen Sie die Gewinner jedes Spiels",
     "roundOf32": "Achtelfinale",
     "roundOf16": "Achtelfinale",
@@ -266,7 +247,6 @@
   "admin": {
     "title": "Administrationspanel",
     "dashboard": "Dashboard",
-    "playoffs": "Playoffs",
     "groups": "Gruppen",
     "knockout": "K.o.-Phase",
     "settings": "Einstellungen",

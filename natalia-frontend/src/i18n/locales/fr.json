@@ -103,28 +103,9 @@
     "duplicateDesc": "Une copie de cette prediction sera creee avec toutes ses donnees",
     "copy": "copie"
   },
-  "playoffs": {
-    "title": "Barrages",
-    "step": "Etape 1 sur 4",
-    "description": "Selectionnez les vainqueurs de chaque barrage",
-    "uefaPlayoffs": "Barrages UEFA",
-    "fifaPlayoffs": "Barrages FIFA",
-    "semifinal": "Demi-finale",
-    "final": "Finale",
-    "round1": "Tour 1",
-    "seeded": "Tete de serie",
-    "winnerGoesTo": "Le vainqueur va au Groupe {{group}}",
-    "changesDetected": "Modifications detectees",
-    "changesWarning": "Vous avez modifie les predictions des barrages. Cela affectera vos predictions de groupes et eliminatoires existantes.",
-    "groupPredictions": "predictions de groupes",
-    "thirdPlaceSelection": "selection des troisiemes",
-    "knockoutPredictions": "predictions eliminatoires",
-    "resetConfirm": "Voulez-vous continuer et reinitialiser les predictions affectees?",
-    "continueAndDelete": "Continuer et reinitialiser"
-  },
   "groups": {
     "title": "Phase de Groupes",
-    "step": "Etape 2 sur 4",
+    "step": "Étape 1 sur 3",
     "description": "Placez les equipes a leur position finale dans la phase de groupes",
     "dragToReorder": "Glissez pour reordonner",
     "group": "Groupe",
@@ -140,7 +121,7 @@
   },
   "thirdPlaces": {
     "title": "Meilleurs Troisiemes",
-    "step": "Etape 3 sur 4",
+    "step": "Étape 2 sur 3",
     "description": "Selectionnez les 8 groupes dont les troisiemes se qualifient",
     "selectGroups": "Selectionnez 8 groupes",
     "selected": "selectionnes",
@@ -155,7 +136,7 @@
   },
   "knockout": {
     "title": "Phase Eliminatoire",
-    "step": "Etape 4 sur 4",
+    "step": "Étape 3 sur 3",
     "description": "Selectionnez les vainqueurs de chaque match",
     "roundOf32": "16emes de finale",
     "roundOf16": "8emes de finale",
@@ -266,7 +247,6 @@
   "admin": {
     "title": "Panneau d'Administration",
     "dashboard": "Tableau de bord",
-    "playoffs": "Barrages",
     "groups": "Groupes",
     "knockout": "Eliminatoires",
     "settings": "Parametres",

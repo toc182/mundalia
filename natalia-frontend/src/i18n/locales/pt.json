@@ -103,28 +103,9 @@
     "duplicateDesc": "Uma copia desta previsao sera criada com todos os seus dados",
     "copy": "copia"
   },
-  "playoffs": {
-    "title": "Repescagens",
-    "step": "Passo 1 de 4",
-    "description": "Selecione os vencedores de cada repescagem",
-    "uefaPlayoffs": "Repescagens UEFA",
-    "fifaPlayoffs": "Repescagens FIFA",
-    "semifinal": "Semifinal",
-    "final": "Final",
-    "round1": "Rodada 1",
-    "seeded": "Cabeca de chave",
-    "winnerGoesTo": "O vencedor vai para o Grupo {{group}}",
-    "changesDetected": "Alteracoes detectadas",
-    "changesWarning": "Voce modificou as previsoes das repescagens. Isso afetara suas previsoes de grupos e eliminatorias existentes.",
-    "groupPredictions": "previsoes de grupos",
-    "thirdPlaceSelection": "selecao de terceiros",
-    "knockoutPredictions": "previsoes de eliminatorias",
-    "resetConfirm": "Deseja continuar e reiniciar as previsoes afetadas?",
-    "continueAndDelete": "Continuar e reiniciar"
-  },
   "groups": {
     "title": "Fase de Grupos",
-    "step": "Passo 2 de 4",
+    "step": "Passo 1 de 3",
     "description": "Coloque os times em sua posicao final na fase de grupos",
     "dragToReorder": "Arraste para reordenar",
     "group": "Grupo",
@@ -140,7 +121,7 @@
   },
   "thirdPlaces": {
     "title": "Melhores Terceiros",
-    "step": "Passo 3 de 4",
+    "step": "Passo 2 de 3",
     "description": "Selecione os 8 grupos cujos terceiros colocados classificam",
     "selectGroups": "Selecione 8 grupos",
     "selected": "selecionados",
@@ -155,7 +136,7 @@
   },
   "knockout": {
     "title": "Fase Eliminatoria",
-    "step": "Passo 4 de 4",
+    "step": "Passo 3 de 3",
     "description": "Selecione os vencedores de cada jogo",
     "roundOf32": "Oitavas",
     "roundOf16": "Oitavas",
@@ -266,7 +247,6 @@
   "admin": {
     "title": "Painel de Administracao",
     "dashboard": "Dashboard",
-    "playoffs": "Repescagens",
     "groups": "Grupos",
     "knockout": "Eliminatorias",
     "settings": "Configuracoes",

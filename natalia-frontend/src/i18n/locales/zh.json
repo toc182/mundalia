@@ -103,28 +103,9 @@
     "duplicateDesc": "将创建此预测的副本及其所有数据",
     "copy": "副本"
   },
-  "playoffs": {
-    "title": "附加赛",
-    "step": "第1步，共4步",
-    "description": "选择每场附加赛的胜者",
-    "uefaPlayoffs": "欧足联附加赛",
-    "fifaPlayoffs": "国际足联附加赛",
-    "semifinal": "半决赛",
-    "final": "决赛",
-    "round1": "第一轮",
-    "seeded": "种子队",
-    "winnerGoesTo": "胜者将进入{{group}}组",
-    "changesDetected": "检测到更改",
-    "changesWarning": "您已修改附加赛预测。这将影响您现有的小组赛和淘汰赛预测。",
-    "groupPredictions": "小组预测",
-    "thirdPlaceSelection": "第三名选择",
-    "knockoutPredictions": "淘汰赛预测",
-    "resetConfirm": "是否继续并重置受影响的预测？",
-    "continueAndDelete": "继续并重置"
-  },
   "groups": {
     "title": "小组赛阶段",
-    "step": "第2步，共4步",
+    "step": "第1步/共3步",
     "description": "将球队放置在小组赛的最终位置",
     "dragToReorder": "拖动重新排序",
     "group": "小组",
@@ -140,7 +121,7 @@
   },
   "thirdPlaces": {
     "title": "最佳第三名",
-    "step": "第3步，共4步",
+    "step": "第2步/共3步",
     "description": "选择8个小组，其第三名球队晋级",
     "selectGroups": "选择8个小组",
     "selected": "已选择",
@@ -155,7 +136,7 @@
   },
   "knockout": {
     "title": "淘汰赛阶段",
-    "step": "第4步，共4步",
+    "step": "第3步/共3步",
     "description": "选择每场比赛的胜者",
     "roundOf32": "十六强",
     "roundOf16": "八强",
@@ -266,7 +247,6 @@
   "admin": {
     "title": "管理面板",
     "dashboard": "仪表板",
-    "playoffs": "附加赛",
     "groups": "小组",
     "knockout": "淘汰赛",
     "settings": "设置",

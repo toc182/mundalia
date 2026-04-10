@@ -103,28 +103,9 @@
     "duplicateDesc": "A copy of this prediction will be created with all its data",
     "copy": "copy"
   },
-  "playoffs": {
-    "title": "Playoffs",
-    "step": "Step 1 of 4",
-    "description": "Select the winners of each playoff",
-    "uefaPlayoffs": "UEFA Playoffs",
-    "fifaPlayoffs": "FIFA Playoffs",
-    "semifinal": "Semifinal",
-    "final": "Final",
-    "round1": "Round 1",
-    "seeded": "Seeded",
-    "winnerGoesTo": "Winner goes to Group {{group}}",
-    "changesDetected": "Changes detected",
-    "changesWarning": "You have modified the playoff predictions. This will affect your existing group and knockout predictions.",
-    "groupPredictions": "group predictions",
-    "thirdPlaceSelection": "third place selection",
-    "knockoutPredictions": "knockout predictions",
-    "resetConfirm": "Do you want to continue and reset the affected predictions?",
-    "continueAndDelete": "Continue and reset"
-  },
   "groups": {
     "title": "Group Stage",
-    "step": "Step 2 of 4",
+    "step": "Step 1 of 3",
     "description": "Place the teams in their final position in the group stage",
     "dragToReorder": "Drag to reorder",
     "group": "Group",
@@ -140,7 +121,7 @@
   },
   "thirdPlaces": {
     "title": "Best Third Places",
-    "step": "Step 3 of 4",
+    "step": "Step 2 of 3",
     "description": "Select the 8 groups whose third-place teams qualify",
     "selectGroups": "Select 8 groups",
     "selected": "selected",
@@ -155,7 +136,7 @@
   },
   "knockout": {
     "title": "Knockout Stage",
-    "step": "Step 4 of 4",
+    "step": "Step 3 of 3",
     "description": "Select the winners of each match",
     "roundOf32": "Round of 32",
     "roundOf16": "Round of 16",
@@ -266,7 +247,6 @@
   "admin": {
     "title": "Admin Panel",
     "dashboard": "Dashboard",
-    "playoffs": "Playoffs",
     "groups": "Groups",
     "knockout": "Knockout",
     "settings": "Settings",
