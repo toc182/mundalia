@@ -143,7 +143,6 @@ describe('PredictionSets Routes', () => {
       expect(data).toHaveProperty('public_id', testSetPublicId);
       expect(data).toHaveProperty('name');
       expect(data).toHaveProperty('groupPredictions');
-      expect(data).toHaveProperty('playoffPredictions');
       expect(data).toHaveProperty('knockoutPredictions');
     });
 

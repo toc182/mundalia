@@ -307,78 +307,6 @@ describe('Predictions Routes', () => {
   });
 
   // ============================================
-  // Playoff Predictions Tests
-  // ============================================
-  describe('POST /api/predictions/playoffs', () => {
-    it('should save playoff predictions', async () => {
-      const predictions = {
-        'UEFA_A': { semi1: 1, semi2: 2, final: 1 },
-      };
-
-      const res = await request(app)
-        .post('/api/predictions/playoffs')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({ predictions, setId: testSetId });
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(res.body).toHaveProperty('message');
-    });
-
-    it('should save multiple playoff predictions', async () => {
-      const predictions = {
-        'UEFA_A': { semi1: 1, semi2: 2, final: 1 },
-        'UEFA_B': { semi1: 3, semi2: 4, final: 3 },
-        'FIFA_1': { semi1: 5, semi2: 6, final: 5 },
-      };
-
-      const res = await request(app)
-        .post('/api/predictions/playoffs')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({ predictions, setId: testSetId });
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.success).toBe(true);
-    });
-
-    it('should reject invalid playoff_id', async () => {
-      const predictions = {
-        'invalid_playoff': { semi1: 1, semi2: 2, final: 1 },
-      };
-
-      const res = await request(app)
-        .post('/api/predictions/playoffs')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({ predictions, setId: testSetId });
-
-      expect(res.statusCode).toBe(400);
-      expect(res.body.error).toContain('Invalid playoff_id');
-    });
-
-    it('should reject non-object predictions', async () => {
-      const res = await request(app)
-        .post('/api/predictions/playoffs')
-        .set('Authorization', `Bearer ${authToken}`)
-        .send({ predictions: 'not an object', setId: testSetId });
-
-      expect(res.statusCode).toBe(400);
-      expect(res.body.error).toContain('must be an object');
-    });
-  });
-
-  describe('GET /api/predictions/playoffs', () => {
-    it('should return playoff predictions', async () => {
-      const res = await request(app)
-        .get(`/api/predictions/playoffs?setId=${testSetId}`)
-        .set('Authorization', `Bearer ${authToken}`);
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(typeof getData(res)).toBe('object');
-    });
-  });
-
-  // ============================================
   // Third Places Predictions Tests
   // ============================================
   describe('POST /api/predictions/third-places', () => {
@@ -650,18 +578,6 @@ describe('Predictions Routes', () => {
   // Reset Endpoints Tests
   // ============================================
   describe('GET /api/predictions/has-subsequent-data', () => {
-    it('should check for subsequent data from playoffs', async () => {
-      const res = await request(app)
-        .get(`/api/predictions/has-subsequent-data?setId=${testSetId}&phase=playoffs`)
-        .set('Authorization', `Bearer ${authToken}`);
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.success).toBe(true);
-      expect(getData(res)).toHaveProperty('hasGroups');
-      expect(getData(res)).toHaveProperty('hasThirds');
-      expect(getData(res)).toHaveProperty('hasKnockout');
-    });
-
     it('should check for subsequent data from groups', async () => {
       const res = await request(app)
         .get(`/api/predictions/has-subsequent-data?setId=${testSetId}&phase=groups`)
@@ -669,7 +585,6 @@ describe('Predictions Routes', () => {
 
       expect(res.statusCode).toBe(200);
       const data = getData(res);
-      expect(data.hasGroups).toBe(false); // Groups phase doesn't check groups
       expect(data).toHaveProperty('hasThirds');
       expect(data).toHaveProperty('hasKnockout');
     });
@@ -713,17 +628,6 @@ describe('Predictions Routes', () => {
     });
   });
 
-  describe('DELETE /api/predictions/reset-from-playoffs', () => {
-    it('should reset groups, thirds, and knockout predictions', async () => {
-      const res = await request(app)
-        .delete(`/api/predictions/reset-from-playoffs?setId=${testSetId}`)
-        .set('Authorization', `Bearer ${authToken}`);
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body.message).toContain('Reset');
-    });
-  });
-
   // ============================================
   // All Predictions Endpoint Tests
   // ============================================
@@ -739,7 +643,6 @@ describe('Predictions Routes', () => {
       const data = getData(res);
       expect(data).toHaveProperty('setId');
       expect(data).toHaveProperty('groupPredictions');
-      expect(data).toHaveProperty('playoffPredictions');
       expect(data).toHaveProperty('thirdPlaces');
       expect(data).toHaveProperty('knockoutPredictions');
     });

@@ -115,7 +115,6 @@ describe('Admin Routes', () => {
       const data = getData(res);
       expect(data).toHaveProperty('total_users');
       expect(data).toHaveProperty('total_predictions');
-      expect(data).toHaveProperty('playoffs_entered');
       expect(data).toHaveProperty('groups_entered');
       expect(data).toHaveProperty('knockout_entered');
     });
@@ -128,98 +127,8 @@ describe('Admin Routes', () => {
       const data = getData(res);
       expect(typeof data.total_users).toBe('number');
       expect(typeof data.total_predictions).toBe('number');
-      expect(typeof data.playoffs_entered).toBe('number');
       expect(typeof data.groups_entered).toBe('number');
       expect(typeof data.knockout_entered).toBe('number');
-    });
-  });
-
-  // ============================================
-  // Playoff Results Tests
-  // ============================================
-  describe('Playoff Results', () => {
-    describe('GET /api/admin/playoffs', () => {
-      it('should return playoff results', async () => {
-        const res = await request(app)
-          .get('/api/admin/playoffs')
-          .set('Authorization', `Bearer ${adminToken}`);
-
-        expect(res.statusCode).toBe(200);
-        expect(res.body.success).toBe(true);
-        expect(Array.isArray(getData(res))).toBe(true);
-      });
-    });
-
-    describe('POST /api/admin/playoffs', () => {
-      it('should save a playoff result', async () => {
-        const res = await request(app)
-          .post('/api/admin/playoffs')
-          .set('Authorization', `Bearer ${adminToken}`)
-          .send({
-            playoff_id: 'TEST_UEFA_A',
-            winner_team_id: 1
-          });
-
-        expect(res.statusCode).toBe(200);
-        expect(res.body.success).toBe(true);
-        expect(res.body.message).toContain('saved');
-      });
-
-      it('should update existing playoff result', async () => {
-        // First save
-        await request(app)
-          .post('/api/admin/playoffs')
-          .set('Authorization', `Bearer ${adminToken}`)
-          .send({
-            playoff_id: 'TEST_UEFA_B',
-            winner_team_id: 1
-          });
-
-        // Update with different winner
-        const res = await request(app)
-          .post('/api/admin/playoffs')
-          .set('Authorization', `Bearer ${adminToken}`)
-          .send({
-            playoff_id: 'TEST_UEFA_B',
-            winner_team_id: 2
-          });
-
-        expect(res.statusCode).toBe(200);
-        expect(res.body.message).toContain('saved');
-      });
-
-      it('should reject missing required fields', async () => {
-        const res = await request(app)
-          .post('/api/admin/playoffs')
-          .set('Authorization', `Bearer ${adminToken}`)
-          .send({
-            playoff_id: 'TEST_MISSING'
-            // missing winner_team_id
-          });
-
-        expect(res.statusCode).toBe(400);
-      });
-    });
-
-    describe('DELETE /api/admin/playoffs/:playoffId', () => {
-      it('should delete a playoff result', async () => {
-        // First create one
-        await request(app)
-          .post('/api/admin/playoffs')
-          .set('Authorization', `Bearer ${adminToken}`)
-          .send({
-            playoff_id: 'TEST_DELETE',
-            winner_team_id: 1
-          });
-
-        // Then delete it
-        const res = await request(app)
-          .delete('/api/admin/playoffs/TEST_DELETE')
-          .set('Authorization', `Bearer ${adminToken}`);
-
-        expect(res.statusCode).toBe(200);
-        expect(res.body.message).toContain('deleted');
-      });
     });
   });
 
