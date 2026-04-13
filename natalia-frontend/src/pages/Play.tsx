@@ -21,8 +21,12 @@ export default function Play(): JSX.Element {
       localStorage.setItem('guest_group_code', groupCode);
     }
 
-    // Enter guest mode
+    // Enter guest mode — clear any previous guest predictions
     localStorage.setItem('guest_mode', 'true');
+    localStorage.removeItem('natalia_predictions');
+    localStorage.removeItem('natalia_best_third_places');
+    localStorage.removeItem('natalia_knockout');
+    localStorage.removeItem('natalia_knockout_scores');
 
     // Start prediction flow at Groups
     navigate('/grupos', { replace: true });
