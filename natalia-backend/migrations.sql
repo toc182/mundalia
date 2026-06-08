@@ -289,6 +289,21 @@ UPDATE teams SET name = 'Irak', code = 'IRQ', flag_url = 'https://flagcdn.com/w8
 UPDATE teams SET name = 'RD Congo', code = 'COD', flag_url = 'https://flagcdn.com/w80/cd.png', is_playoff = false WHERE id = 42;
 
 -- ============================================
+-- MIGRACION 012: Backfill public_id en prediction_sets
+-- Fecha: 2026-06-08
+-- Motivo: sets creados antes de existir la columna public_id quedaron
+--   con public_id NULL. El frontend referencia los sets por public_id,
+--   por lo que esos sets no se podian eliminar. Esta migracion tambien
+--   se ejecuta automaticamente en server.ts al arrancar.
+-- ============================================
+
+ALTER TABLE prediction_sets ADD COLUMN IF NOT EXISTS public_id VARCHAR(12);
+
+UPDATE prediction_sets
+SET public_id = substr(md5(random()::text || clock_timestamp()::text || id::text), 1, 8)
+WHERE public_id IS NULL OR public_id = '';
+
+-- ============================================
 -- NUEVA MIGRACION: Agregar aqui abajo
 -- Fecha: YYYY-MM-DD
 -- ============================================

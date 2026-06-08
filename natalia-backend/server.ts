@@ -184,6 +184,20 @@ const runMigrations = async (): Promise<void> => {
     `);
     console.log('[MIGRATIONS] ✓ real_group_matches table');
 
+    // Migration 012: Backfill public_id for prediction_sets created before
+    // the column existed. NULL public_id makes a set unreachable from the
+    // frontend (it references sets by public_id), so it can't be deleted.
+    await db.query(`
+      ALTER TABLE prediction_sets
+      ADD COLUMN IF NOT EXISTS public_id VARCHAR(12)
+    `);
+    await db.query(`
+      UPDATE prediction_sets
+      SET public_id = substr(md5(random()::text || clock_timestamp()::text || id::text), 1, 8)
+      WHERE public_id IS NULL OR public_id = ''
+    `);
+    console.log('[MIGRATIONS] ✓ prediction_sets.public_id backfill');
+
     console.log('[MIGRATIONS] All migrations completed successfully!');
   } catch (err) {
     const error = err as Error;
