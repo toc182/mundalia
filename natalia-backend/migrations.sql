@@ -304,6 +304,25 @@ SET public_id = substr(md5(random()::text || clock_timestamp()::text || id::text
 WHERE public_id IS NULL OR public_id = '';
 
 -- ============================================
+-- MIGRACION 013: Vincular predicciones a grupos privados
+-- Fecha: 2026-06-08
+-- Motivo: la asociacion ahora es a nivel de prediccion (no de usuario).
+--   Relacion muchos-a-muchos: una prediccion puede vincularse a varios
+--   grupos, y un usuario puede vincular varias de sus predicciones al
+--   mismo grupo. Se ejecuta automaticamente en server.ts al arrancar.
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS group_prediction_links (
+  id SERIAL PRIMARY KEY,
+  group_id INTEGER REFERENCES private_groups(id) ON DELETE CASCADE,
+  prediction_set_id INTEGER REFERENCES prediction_sets(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(group_id, prediction_set_id)
+);
+CREATE INDEX IF NOT EXISTS idx_gpl_group ON group_prediction_links(group_id);
+CREATE INDEX IF NOT EXISTS idx_gpl_set ON group_prediction_links(prediction_set_id);
+
+-- ============================================
 -- NUEVA MIGRACION: Agregar aqui abajo
 -- Fecha: YYYY-MM-DD
 -- ============================================

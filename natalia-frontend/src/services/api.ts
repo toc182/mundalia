@@ -181,6 +181,31 @@ export const predictionsAPI = {
 
 // ============ GROUPS (PRIVADOS) ============
 
+export interface GroupDetails {
+  id: number;
+  name: string;
+  code: string;
+  member_count: number;
+  is_owner: boolean;
+}
+
+export interface GroupLeaderboardEntry {
+  public_id: string;
+  prediction_name: string;
+  owner_name: string;
+  is_complete: boolean;
+  total_points: number;
+  is_mine: boolean;
+}
+
+export interface LinkablePrediction {
+  public_id: string;
+  name: string;
+  mode: 'positions' | 'scores';
+  created_at: string;
+  is_linked: boolean;
+}
+
 export const groupsAPI = {
   getMy: (): Promise<AxiosResponse<PrivateGroup[]>> =>
     api.get('/groups'),
@@ -191,8 +216,20 @@ export const groupsAPI = {
   join: (code: string): Promise<AxiosResponse<PrivateGroup>> =>
     api.post('/groups/join', { code }),
 
-  getLeaderboard: (groupId: number): Promise<AxiosResponse<LeaderboardEntry[]>> =>
+  getDetails: (groupId: number | string): Promise<AxiosResponse<GroupDetails>> =>
+    api.get(`/groups/${groupId}`),
+
+  getLeaderboard: (groupId: number | string): Promise<AxiosResponse<GroupLeaderboardEntry[]>> =>
     api.get(`/groups/${groupId}/leaderboard`),
+
+  getLinkable: (groupId: number | string): Promise<AxiosResponse<LinkablePrediction[]>> =>
+    api.get(`/groups/${groupId}/linkable`),
+
+  linkPrediction: (groupId: number | string, predictionSetId: string): Promise<AxiosResponse<void>> =>
+    api.post(`/groups/${groupId}/predictions`, { predictionSetId }),
+
+  unlinkPrediction: (groupId: number | string, publicId: string): Promise<AxiosResponse<void>> =>
+    api.delete(`/groups/${groupId}/predictions/${publicId}`),
 };
 
 // ============ LEADERBOARD ============

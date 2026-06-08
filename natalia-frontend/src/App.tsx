@@ -17,6 +17,7 @@ const Knockout = lazy(() => import('@/pages/Knockout'));
 const PredictionsScores = lazy(() => import('@/pages/PredictionsScores'));
 const Leaderboard = lazy(() => import('@/pages/Leaderboard'));
 const Groups = lazy(() => import('@/pages/Groups'));
+const GroupDetail = lazy(() => import('@/pages/GroupDetail'));
 const MyPredictions = lazy(() => import('@/pages/MyPredictions'));
 const PredictionDetail = lazy(() => import('@/pages/PredictionDetail'));
 const Account = lazy(() => import('@/pages/Account'));
@@ -103,6 +104,7 @@ function AppRoutes(): JSX.Element {
         <Route path="/mis-predicciones" element={<ProtectedRoute><MyPredictions /></ProtectedRoute>} />
         <Route path="/prediccion/:publicId" element={<ProtectedRoute><PredictionDetail /></ProtectedRoute>} />
         <Route path="/mis-grupos" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
+        <Route path="/mis-grupos/:id" element={<ProtectedRoute><GroupDetail /></ProtectedRoute>} />
         <Route path="/cuenta" element={<ProtectedRoute><Account /></ProtectedRoute>} />
         <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
       </Routes>

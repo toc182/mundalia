@@ -58,6 +58,7 @@ describe('Groups Routes (Private Groups)', () => {
     try {
       await db.query('DELETE FROM private_group_members WHERE group_id IN (SELECT id FROM private_groups WHERE name LIKE $1)', ['Test Group%']);
       await db.query('DELETE FROM private_groups WHERE name LIKE $1', ['Test Group%']);
+      await db.query('DELETE FROM prediction_sets WHERE name LIKE $1', ['Test Group%']);
       await db.query('DELETE FROM users WHERE email LIKE $1', ['groups_test%@example.com']);
       await db.pool.end();
     } catch {
@@ -230,7 +231,7 @@ describe('Groups Routes (Private Groups)', () => {
       }
     });
 
-    it('should include user info and points when available', async () => {
+    it('should include prediction info and points when available', async () => {
       const res = await request(app)
         .get(`/api/groups/${testGroupId}/leaderboard`)
         .set('Authorization', `Bearer ${authToken1}`);
@@ -238,8 +239,11 @@ describe('Groups Routes (Private Groups)', () => {
       if (res.statusCode === 200) {
         const leaderboard = getData(res);
         if (leaderboard.length > 0) {
-          expect(leaderboard[0]).toHaveProperty('name');
+          expect(leaderboard[0]).toHaveProperty('public_id');
+          expect(leaderboard[0]).toHaveProperty('prediction_name');
+          expect(leaderboard[0]).toHaveProperty('owner_name');
           expect(leaderboard[0]).toHaveProperty('total_points');
+          expect(leaderboard[0]).toHaveProperty('is_mine');
         }
       }
     });
@@ -271,6 +275,160 @@ describe('Groups Routes (Private Groups)', () => {
         .get(`/api/groups/${testGroupId}/leaderboard`);
 
       expect(res.statusCode).toBe(401);
+    });
+  });
+
+  // ============================================
+  // Group Details Tests
+  // ============================================
+  describe('GET /api/groups/:id', () => {
+    it('should return group details for a member', async () => {
+      const res = await request(app)
+        .get(`/api/groups/${testGroupId}`)
+        .set('Authorization', `Bearer ${authToken1}`);
+
+      expect(res.statusCode).toBe(200);
+      const data = getData(res);
+      expect(data).toHaveProperty('id', testGroupId);
+      expect(data).toHaveProperty('name');
+      expect(data).toHaveProperty('code');
+      expect(data).toHaveProperty('member_count');
+      expect(data).toHaveProperty('is_owner', true);
+    });
+
+    it('should reject non-members', async () => {
+      const newUserRes = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Detail Non Member',
+          email: `groups_test_detail_${Date.now()}@example.com`,
+          password: 'TestPassword123',
+        });
+      const token = getData(newUserRes).token;
+
+      const res = await request(app)
+        .get(`/api/groups/${testGroupId}`)
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(res.statusCode).toBe(403);
+    });
+
+    it('should require authentication', async () => {
+      const res = await request(app).get(`/api/groups/${testGroupId}`);
+      expect(res.statusCode).toBe(401);
+    });
+  });
+
+  // ============================================
+  // Link / Unlink Prediction Tests
+  // ============================================
+  describe('Linking predictions to a group', () => {
+    let predPublicId;
+
+    beforeAll(async () => {
+      // Create a prediction set owned by user1
+      const res = await request(app)
+        .post('/api/prediction-sets')
+        .set('Authorization', `Bearer ${authToken1}`)
+        .send({ name: 'Test Group Link Pred', mode: 'positions' });
+      predPublicId = getData(res).public_id;
+    });
+
+    it('should list the caller predictions as linkable (not yet linked)', async () => {
+      const res = await request(app)
+        .get(`/api/groups/${testGroupId}/linkable`)
+        .set('Authorization', `Bearer ${authToken1}`);
+
+      expect(res.statusCode).toBe(200);
+      const sets = getData(res);
+      const target = sets.find((s) => s.public_id === predPublicId);
+      expect(target).toBeDefined();
+      expect(target.is_linked).toBe(false);
+    });
+
+    it('should link a prediction to the group', async () => {
+      const res = await request(app)
+        .post(`/api/groups/${testGroupId}/predictions`)
+        .set('Authorization', `Bearer ${authToken1}`)
+        .send({ predictionSetId: predPublicId });
+
+      expect(res.statusCode).toBe(201);
+      expect(res.body.success).toBe(true);
+    });
+
+    it('should mark the prediction as linked afterwards', async () => {
+      const res = await request(app)
+        .get(`/api/groups/${testGroupId}/linkable`)
+        .set('Authorization', `Bearer ${authToken1}`);
+
+      const target = getData(res).find((s) => s.public_id === predPublicId);
+      expect(target.is_linked).toBe(true);
+    });
+
+    it('should show the linked prediction in the leaderboard', async () => {
+      const res = await request(app)
+        .get(`/api/groups/${testGroupId}/leaderboard`)
+        .set('Authorization', `Bearer ${authToken1}`);
+
+      expect(res.statusCode).toBe(200);
+      const row = getData(res).find((r) => r.public_id === predPublicId);
+      expect(row).toBeDefined();
+      expect(row).toHaveProperty('prediction_name', 'Test Group Link Pred');
+      expect(row.is_mine).toBe(true);
+    });
+
+    it('should reject linking the same prediction twice (409)', async () => {
+      const res = await request(app)
+        .post(`/api/groups/${testGroupId}/predictions`)
+        .set('Authorization', `Bearer ${authToken1}`)
+        .send({ predictionSetId: predPublicId });
+
+      expect(res.statusCode).toBe(409);
+    });
+
+    it("should not let a member link another user's prediction", async () => {
+      const res = await request(app)
+        .post(`/api/groups/${testGroupId}/predictions`)
+        .set('Authorization', `Bearer ${authToken2}`)
+        .send({ predictionSetId: predPublicId });
+
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('should reject linking by non-members', async () => {
+      const newUserRes = await request(app)
+        .post('/api/auth/register')
+        .send({
+          name: 'Link Non Member',
+          email: `groups_test_link_${Date.now()}@example.com`,
+          password: 'TestPassword123',
+        });
+      const token = getData(newUserRes).token;
+
+      const res = await request(app)
+        .post(`/api/groups/${testGroupId}/predictions`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ predictionSetId: predPublicId });
+
+      expect(res.statusCode).toBe(403);
+    });
+
+    it('should unlink the prediction from the group', async () => {
+      const res = await request(app)
+        .delete(`/api/groups/${testGroupId}/predictions/${predPublicId}`)
+        .set('Authorization', `Bearer ${authToken1}`);
+
+      expect(res.statusCode).toBe(200);
+      expect(res.body.success).toBe(true);
+    });
+
+    it('should remove the prediction from the leaderboard after unlink', async () => {
+      const res = await request(app)
+        .get(`/api/groups/${testGroupId}/leaderboard`)
+        .set('Authorization', `Bearer ${authToken1}`);
+
+      const row = getData(res).find((r) => r.public_id === predPublicId);
+      expect(row).toBeUndefined();
     });
   });
 });

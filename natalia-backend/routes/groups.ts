@@ -17,13 +17,6 @@ interface PrivateGroupRow {
   created_at: Date;
 }
 
-interface GroupMember {
-  id: number;
-  name: string;
-  username?: string;
-  total_points?: number;
-}
-
 interface GroupPrediction {
   prediction_set_id: number;
   group_letter: string;
@@ -131,26 +124,23 @@ router.post('/join', auth, async (req: Request, res: Response): Promise<void> =>
   }
 });
 
-// Calculate best score for a user (across all their prediction sets)
-// OPTIMIZED: Load all predictions in 2 queries instead of 2N
-async function calculateUserBestScore(userId: number): Promise<number> {
-  // Get all complete prediction sets for user
-  const predSets = await db.query(`
-    SELECT ps.id FROM prediction_sets ps
-    WHERE ps.user_id = $1
-      AND EXISTS (
-        SELECT 1 FROM knockout_predictions kp
-        WHERE kp.prediction_set_id = ps.id
-          AND kp.match_key = 'M104'
-          AND kp.winner_team_id IS NOT NULL
-      )
-  `, [userId]);
+// Check whether a user belongs to a group
+async function isMember(groupId: string | number, userId: number): Promise<boolean> {
+  const result = await db.query(
+    'SELECT 1 FROM private_group_members WHERE group_id = $1 AND user_id = $2',
+    [groupId, userId]
+  );
+  return result.rows.length > 0;
+}
 
-  if (predSets.rows.length === 0) return 0;
+// Score a set of prediction sets against the real results.
+// Returns a map of prediction_set_id -> total points (0 for sets with no scoring preds).
+// OPTIMIZED: loads all data in 4 parallel queries regardless of how many sets.
+async function calculateScoresForSets(setIds: number[]): Promise<Record<number, number>> {
+  const scores: Record<number, number> = {};
+  setIds.forEach(id => { scores[id] = 0; });
+  if (setIds.length === 0) return scores;
 
-  const setIds = predSets.rows.map((ps: { id: number }) => ps.id);
-
-  // OPTIMIZED: Load ALL data in 4 parallel queries (instead of 2N+2)
   const [realGroupStandings, realKnockout, allGroupPreds, allKnockoutPreds] = await Promise.all([
     db.query('SELECT * FROM real_group_standings'),
     db.query('SELECT * FROM real_knockout_results'),
@@ -170,93 +160,222 @@ async function calculateUserBestScore(userId: number): Promise<number> {
     realKnockoutMap[row.match_key] = row.winner_team_id;
   });
 
-  // Group predictions by set_id
-  const groupPredsBySet: Record<number, GroupPrediction[]> = {};
+  // Score group predictions
   (allGroupPreds.rows as GroupPrediction[]).forEach(pred => {
-    if (!groupPredsBySet[pred.prediction_set_id]) groupPredsBySet[pred.prediction_set_id] = [];
-    groupPredsBySet[pred.prediction_set_id].push(pred);
+    const realPositions = realGroupMap[pred.group_letter];
+    if (!realPositions) return;
+    const realPosition = realPositions[pred.team_id];
+    if (realPosition === undefined) return;
+
+    if (pred.predicted_position === realPosition) {
+      scores[pred.prediction_set_id] += POINTS.GROUP_EXACT_POSITION;
+    } else if (pred.predicted_position <= 2 && realPosition <= 2) {
+      scores[pred.prediction_set_id] += POINTS.GROUP_QUALIFIER;
+    }
   });
 
-  const knockoutPredsBySet: Record<number, KnockoutPrediction[]> = {};
+  // Score knockout predictions
   (allKnockoutPreds.rows as KnockoutPrediction[]).forEach(pred => {
-    if (!knockoutPredsBySet[pred.prediction_set_id]) knockoutPredsBySet[pred.prediction_set_id] = [];
-    knockoutPredsBySet[pred.prediction_set_id].push(pred);
+    const realWinner = realKnockoutMap[pred.match_key];
+    if (realWinner === undefined) return;
+    if (pred.winner_team_id === realWinner) {
+      scores[pred.prediction_set_id] += getMatchPoints(pred.match_key);
+    }
   });
 
-  // Calculate best score across all sets (in memory, no more queries)
-  let bestScore = 0;
-
-  for (const ps of predSets.rows as { id: number }[]) {
-    let score = 0;
-
-    // Score group predictions
-    const groupPreds = groupPredsBySet[ps.id] || [];
-    groupPreds.forEach(pred => {
-      const realPositions = realGroupMap[pred.group_letter];
-      if (!realPositions) return;
-
-      const realPosition = realPositions[pred.team_id];
-      if (realPosition === undefined) return;
-
-      if (pred.predicted_position === realPosition) {
-        score += POINTS.GROUP_EXACT_POSITION;
-      } else if (pred.predicted_position <= 2 && realPosition <= 2) {
-        score += POINTS.GROUP_QUALIFIER;
-      }
-    });
-
-    // Score knockout predictions
-    const knockoutPreds = knockoutPredsBySet[ps.id] || [];
-    knockoutPreds.forEach(pred => {
-      const realWinner = realKnockoutMap[pred.match_key];
-      if (realWinner === undefined) return;
-
-      if (pred.winner_team_id === realWinner) {
-        score += getMatchPoints(pred.match_key);
-      }
-    });
-
-    if (score > bestScore) bestScore = score;
-  }
-
-  return bestScore;
+  return scores;
 }
 
-// Get group leaderboard
-router.get('/:id/leaderboard', auth, async (req: Request, res: Response): Promise<void> => {
+// Calculate best score for a user (across all their complete prediction sets)
+async function calculateUserBestScore(userId: number): Promise<number> {
+  const predSets = await db.query(`
+    SELECT ps.id FROM prediction_sets ps
+    WHERE ps.user_id = $1
+      AND EXISTS (
+        SELECT 1 FROM knockout_predictions kp
+        WHERE kp.prediction_set_id = ps.id
+          AND kp.match_key = 'M104'
+          AND kp.winner_team_id IS NOT NULL
+      )
+  `, [userId]);
+
+  if (predSets.rows.length === 0) return 0;
+
+  const setIds = predSets.rows.map((ps: { id: number }) => ps.id);
+  const scores = await calculateScoresForSets(setIds);
+  return Math.max(0, ...Object.values(scores));
+}
+
+// Get group details
+router.get('/:id', auth, async (req: Request, res: Response): Promise<void> => {
   try {
     const authReq = req as AuthenticatedRequest;
-    // Verify user is member
-    const isMember = await db.query(
-      'SELECT * FROM private_group_members WHERE group_id = $1 AND user_id = $2',
-      [req.params.id, authReq.user.id]
-    );
-
-    if (isMember.rows.length === 0) {
+    if (!(await isMember(req.params.id, authReq.user.id))) {
       forbidden(res, 'Not a member of this group');
       return;
     }
 
-    // Get group members
-    const members = await db.query(`
-      SELECT u.id, u.name, u.username
-      FROM private_group_members pgm
-      JOIN users u ON pgm.user_id = u.id
-      WHERE pgm.group_id = $1
+    const result = await db.query(`
+      SELECT pg.id, pg.name, pg.code, pg.owner_id,
+             (SELECT COUNT(*) FROM private_group_members WHERE group_id = pg.id) as member_count
+      FROM private_groups pg
+      WHERE pg.id = $1
     `, [req.params.id]);
 
-    // Calculate points for each member
-    const leaderboard = await Promise.all(
-      (members.rows as GroupMember[]).map(async (member) => {
-        const total_points = await calculateUserBestScore(member.id);
-        return { ...member, total_points };
-      })
-    );
+    if (result.rows.length === 0) {
+      notFound(res, 'Group not found');
+      return;
+    }
 
-    // Sort by points descending
-    leaderboard.sort((a, b) => (b.total_points || 0) - (a.total_points || 0));
+    const g = result.rows[0];
+    success(res, {
+      id: g.id,
+      name: g.name,
+      code: g.code,
+      member_count: Number(g.member_count),
+      is_owner: g.owner_id === authReq.user.id
+    });
+  } catch (err) {
+    serverError(res, err as Error);
+  }
+});
+
+// Get group leaderboard (one row per linked prediction)
+router.get('/:id/leaderboard', auth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    if (!(await isMember(req.params.id, authReq.user.id))) {
+      forbidden(res, 'Not a member of this group');
+      return;
+    }
+
+    // All predictions linked to this group, with owner info and completeness
+    const linked = await db.query(`
+      SELECT ps.id as set_id, ps.public_id, ps.name as prediction_name,
+             ps.user_id as owner_id, u.name as owner_name, u.username as owner_username,
+             EXISTS (
+               SELECT 1 FROM knockout_predictions kp
+               WHERE kp.prediction_set_id = ps.id
+                 AND kp.match_key = 'M104' AND kp.winner_team_id IS NOT NULL
+             ) as is_complete
+      FROM group_prediction_links gpl
+      JOIN prediction_sets ps ON gpl.prediction_set_id = ps.id
+      JOIN users u ON ps.user_id = u.id
+      WHERE gpl.group_id = $1
+    `, [req.params.id]);
+
+    // Only complete sets are scored; incomplete ones show 0
+    const completeIds = linked.rows.filter((r: any) => r.is_complete).map((r: any) => r.set_id);
+    const scores = await calculateScoresForSets(completeIds);
+
+    const leaderboard = (linked.rows as any[]).map(r => ({
+      public_id: r.public_id,
+      prediction_name: r.prediction_name,
+      owner_name: r.owner_username || r.owner_name,
+      is_complete: r.is_complete,
+      total_points: scores[r.set_id] || 0,
+      is_mine: r.owner_id === authReq.user.id
+    }));
+
+    leaderboard.sort((a, b) => b.total_points - a.total_points);
 
     success(res, leaderboard);
+  } catch (err) {
+    serverError(res, err as Error);
+  }
+});
+
+// Get the caller's prediction sets with a flag for whether each is linked to this group
+router.get('/:id/linkable', auth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    if (!(await isMember(req.params.id, authReq.user.id))) {
+      forbidden(res, 'Not a member of this group');
+      return;
+    }
+
+    const sets = await db.query(`
+      SELECT ps.public_id, ps.name, ps.mode, ps.created_at,
+             EXISTS (
+               SELECT 1 FROM group_prediction_links gpl
+               WHERE gpl.group_id = $1 AND gpl.prediction_set_id = ps.id
+             ) as is_linked
+      FROM prediction_sets ps
+      WHERE ps.user_id = $2
+      ORDER BY ps.created_at DESC
+    `, [req.params.id, authReq.user.id]);
+
+    success(res, sets.rows);
+  } catch (err) {
+    serverError(res, err as Error);
+  }
+});
+
+// Link one of the caller's predictions to the group
+router.post('/:id/predictions', auth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const { predictionSetId } = req.body as { predictionSetId: string };
+
+    if (!(await isMember(req.params.id, authReq.user.id))) {
+      forbidden(res, 'Not a member of this group');
+      return;
+    }
+
+    // Resolve the set by public_id and verify ownership
+    const set = await db.query(
+      'SELECT id FROM prediction_sets WHERE public_id = $1 AND user_id = $2',
+      [predictionSetId, authReq.user.id]
+    );
+    if (set.rows.length === 0) {
+      notFound(res, 'Prediction not found');
+      return;
+    }
+
+    const ins = await db.query(
+      `INSERT INTO group_prediction_links (group_id, prediction_set_id)
+       VALUES ($1, $2)
+       ON CONFLICT (group_id, prediction_set_id) DO NOTHING
+       RETURNING id`,
+      [req.params.id, set.rows[0].id]
+    );
+
+    if (ins.rows.length === 0) {
+      error(res, 'Prediction already linked to this group', 409, 'ALREADY_LINKED');
+      return;
+    }
+
+    success(res, null, 'Prediction linked to group', 201);
+  } catch (err) {
+    serverError(res, err as Error);
+  }
+});
+
+// Unlink one of the caller's predictions from the group (does not delete the prediction)
+router.delete('/:id/predictions/:publicId', auth, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+
+    if (!(await isMember(req.params.id, authReq.user.id))) {
+      forbidden(res, 'Not a member of this group');
+      return;
+    }
+
+    const set = await db.query(
+      'SELECT id FROM prediction_sets WHERE public_id = $1 AND user_id = $2',
+      [req.params.publicId, authReq.user.id]
+    );
+    if (set.rows.length === 0) {
+      notFound(res, 'Prediction not found');
+      return;
+    }
+
+    await db.query(
+      'DELETE FROM group_prediction_links WHERE group_id = $1 AND prediction_set_id = $2',
+      [req.params.id, set.rows[0].id]
+    );
+
+    success(res, null, 'Prediction unlinked from group');
   } catch (err) {
     serverError(res, err as Error);
   }

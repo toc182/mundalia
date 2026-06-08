@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/context/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { groupsAPI } from '@/services/api';
 import { Users, Copy, Check, Trophy } from 'lucide-react';
@@ -17,16 +17,10 @@ interface Message {
   text: string;
 }
 
-interface LeaderboardMember {
-  id: number;
-  name: string;
-  username?: string;
-  total_points: number;
-}
-
 export default function Groups(): JSX.Element {
   const { t } = useTranslation();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [groups, setGroups] = useState<PrivateGroup[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [newGroupName, setNewGroupName] = useState<string>('');
@@ -36,10 +30,6 @@ export default function Groups(): JSX.Element {
   const [joinOpen, setJoinOpen] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
-  const [leaderboardOpen, setLeaderboardOpen] = useState<boolean>(false);
-  const [selectedGroup, setSelectedGroup] = useState<PrivateGroup | null>(null);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardMember[]>([]);
-  const [loadingLeaderboard, setLoadingLeaderboard] = useState<boolean>(false);
 
   // Timer refs for cleanup
   const messageTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -118,21 +108,6 @@ export default function Groups(): JSX.Element {
     setCopiedCode(code);
     if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
     copyTimerRef.current = setTimeout(() => setCopiedCode(null), 2000);
-  };
-
-  const openLeaderboard = async (group: PrivateGroup): Promise<void> => {
-    setSelectedGroup(group);
-    setLeaderboardOpen(true);
-    setLoadingLeaderboard(true);
-    try {
-      const response = await groupsAPI.getLeaderboard(group.id);
-      setLeaderboard(response.data);
-    } catch (err) {
-      console.error('Error loading leaderboard:', err);
-      setLeaderboard([]);
-    } finally {
-      setLoadingLeaderboard(false);
-    }
   };
 
   if (loading) {
@@ -269,7 +244,7 @@ export default function Groups(): JSX.Element {
                     variant="outline"
                     className="w-full"
                     size="sm"
-                    onClick={() => openLeaderboard(group)}
+                    onClick={() => navigate(`/mis-grupos/${group.id}`)}
                   >
                     <Trophy className="h-4 w-4 mr-2" />
                     {t('privateGroups.viewRanking')}
@@ -280,57 +255,6 @@ export default function Groups(): JSX.Element {
           ))}
         </div>
       )}
-
-      {/* Leaderboard Modal */}
-      <Dialog open={leaderboardOpen} onOpenChange={setLeaderboardOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Trophy className="h-5 w-5 text-yellow-500" />
-              {selectedGroup?.name}
-            </DialogTitle>
-            <DialogDescription>
-              {t('privateGroups.groupRanking')}
-            </DialogDescription>
-          </DialogHeader>
-          {loadingLeaderboard ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="h-6 w-6 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-            </div>
-          ) : leaderboard.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              {t('privateGroups.noMembersPredictions')}
-            </div>
-          ) : (
-            <div className="space-y-2 max-h-80 overflow-y-auto">
-              {leaderboard.map((member, index) => (
-                <div
-                  key={member.id}
-                  className={`flex items-center gap-3 p-2 rounded-lg ${member.id === user.id ? 'bg-primary/10' : ''}`}
-                >
-                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
-                    index === 0 ? 'bg-yellow-400 text-yellow-900' :
-                    index === 1 ? 'bg-gray-300 text-gray-700' :
-                    index === 2 ? 'bg-amber-600 text-amber-100' :
-                    'bg-muted text-muted-foreground'
-                  }`}>
-                    {index + 1}
-                  </div>
-                  <div className="flex-1">
-                    <span className={member.id === user.id ? 'font-medium text-primary' : ''}>
-                      {member.username || member.name}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-bold">{member.total_points}</span>
-                    <span className="text-xs text-muted-foreground ml-1">pts</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

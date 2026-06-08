@@ -198,6 +198,22 @@ const runMigrations = async (): Promise<void> => {
     `);
     console.log('[MIGRATIONS] ✓ prediction_sets.public_id backfill');
 
+    // Migration 013: Link predictions to private groups (prediction-level association).
+    // Many-to-many: a prediction set can be linked to multiple groups, and a user can
+    // link multiple of their sets to the same group.
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS group_prediction_links (
+        id SERIAL PRIMARY KEY,
+        group_id INTEGER REFERENCES private_groups(id) ON DELETE CASCADE,
+        prediction_set_id INTEGER REFERENCES prediction_sets(id) ON DELETE CASCADE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(group_id, prediction_set_id)
+      )
+    `);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_gpl_group ON group_prediction_links(group_id)`);
+    await db.query(`CREATE INDEX IF NOT EXISTS idx_gpl_set ON group_prediction_links(prediction_set_id)`);
+    console.log('[MIGRATIONS] ✓ group_prediction_links table');
+
     console.log('[MIGRATIONS] All migrations completed successfully!');
   } catch (err) {
     const error = err as Error;

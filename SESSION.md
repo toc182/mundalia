@@ -1,6 +1,29 @@
 # SESSION.md - Estado Actual del Proyecto Mundalia
 
-## Ultima Actualizacion: 2026-04-10
+## Ultima Actualizacion: 2026-06-08
+
+---
+
+## Cambios - 2026-06-08
+
+### Asociacion de predicciones a grupos (a nivel de prediccion)
+
+Antes los grupos privados puntuaban por usuario (mejor set automatico). Ahora la
+asociacion es a nivel de prediccion (muchos-a-muchos): una prediccion puede vincularse
+a varios grupos y un usuario puede vincular varias de sus predicciones al mismo grupo.
+
+- Nueva tabla `group_prediction_links` (migracion 013, auto en server.ts + migrations.sql).
+- Backend (`routes/groups.ts`): extraido `calculateScoresForSets`; nuevos endpoints
+  `GET /:id`, `GET /:id/linkable`, `POST /:id/predictions`, `DELETE /:id/predictions/:publicId`;
+  `GET /:id/leaderboard` ahora devuelve una fila por prediccion vinculada.
+- Frontend: nueva pagina `GroupDetail.tsx` en `/mis-grupos/:id` (reemplaza el modal de
+  ranking) con vincular existente, crear-para-el-grupo y desvincular. i18n en 6 idiomas.
+- Spec: `docs/superpowers/specs/2026-06-08-group-prediction-links-design.md`.
+
+### Fix: eliminar predicciones legadas
+
+Backfill de `public_id` NULL en `prediction_sets` (migracion 012) para que los sets
+creados antes de existir la columna se puedan eliminar.
 
 ---
 
