@@ -11,7 +11,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { groupsAPI, predictionSetsAPI } from '@/services/api';
 import type { GroupDetails, GroupLeaderboardEntry, LinkablePrediction } from '@/services/api';
-import { ArrowLeft, Copy, Check, Trophy, Plus, Link2, X, Users } from 'lucide-react';
+import { usePredictionStatus } from '@/hooks/usePredictionStatus';
+import { ArrowLeft, Copy, Check, Trophy, Plus, Link2, X, Users, Lock } from 'lucide-react';
 
 interface Message {
   type: 'success' | 'error' | '';
@@ -23,6 +24,8 @@ export default function GroupDetail(): JSX.Element {
   const { user } = useAuth();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { status: predictionStatus } = usePredictionStatus();
+  const predictionsOpen = predictionStatus?.isOpen ?? true;
 
   const [group, setGroup] = useState<GroupDetails | null>(null);
   const [leaderboard, setLeaderboard] = useState<GroupLeaderboardEntry[]>([]);
@@ -129,6 +132,8 @@ export default function GroupDetail(): JSX.Element {
     } catch (err: any) {
       if (err.response?.status === 409) {
         flash('error', t('privateGroups.alreadyLinkedError'));
+      } else if (err.response?.status === 403) {
+        flash('error', t('privateGroups.predictionsClosed'));
       } else {
         flash('error', t('privateGroups.linkError'));
       }
@@ -143,8 +148,12 @@ export default function GroupDetail(): JSX.Element {
       await groupsAPI.unlinkPrediction(id, publicId);
       setLeaderboard(prev => prev.filter(e => e.public_id !== publicId));
       flash('success', t('privateGroups.predictionUnlinked'));
-    } catch (err) {
-      flash('error', t('privateGroups.linkError'));
+    } catch (err: any) {
+      if (err.response?.status === 403) {
+        flash('error', t('privateGroups.predictionsClosed'));
+      } else {
+        flash('error', t('privateGroups.linkError'));
+      }
     }
   };
 
@@ -216,17 +225,26 @@ export default function GroupDetail(): JSX.Element {
             </button>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={openLinkDialog}>
-            <Link2 className="h-4 w-4 mr-2" />
-            {t('privateGroups.linkPrediction')}
-          </Button>
-          <Button size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t('privateGroups.createForGroup')}
-          </Button>
-        </div>
+        {predictionsOpen && (
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={openLinkDialog}>
+              <Link2 className="h-4 w-4 mr-2" />
+              {t('privateGroups.linkPrediction')}
+            </Button>
+            <Button size="sm" onClick={() => setCreateOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              {t('privateGroups.createForGroup')}
+            </Button>
+          </div>
+        )}
       </div>
+
+      {!predictionsOpen && (
+        <div className="flex items-center gap-2 mb-4 text-sm text-muted-foreground bg-muted rounded-lg px-3 py-2">
+          <Lock className="h-4 w-4 shrink-0" />
+          {t('privateGroups.predictionsClosed')}
+        </div>
+      )}
 
       {/* Ranking */}
       <h2 className="text-lg font-semibold flex items-center gap-2 mb-3">
@@ -239,17 +257,21 @@ export default function GroupDetail(): JSX.Element {
           <CardContent className="py-12 text-center">
             <Trophy className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
             <p className="text-muted-foreground mb-1">{t('privateGroups.noLinkedPredictions')}</p>
-            <p className="text-sm text-muted-foreground mb-4">{t('privateGroups.noLinkedPredictionsDesc')}</p>
-            <div className="flex justify-center gap-2">
-              <Button variant="outline" onClick={openLinkDialog}>
-                <Link2 className="h-4 w-4 mr-2" />
-                {t('privateGroups.linkPrediction')}
-              </Button>
-              <Button onClick={() => setCreateOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                {t('privateGroups.createForGroup')}
-              </Button>
-            </div>
+            {predictionsOpen && (
+              <>
+                <p className="text-sm text-muted-foreground mb-4">{t('privateGroups.noLinkedPredictionsDesc')}</p>
+                <div className="flex justify-center gap-2">
+                  <Button variant="outline" onClick={openLinkDialog}>
+                    <Link2 className="h-4 w-4 mr-2" />
+                    {t('privateGroups.linkPrediction')}
+                  </Button>
+                  <Button onClick={() => setCreateOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    {t('privateGroups.createForGroup')}
+                  </Button>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -282,7 +304,7 @@ export default function GroupDetail(): JSX.Element {
                 <span className="font-bold">{entry.total_points}</span>
                 <span className="text-xs text-muted-foreground ml-1">pts</span>
               </div>
-              {entry.is_mine && (
+              {entry.is_mine && predictionsOpen && (
                 <Button
                   variant="ghost"
                   size="icon"

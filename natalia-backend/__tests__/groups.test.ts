@@ -431,6 +431,51 @@ describe('Groups Routes (Private Groups)', () => {
       expect(row).toBeUndefined();
     });
   });
+
+  // ============================================
+  // Deadline Gating Tests (predictions closed)
+  // ============================================
+  describe('Linking blocked when predictions are closed', () => {
+    let predPublicId;
+
+    beforeAll(async () => {
+      // Set a deadline in the past so predictions are closed
+      await db.query(`
+        INSERT INTO settings (key, value) VALUES ('predictions_deadline', '2000-01-01T00:00:00.000Z')
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+      `);
+      // Create a prediction owned by user1 to attempt linking
+      const res = await request(app)
+        .post('/api/prediction-sets')
+        .set('Authorization', `Bearer ${authToken1}`)
+        .send({ name: 'Test Group Deadline Pred', mode: 'positions' });
+      predPublicId = getData(res).public_id;
+    });
+
+    afterAll(async () => {
+      // Re-open predictions so we don't affect other test runs
+      await db.query("DELETE FROM settings WHERE key = 'predictions_deadline'");
+    });
+
+    it('should reject linking when predictions are closed (403)', async () => {
+      const res = await request(app)
+        .post(`/api/groups/${testGroupId}/predictions`)
+        .set('Authorization', `Bearer ${authToken1}`)
+        .send({ predictionSetId: predPublicId });
+
+      expect(res.statusCode).toBe(403);
+      expect(res.body.code).toBe('DEADLINE_PASSED');
+    });
+
+    it('should reject unlinking when predictions are closed (403)', async () => {
+      const res = await request(app)
+        .delete(`/api/groups/${testGroupId}/predictions/${predPublicId}`)
+        .set('Authorization', `Bearer ${authToken1}`);
+
+      expect(res.statusCode).toBe(403);
+      expect(res.body.code).toBe('DEADLINE_PASSED');
+    });
+  });
 });
 
 export {};

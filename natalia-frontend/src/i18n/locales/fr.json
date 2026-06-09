@@ -211,7 +211,8 @@
     "predictionLinked": "Pronostic lie au groupe",
     "predictionUnlinked": "Pronostic delie",
     "linkError": "Erreur lors de la liaison du pronostic",
-    "alreadyLinkedError": "Ce pronostic est deja dans le groupe"
+    "alreadyLinkedError": "Ce pronostic est deja dans le groupe",
+    "predictionsClosed": "Les pronostics sont fermes. Vous ne pouvez plus lier ou delier de pronostics."
   },
   "account": {
     "title": "Mon Compte",

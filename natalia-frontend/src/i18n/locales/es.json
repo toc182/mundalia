@@ -211,7 +211,8 @@
     "predictionLinked": "Prediccion vinculada al grupo",
     "predictionUnlinked": "Prediccion desvinculada",
     "linkError": "Error al vincular la prediccion",
-    "alreadyLinkedError": "Esa prediccion ya esta en el grupo"
+    "alreadyLinkedError": "Esa prediccion ya esta en el grupo",
+    "predictionsClosed": "Las predicciones estan cerradas. Ya no puedes vincular ni desvincular predicciones."
   },
   "account": {
     "title": "Mi Cuenta",

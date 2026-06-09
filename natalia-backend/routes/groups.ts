@@ -133,6 +133,17 @@ async function isMember(groupId: string | number, userId: number): Promise<boole
   return result.rows.length > 0;
 }
 
+// Check whether predictions are closed (past the global deadline).
+// Uses the same 'predictions_deadline' setting the admin sets and the UI reads.
+async function predictionsClosed(): Promise<boolean> {
+  const result = await db.query(
+    "SELECT value FROM settings WHERE key = 'predictions_deadline'"
+  );
+  if (result.rows.length === 0) return false; // no deadline set => always open
+  const deadlineDate = new Date((result.rows[0] as { value: string }).value);
+  return new Date() > deadlineDate;
+}
+
 // Score a set of prediction sets against the real results.
 // Returns a map of prediction_set_id -> total points (0 for sets with no scoring preds).
 // OPTIMIZED: loads all data in 4 parallel queries regardless of how many sets.
@@ -322,6 +333,11 @@ router.post('/:id/predictions', auth, async (req: Request, res: Response): Promi
       return;
     }
 
+    if (await predictionsClosed()) {
+      error(res, 'Predictions are closed', 403, 'DEADLINE_PASSED');
+      return;
+    }
+
     // Resolve the set by public_id and verify ownership
     const set = await db.query(
       'SELECT id FROM prediction_sets WHERE public_id = $1 AND user_id = $2',
@@ -358,6 +374,11 @@ router.delete('/:id/predictions/:publicId', auth, async (req: Request, res: Resp
 
     if (!(await isMember(req.params.id, authReq.user.id))) {
       forbidden(res, 'Not a member of this group');
+      return;
+    }
+
+    if (await predictionsClosed()) {
+      error(res, 'Predictions are closed', 403, 'DEADLINE_PASSED');
       return;
     }
 

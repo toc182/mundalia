@@ -211,7 +211,8 @@
     "predictionLinked": "Tipp mit der Gruppe verknupft",
     "predictionUnlinked": "Tipp getrennt",
     "linkError": "Fehler beim Verknupfen des Tipps",
-    "alreadyLinkedError": "Dieser Tipp ist bereits in der Gruppe"
+    "alreadyLinkedError": "Dieser Tipp ist bereits in der Gruppe",
+    "predictionsClosed": "Die Tipps sind geschlossen. Du kannst keine Tipps mehr verknupfen oder trennen."
   },
   "account": {
     "title": "Mein Konto",

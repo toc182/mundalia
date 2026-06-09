@@ -18,6 +18,9 @@ a varios grupos y un usuario puede vincular varias de sus predicciones al mismo 
   `GET /:id/leaderboard` ahora devuelve una fila por prediccion vinculada.
 - Frontend: nueva pagina `GroupDetail.tsx` en `/mis-grupos/:id` (reemplaza el modal de
   ranking) con vincular existente, crear-para-el-grupo y desvincular. i18n en 6 idiomas.
+- Vincular/desvincular se bloquean cuando las predicciones estan cerradas (deadline
+  `predictions_deadline`): gate en backend (403 `DEADLINE_PASSED`) y en UI (oculta
+  acciones + aviso). El ranking sigue visible en modo lectura.
 - Spec: `docs/superpowers/specs/2026-06-08-group-prediction-links-design.md`.
 
 ### Fix: eliminar predicciones legadas
