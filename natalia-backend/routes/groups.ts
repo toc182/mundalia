@@ -3,6 +3,7 @@ import db from '../config/db';
 import { auth } from '../middleware/auth';
 import { POINTS, getMatchPoints } from '../utils/scoring';
 import { success, error, notFound, forbidden, serverError } from '../utils/response';
+import { predictionsClosed } from '../utils/deadline';
 import { AuthenticatedRequest } from '../types';
 
 const router: Router = express.Router();
@@ -131,17 +132,6 @@ async function isMember(groupId: string | number, userId: number): Promise<boole
     [groupId, userId]
   );
   return result.rows.length > 0;
-}
-
-// Check whether predictions are closed (past the global deadline).
-// Uses the same 'predictions_deadline' setting the admin sets and the UI reads.
-async function predictionsClosed(): Promise<boolean> {
-  const result = await db.query(
-    "SELECT value FROM settings WHERE key = 'predictions_deadline'"
-  );
-  if (result.rows.length === 0) return false; // no deadline set => always open
-  const deadlineDate = new Date((result.rows[0] as { value: string }).value);
-  return new Date() > deadlineDate;
 }
 
 // Score a set of prediction sets against the real results.

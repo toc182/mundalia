@@ -679,6 +679,77 @@ describe('Predictions Routes', () => {
       expect(res.statusCode).toBe(401);
     });
   });
+
+  // ============================================
+  // Deadline Gating Tests (predictions closed)
+  // ============================================
+  describe('Saves blocked when predictions are closed', () => {
+    beforeAll(async () => {
+      await db.query(`
+        INSERT INTO settings (key, value) VALUES ('predictions_deadline', '2000-01-01T00:00:00.000Z')
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+      `);
+    });
+
+    afterAll(async () => {
+      await db.query("DELETE FROM settings WHERE key = 'predictions_deadline'");
+    });
+
+    it('should reject group save with 403 DEADLINE_PASSED', async () => {
+      const predictions = [
+        { group_letter: 'A', team_id: 1, predicted_position: 1 },
+        { group_letter: 'A', team_id: 2, predicted_position: 2 },
+        { group_letter: 'A', team_id: 3, predicted_position: 3 },
+        { group_letter: 'A', team_id: 4, predicted_position: 4 },
+      ];
+      const res = await request(app)
+        .post('/api/predictions/groups')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ predictions, setId: testSetId });
+
+      expect(res.statusCode).toBe(403);
+      expect(res.body.code).toBe('DEADLINE_PASSED');
+    });
+
+    it('should reject third-places save with 403 DEADLINE_PASSED', async () => {
+      const res = await request(app)
+        .post('/api/predictions/third-places')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ selectedGroups: 'ABCDEFGH', setId: testSetId });
+
+      expect(res.statusCode).toBe(403);
+      expect(res.body.code).toBe('DEADLINE_PASSED');
+    });
+
+    it('should reject knockout save with 403 DEADLINE_PASSED', async () => {
+      const res = await request(app)
+        .post('/api/predictions/knockout')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ predictions: { M73: 1 }, setId: testSetId });
+
+      expect(res.statusCode).toBe(403);
+      expect(res.body.code).toBe('DEADLINE_PASSED');
+    });
+
+    it('should reject scores save with 403 DEADLINE_PASSED', async () => {
+      const res = await request(app)
+        .post('/api/predictions/scores')
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ scores: { A: { 1: { a: 1, b: 0 } } }, setId: scoresSetId });
+
+      expect(res.statusCode).toBe(403);
+      expect(res.body.code).toBe('DEADLINE_PASSED');
+    });
+
+    it('should reject reset-from-groups with 403 DEADLINE_PASSED', async () => {
+      const res = await request(app)
+        .delete(`/api/predictions/reset-from-groups?setId=${testSetId}`)
+        .set('Authorization', `Bearer ${authToken}`);
+
+      expect(res.statusCode).toBe(403);
+      expect(res.body.code).toBe('DEADLINE_PASSED');
+    });
+  });
 });
 
 export {};

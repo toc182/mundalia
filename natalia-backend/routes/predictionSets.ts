@@ -2,7 +2,8 @@ import express, { Request, Response, Router } from 'express';
 import crypto from 'crypto';
 import db from '../config/db';
 import { auth } from '../middleware/auth';
-import { success, created, notFound, validationError, serverError } from '../utils/response';
+import { success, created, error, notFound, validationError, serverError } from '../utils/response';
+import { predictionsClosed } from '../utils/deadline';
 import { AuthenticatedRequest } from '../types';
 
 const router: Router = express.Router();
@@ -217,6 +218,12 @@ router.post('/:publicId/duplicate', auth, async (req: Request, res: Response): P
   const client = await db.pool.connect();
 
   try {
+    // Block duplication once predictions are closed (it copies a full prediction)
+    if (await predictionsClosed()) {
+      error(res, 'Predictions are closed', 403, 'DEADLINE_PASSED');
+      return;
+    }
+
     // Verify ownership of source (before starting transaction)
     const sourceSet = await client.query(
       'SELECT * FROM prediction_sets WHERE public_id = $1 AND user_id = $2',

@@ -323,6 +323,20 @@ CREATE INDEX IF NOT EXISTS idx_gpl_group ON group_prediction_links(group_id);
 CREATE INDEX IF NOT EXISTS idx_gpl_set ON group_prediction_links(prediction_set_id);
 
 -- ============================================
+-- MIGRACION 014: Consolidar el deadline de predicciones en una sola key
+-- Fecha: 2026-06-09
+-- Motivo: existian dos keys (group_predictions_deadline solo leida por el guardado
+--   de grupos, y predictions_deadline usada por el admin/contador/bloqueo de grupos).
+--   Se unifica todo en predictions_deadline (1:50 PM Panama del 2026-06-11, 10 min
+--   antes del primer partido). Se ejecuta automaticamente en server.ts al arrancar.
+-- ============================================
+
+DELETE FROM settings WHERE key = 'group_predictions_deadline';
+INSERT INTO settings (key, value)
+VALUES ('predictions_deadline', '2026-06-11T18:50:00Z')
+ON CONFLICT (key) DO NOTHING;
+
+-- ============================================
 -- NUEVA MIGRACION: Agregar aqui abajo
 -- Fecha: YYYY-MM-DD
 -- ============================================

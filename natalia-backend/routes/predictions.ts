@@ -3,6 +3,7 @@ import db, { pool } from '../config/db';
 import { auth } from '../middleware/auth';
 import { isValidGroupLetter, isValidPosition, isValidTeamId, isValidMatchKey } from '../utils/validators';
 import { success, error, notFound, validationError, serverError } from '../utils/response';
+import { predictionsClosed } from '../utils/deadline';
 import { AuthenticatedRequest } from '../types';
 
 const router: Router = express.Router();
@@ -158,16 +159,9 @@ router.post('/groups', auth, async (req: Request<unknown, unknown, SaveGroupsBod
 
   try {
     // Check deadline
-    const deadline = await db.query(
-      "SELECT value FROM settings WHERE key = 'group_predictions_deadline'"
-    );
-
-    if (deadline.rows.length > 0) {
-      const deadlineDate = new Date((deadline.rows[0] as { value: string }).value);
-      if (new Date() > deadlineDate) {
-        error(res, 'Deadline for group predictions has passed', 400, 'DEADLINE_PASSED');
-        return;
-      }
+    if (await predictionsClosed()) {
+      error(res, 'Predictions are closed', 403, 'DEADLINE_PASSED');
+      return;
     }
 
     // Resolve public_id to numeric id
@@ -309,6 +303,12 @@ router.post('/third-places', auth, async (req: Request<unknown, unknown, SaveThi
   }
 
   try {
+    // Check deadline
+    if (await predictionsClosed()) {
+      error(res, 'Predictions are closed', 403, 'DEADLINE_PASSED');
+      return;
+    }
+
     // Resolve public_id to numeric id
     let setId: number;
     if (requestSetId) {
@@ -429,6 +429,12 @@ router.post('/knockout', auth, async (req: Request<unknown, unknown, SaveKnockou
   }
 
   try {
+    // Check deadline
+    if (await predictionsClosed()) {
+      error(res, 'Predictions are closed', 403, 'DEADLINE_PASSED');
+      return;
+    }
+
     // Resolve public_id to numeric id
     let setId: number;
     if (requestSetId) {
@@ -574,6 +580,12 @@ router.post('/scores', auth, async (req: Request<unknown, unknown, SaveScoresBod
   }
 
   try {
+    // Check deadline
+    if (await predictionsClosed()) {
+      error(res, 'Predictions are closed', 403, 'DEADLINE_PASSED');
+      return;
+    }
+
     // Resolve public_id to numeric id
     let setId: number;
     if (requestSetId) {
@@ -719,6 +731,12 @@ router.post('/tiebreaker', auth, async (req: Request<unknown, unknown, SaveTiebr
   }
 
   try {
+    // Check deadline
+    if (await predictionsClosed()) {
+      error(res, 'Predictions are closed', 403, 'DEADLINE_PASSED');
+      return;
+    }
+
     // Resolve public_id to numeric id
     let setId: number;
     if (requestSetId) {
@@ -798,6 +816,10 @@ router.get('/has-subsequent-data', auth, async (req: Request, res: Response): Pr
 router.delete('/reset-from-groups', auth, async (req: Request, res: Response): Promise<void> => {
   try {
     const authReq = req as AuthenticatedRequest;
+    if (await predictionsClosed()) {
+      error(res, 'Predictions are closed', 403, 'DEADLINE_PASSED');
+      return;
+    }
     const querySetId = req.query.setId as string;
     if (!querySetId) {
       validationError(res, 'setId is required');
@@ -833,6 +855,10 @@ router.delete('/reset-from-groups', auth, async (req: Request, res: Response): P
 router.delete('/reset-from-thirds', auth, async (req: Request, res: Response): Promise<void> => {
   try {
     const authReq = req as AuthenticatedRequest;
+    if (await predictionsClosed()) {
+      error(res, 'Predictions are closed', 403, 'DEADLINE_PASSED');
+      return;
+    }
     const querySetId = req.query.setId as string;
     if (!querySetId) {
       validationError(res, 'setId is required');

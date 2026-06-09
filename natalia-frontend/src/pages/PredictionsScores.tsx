@@ -18,13 +18,17 @@ import {
 } from '../components/ui/dialog';
 import GroupScoreInput from '../components/GroupScoreInput';
 import TiebreakerModal from '../components/TiebreakerModal';
+import PredictionsClosedBanner from '../components/PredictionsClosedBanner';
 import { ALL_GROUPS } from '../data/groupMatches';
 import { usePredictionsScores } from '../hooks/usePredictionsScores';
+import { usePredictionStatus } from '../hooks/usePredictionStatus';
 import type { UnresolvableTieWithGroup } from '../types/predictionsScores';
 
 export default function PredictionsScores(): JSX.Element {
   const [searchParams] = useSearchParams();
   const setId = searchParams.get('setId');
+  const { status: predictionStatus } = usePredictionStatus();
+  const predictionsOpen = predictionStatus?.isOpen ?? true;
 
   const {
     scores,
@@ -79,6 +83,8 @@ export default function PredictionsScores(): JSX.Element {
           </div>
         </div>
 
+        <PredictionsClosedBanner />
+
         {/* Top navigation buttons */}
         <div className="flex justify-between items-center mb-6">
           <Button
@@ -103,7 +109,7 @@ export default function PredictionsScores(): JSX.Element {
             <Button
               variant="outline"
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || !predictionsOpen}
             >
               <Save className="w-4 h-4 mr-2" />
               Guardar
@@ -111,7 +117,7 @@ export default function PredictionsScores(): JSX.Element {
 
             <Button
               onClick={handleContinue}
-              disabled={saving}
+              disabled={saving || !predictionsOpen}
             >
               {saving ? 'Guardando...' : 'Siguiente'}
               <ArrowRight className="w-4 h-4 ml-2" />
@@ -187,7 +193,7 @@ export default function PredictionsScores(): JSX.Element {
             <Button
               variant="outline"
               onClick={handleSave}
-              disabled={saving}
+              disabled={saving || !predictionsOpen}
             >
               <Save className="w-4 h-4 mr-2" />
               Guardar
@@ -195,7 +201,7 @@ export default function PredictionsScores(): JSX.Element {
 
             <Button
               onClick={handleContinue}
-              disabled={saving}
+              disabled={saving || !predictionsOpen}
             >
               {saving ? 'Guardando...' : 'Siguiente'}
               <ArrowRight className="w-4 h-4 ml-2" />

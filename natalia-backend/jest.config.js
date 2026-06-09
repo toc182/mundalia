@@ -19,6 +19,9 @@ module.exports = {
     },
   },
   verbose: true,
+  // Tests share a single database and some suites toggle global settings
+  // (e.g. the predictions deadline), so run serially to avoid cross-file races.
+  maxWorkers: 1,
   testTimeout: 10000,
   moduleFileExtensions: ['ts', 'js', 'json'],
   transform: {

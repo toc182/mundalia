@@ -1,6 +1,7 @@
 import { predictionSetsAPI, predictionsAPI, groupsAPI } from '@/services/api';
 
 export async function claimGuestPredictions(): Promise<string | null> {
+  let createdSetId: string | null = null;
   try {
     const predictions = localStorage.getItem('natalia_predictions');
     const thirdPlaces = localStorage.getItem('natalia_best_third_places');
@@ -11,6 +12,7 @@ export async function claimGuestPredictions(): Promise<string | null> {
     // Create prediction set
     const setResponse = await predictionSetsAPI.create('Mi Prediccion', 'positions');
     const setId = setResponse.data.public_id;
+    createdSetId = setId;
 
     // Save groups
     const groupPredictions = JSON.parse(predictions);
@@ -62,8 +64,18 @@ export async function claimGuestPredictions(): Promise<string | null> {
     localStorage.removeItem('natalia_knockout_scores');
 
     return setId;
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error claiming guest predictions:', err);
+    // Predictions closed (deadline passed): block the claim and remove the empty
+    // set we just created so it doesn't clutter the account. The user lands on Home,
+    // which shows the "predictions are closed" banner.
+    if (err?.response?.status === 403 && createdSetId) {
+      try {
+        await predictionSetsAPI.delete(createdSetId);
+      } catch {
+        // ignore cleanup failure
+      }
+    }
     localStorage.removeItem('guest_mode');
     localStorage.removeItem('guest_group_code');
     localStorage.removeItem('guest_pending_claim');

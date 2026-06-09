@@ -1,8 +1,28 @@
 # SESSION.md - Estado Actual del Proyecto Mundalia
 
-## Ultima Actualizacion: 2026-06-08
+## Ultima Actualizacion: 2026-06-09
 
 ---
+
+## Cambios - 2026-06-09
+
+### Consolidacion del deadline de predicciones
+
+Existian dos keys de deadline en conflicto. Ahora hay una sola fuente de verdad:
+`predictions_deadline` (la que controla el admin y muestra el contador), aplicada a
+TODOS los guardados de prediccion. Valor: `2026-06-11T18:50:00Z` (1:50 PM Panama, 10
+min antes del primer partido).
+
+- Backend: nuevo `utils/deadline.ts` (`predictionsClosed()`). Se bloquean con
+  `403 DEADLINE_PASSED`: guardar grupos (antes 400), terceros, eliminatorias, marcadores,
+  desempates, resets, y **duplicar** prediccion. La key vieja `group_predictions_deadline`
+  se elimina (migracion 014 en server.ts + migrations.sql; schema.sql actualizado).
+- Frontend: banner "predicciones cerradas" + bloqueo de guardado en las 4 paginas de
+  prediccion (`PredictionsClosedBanner`); el reclamo de invitado (guestClaim) se bloquea
+  tras el cierre y limpia el set vacio. `POST /predictions/match` queda igual (legacy).
+- Tests: 199 en verde (nuevos: bloqueo por deadline en saves y en duplicar). Jest ahora
+  corre en serie (`maxWorkers: 1`) por compartir BD/estado global.
+- Spec/plan: `docs/superpowers/specs/...` + plan de consolidacion.
 
 ## Cambios - 2026-06-08
 

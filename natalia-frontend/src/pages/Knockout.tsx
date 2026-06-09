@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ChevronLeft, ChevronRight, Trophy, Save } from 'lucide-react';
 import { useKnockoutData } from '@/hooks/useKnockoutData';
+import { usePredictionStatus } from '@/hooks/usePredictionStatus';
+import PredictionsClosedBanner from '@/components/PredictionsClosedBanner';
 import { MobileKnockoutSlides } from '@/components/knockout/MobileKnockout';
 import { FullBracket } from '@/components/knockout/DesktopBracket';
 import { predictionsAPI } from '@/services/api';
@@ -51,6 +53,9 @@ export default function Knockout(): React.JSX.Element {
     buildSaveData,
     navTimerRef,
   } = useKnockoutData();
+
+  const { status: predictionStatus } = usePredictionStatus();
+  const predictionsOpen = predictionStatus?.isOpen ?? true;
 
   // Local UI state
   const [activeRound, setActiveRound] = useState<RoundId>('r32');
@@ -148,6 +153,13 @@ export default function Knockout(): React.JSX.Element {
       return;
     }
 
+    // Predictions closed: block the save with a clear message, do not navigate
+    if (!predictionsOpen) {
+      setError(t('predictions.closed'));
+      setSaving(false);
+      return;
+    }
+
     const nextUrl = `/prediccion/${setId}`;
 
     try {
@@ -155,7 +167,12 @@ export default function Knockout(): React.JSX.Element {
       setSaved(true);
       window.scrollTo(0, 0);
       navigate(nextUrl);
-    } catch (err) {
+    } catch (err: any) {
+      if (err.response?.status === 403) {
+        setError(t('predictions.closed'));
+        setSaving(false);
+        return;
+      }
       setError(t('errors.savingFailed'));
       if (navTimerRef.current) clearTimeout(navTimerRef.current);
       navTimerRef.current = setTimeout(() => {
@@ -165,6 +182,15 @@ export default function Knockout(): React.JSX.Element {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Explicit "Save progress" button, guarded by the deadline
+  const handleSaveGuarded = async (): Promise<void> => {
+    if (!predictionsOpen) {
+      setError(t('predictions.closed'));
+      return;
+    }
+    await handleSave();
   };
 
   // Back button component
@@ -269,6 +295,8 @@ export default function Knockout(): React.JSX.Element {
         <p className="text-sm text-muted-foreground mt-1">{t('knockout.description')}</p>
       </div>
 
+      <PredictionsClosedBanner />
+
       {/* Navigation buttons */}
       <div className="flex justify-between items-center mb-6">
         <BackButton />
@@ -283,7 +311,7 @@ export default function Knockout(): React.JSX.Element {
           <Button
             variant="outline"
             size="sm"
-            onClick={handleSave}
+            onClick={handleSaveGuarded}
             disabled={saving || Object.keys(knockoutPredictions).length === 0}
           >
             <Save className="w-4 h-4 mr-1" />
@@ -345,7 +373,7 @@ export default function Knockout(): React.JSX.Element {
             </Button>
             <Button
               variant="outline"
-              onClick={handleSave}
+              onClick={handleSaveGuarded}
               disabled={saving || Object.keys(knockoutPredictions).length === 0}
             >
               <Save className="w-4 h-4 mr-2" />
@@ -406,7 +434,7 @@ export default function Knockout(): React.JSX.Element {
             <Button
               variant="outline"
               size="sm"
-              onClick={handleSave}
+              onClick={handleSaveGuarded}
               disabled={saving || Object.keys(knockoutPredictions).length === 0}
             >
               <Save className="w-4 h-4" />

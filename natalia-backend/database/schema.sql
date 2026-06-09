@@ -105,7 +105,7 @@ CREATE TABLE group_standings (
 
 -- Insert initial settings
 INSERT INTO settings (key, value) VALUES
-('group_predictions_deadline', '2026-06-11T00:00:00Z'),
+('predictions_deadline', '2026-06-11T18:50:00Z'),
 ('points_exact_position', '3'),
 ('points_qualifier', '1'),
 ('points_round_of_32', '2'),

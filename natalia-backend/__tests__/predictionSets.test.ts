@@ -273,6 +273,32 @@ describe('PredictionSets Routes', () => {
       expect(res.statusCode).toBe(404);
     });
   });
+
+  // ============================================
+  // Deadline Gating (duplicate blocked when closed)
+  // ============================================
+  describe('Duplicate blocked when predictions are closed', () => {
+    beforeAll(async () => {
+      await db.query(`
+        INSERT INTO settings (key, value) VALUES ('predictions_deadline', '2000-01-01T00:00:00.000Z')
+        ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value
+      `);
+    });
+
+    afterAll(async () => {
+      await db.query("DELETE FROM settings WHERE key = 'predictions_deadline'");
+    });
+
+    it('should reject duplicate with 403 DEADLINE_PASSED', async () => {
+      const res = await request(app)
+        .post(`/api/prediction-sets/${testSetPublicId}/duplicate`)
+        .set('Authorization', `Bearer ${authToken}`)
+        .send({ name: 'Copia despues del cierre' });
+
+      expect(res.statusCode).toBe(403);
+      expect(res.body.code).toBe('DEADLINE_PASSED');
+    });
+  });
 });
 
 export {};

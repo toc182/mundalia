@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/dialog';
 import { StepNavigation } from '@/components/StepNavigation';
 import { GroupCard } from '@/components/GroupCard';
+import PredictionsClosedBanner from '@/components/PredictionsClosedBanner';
+import { usePredictionStatus } from '@/hooks/usePredictionStatus';
 import { mockTeams, getAllGroups } from '@/data/mockData';
 import { predictionsAPI } from '@/services/api';
 import { getTeamById as getTeamByIdHelper } from '@/utils/predictionHelpers';
@@ -38,6 +40,8 @@ export default function Predictions(): JSX.Element {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const setId = searchParams.get('setId');
+  const { status: predictionStatus } = usePredictionStatus();
+  const predictionsOpen = predictionStatus?.isOpen ?? true;
 
   const [predictions, setPredictions] = useState<GroupPredictions>({});
   const [saved, setSaved] = useState<boolean>(false);
@@ -252,6 +256,13 @@ export default function Predictions(): JSX.Element {
       return;
     }
 
+    // Predictions closed: block the save with a clear message, do not navigate
+    if (!predictionsOpen) {
+      setError(t('predictions.closed'));
+      setSaving(false);
+      return;
+    }
+
     try {
       if (resetFirst && setId) {
         await predictionsAPI.resetFromGroups(setId);
@@ -264,7 +275,12 @@ export default function Predictions(): JSX.Element {
       setSaving(false);
       window.scrollTo(0, 0);
       navigate(nextUrl);
-    } catch (err) {
+    } catch (err: any) {
+      if (err.response?.status === 403) {
+        setError(t('predictions.closed'));
+        setSaving(false);
+        return;
+      }
       setError(t('errors.savingFailed'));
       setSaving(false);
       if (navTimerRef.current) clearTimeout(navTimerRef.current);
@@ -317,6 +333,8 @@ export default function Predictions(): JSX.Element {
           {t('groups.description')}
         </p>
       </div>
+
+      <PredictionsClosedBanner />
 
       {/* Top navigation */}
       <div className="mb-6">

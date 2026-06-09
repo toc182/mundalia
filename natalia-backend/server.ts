@@ -214,6 +214,18 @@ const runMigrations = async (): Promise<void> => {
     await db.query(`CREATE INDEX IF NOT EXISTS idx_gpl_set ON group_prediction_links(prediction_set_id)`);
     console.log('[MIGRATIONS] ✓ group_prediction_links table');
 
+    // Migration 014: Consolidate the predictions deadline onto a single key.
+    // Removes the stale 'group_predictions_deadline' (only the group-stage save read it)
+    // and sets 'predictions_deadline' (the admin-controlled key every save now respects)
+    // to 1:50 PM Panama on 2026-06-11 (10 min before the first match), unless already set.
+    await db.query("DELETE FROM settings WHERE key = 'group_predictions_deadline'");
+    await db.query(`
+      INSERT INTO settings (key, value)
+      VALUES ('predictions_deadline', '2026-06-11T18:50:00Z')
+      ON CONFLICT (key) DO NOTHING
+    `);
+    console.log('[MIGRATIONS] ✓ predictions_deadline consolidation');
+
     console.log('[MIGRATIONS] All migrations completed successfully!');
   } catch (err) {
     const error = err as Error;
