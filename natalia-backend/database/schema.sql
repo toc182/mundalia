@@ -104,8 +104,9 @@ CREATE TABLE group_standings (
 );
 
 -- Insert initial settings
+-- Note: no predictions_deadline is seeded — it is admin-controlled. With no value
+-- set, predictions stay open. The admin can set one from the panel if needed.
 INSERT INTO settings (key, value) VALUES
-('predictions_deadline', '2026-06-11T18:50:00Z'),
 ('points_exact_position', '3'),
 ('points_qualifier', '1'),
 ('points_round_of_32', '2'),

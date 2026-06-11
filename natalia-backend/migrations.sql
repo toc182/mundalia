@@ -323,18 +323,24 @@ CREATE INDEX IF NOT EXISTS idx_gpl_group ON group_prediction_links(group_id);
 CREATE INDEX IF NOT EXISTS idx_gpl_set ON group_prediction_links(prediction_set_id);
 
 -- ============================================
--- MIGRACION 014: Consolidar el deadline de predicciones en una sola key
+-- MIGRACION 014: Consolidar el deadline en una sola key (predictions_deadline)
 -- Fecha: 2026-06-09
 -- Motivo: existian dos keys (group_predictions_deadline solo leida por el guardado
---   de grupos, y predictions_deadline usada por el admin/contador/bloqueo de grupos).
---   Se unifica todo en predictions_deadline (1:50 PM Panama del 2026-06-11, 10 min
---   antes del primer partido). Se ejecuta automaticamente en server.ts al arrancar.
+--   de grupos, y predictions_deadline usada por admin/contador/bloqueos). Se elimina
+--   la vieja. El deadline NO se siembra por codigo: es 100% controlado por el admin.
+--   Sin valor => predicciones abiertas.
 -- ============================================
 
 DELETE FROM settings WHERE key = 'group_predictions_deadline';
-INSERT INTO settings (key, value)
-VALUES ('predictions_deadline', '2026-06-11T18:50:00Z')
-ON CONFLICT (key) DO NOTHING;
+
+-- ============================================
+-- MIGRACION 015: Reabrir predicciones (Mundial ya iniciado)
+-- Fecha: 2026-06-09
+-- Motivo: quitar la limitacion de tiempo para que se pueda predecir tras el inicio.
+--   Ejecutar en Railway una sola vez (el codigo ya no re-siembra el deadline).
+-- ============================================
+
+DELETE FROM settings WHERE key = 'predictions_deadline';
 
 -- ============================================
 -- NUEVA MIGRACION: Agregar aqui abajo
